@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="true">
+        <exclude domain="sharedpref" path="bond_mail_credentials.xml" />
+        <exclude domain="database" path="bond_mail.db" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="bond_mail_credentials.xml" />
+    </device-transfer>
+</data-extraction-rules>

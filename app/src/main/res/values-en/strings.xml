@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Mail</string>
+    <string name="notifications">New mail notifications</string>
+</resources>

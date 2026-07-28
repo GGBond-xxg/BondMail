@@ -1,0 +1,66 @@
+BondMail Kotlin v0.2.33.0 validation
+===================================
+
+Release identity
+----------------
+PASS  versionCode = 52
+PASS  versionName = 0.2.33.0
+PASS  Room database = 8
+PASS  MIME parser = 8
+PASS  prepared HTML cache = layout-v25
+PASS  upgrade baseline = v0.2.32.0
+
+Implemented scope
+-----------------
+PASS  First uncached detail open waits for a Chromium visual-state commit, keeps the stable
+      background for 300 ms, then performs one 300 ms fade.
+PASS  Previously presented prepared content skips the first-open hold/fade and reuses the retained
+      WebView when available.
+PASS  Room migration 7 -> 8 adds attachmentsJson without clearing accounts, credentials or mail.
+PASS  JavaMail parsing records attachment name, MIME type and size.
+PASS  Bounded raw RFC822 fallback parses folded headers, multipart boundaries, base64,
+      quoted-printable and common Chinese/Western charsets.
+PASS  Attachment-only mail is considered displayable and receives paperclip/attachment cards.
+PASS  Sent placeholder replacement uses a stable normalized Message-ID and a real remote UID.
+PASS  Delayed Sent indexing is reconciled after folder refresh without keeping a second local row
+      or retrying SMTP/APPEND.
+PASS  Gmail, Microsoft and NetEase server-created Sent copies are probed before explicit APPEND.
+PASS  Remote deletion falls back from a changed UID to Message-ID; local Sent placeholders remove
+      matching server copies before local deletion.
+
+Static/data validation
+----------------------
+PASS  git diff --check: no whitespace/patch errors.
+PASS  53 Kotlin/KTS source files discovered.
+PASS  Modified Kotlin source passed parser-level syntax scans.
+PASS  MimeParser compiled in isolation against the real javax.mail/javax.activation APIs.
+PASS  ImapClient compiled in isolation against the real javax.mail/javax.activation APIs and
+      kotlinx-coroutines, with only Android/project model stubs.
+PASS  Raw RFC822 multipart test: quoted-printable body and base64 PDF attachment extracted.
+PASS  Normal JavaMail multipart test: text body and PDF attachment metadata extracted.
+PASS  Normalized Message-ID SQLite SELECT/DELETE queries executed successfully.
+PASS  en, zh and zh-CHT contain 178 keys each.
+PASS  Translation key sets and formatting placeholders are identical.
+PASS  132 direct tr("...") references were found; missing keys = 0.
+PASS  15 Android XML files parsed successfully.
+PASS  Source checks confirm version 52, Room 8, parser 8, layout-v25, migration 7->8,
+      attachment persistence, raw fallback, delayed-Sent reconciliation and Message-ID deletion.
+
+Gradle build status
+-------------------
+NOT RUN  A complete Android/Compose Gradle build could not run in this environment because the
+         Gradle 8.11.1 distribution is not cached and services.gradle.org cannot be resolved:
+         java.net.UnknownHostException: services.gradle.org
+
+Run on the development machine:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Focused device checks
+---------------------
+1. Send subject + body + attachment from Outlook to 163.
+2. Sent must transition from one local Sending row to one remote Sent row, never two rows.
+3. Open both Outlook Sent and 163 Inbox copies; body, paperclip, filename and size must appear.
+4. Delete the Sent copy, refresh and reopen Sent; it must not return.
+5. First uncached open: content-ready -> 300 ms stable background -> 300 ms fade.
+6. Reopen the same message: cached content appears without replaying the first-open animation.

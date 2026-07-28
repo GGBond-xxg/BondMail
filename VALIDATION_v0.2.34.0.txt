@@ -1,0 +1,50 @@
+BondMail Kotlin v0.2.34.0 validation
+Date: 2026-07-26
+
+Source/version checks
+PASS  versionCode = 54
+PASS  versionName = 0.2.34.0
+PASS  Room database remains 8
+PASS  MIME parser remains 8
+PASS  prepared HTML cache = layout-v26
+PASS  v0.2.33.1 SmtpClient visibility hotfix remains present
+
+Double-flash source checks
+PASS  300 ms delayed body placeholder removed
+PASS  450 ms delayed WebView placeholder removed
+PASS  300 ms post-visual-commit hold removed
+PASS  cold WebView staging uses BondMotionDuration.EffectQuick (90 ms)
+PASS  first presentation uses one BondMotionDuration.ElementEnter reveal (180 ms)
+PASS  cached/previously presented content uses snap()
+PASS  Android remove-animations mode uses snap()
+PASS  native subject/sender/date/preview shell remains above the page background until WebView alpha reaches 1
+PASS  visual-state callback, generation guard, vendor fallback and renderer recovery remain present
+
+HTML layout source checks
+PASS  Binance/binance.us and subdomains can prefer a reliable DESKTOP_SCALED canvas
+PASS  known NetEase mobile transactional senders remain forced FLUID
+PASS  structural image/SVG icon rows are marked and protected as table-row/table-cell
+PASS  icon-only footer tables are excluded from compact-content and desktop-canvas scoring
+PASS  WebView algorithmic darkening code remains enabled
+PASS  prepared-document cache key bumped so old in-memory layout results cannot be reused
+
+Static validation
+PASS  Kotlin delimiter/string/comment scan for DetailScreen.kt
+PASS  Kotlin delimiter/string/comment scan for MailWebViewCache.kt
+PASS  standalone Kotlin compiler parse produced no syntax-error markers; unresolved Android/Compose/Jsoup references are expected without the Android dependency classpath
+PASS  5 source JSON files parsed
+PASS  15 source XML files parsed
+PASS  source tree excludes .gradle, .kotlin and build outputs
+
+Build status
+NOT RUN  Full Android Gradle build in this environment.
+Reason: no Android SDK is installed and outbound network/DNS is unavailable, so Gradle 8.11.1 and Android/Maven dependencies cannot be downloaded. No new APK is included or claimed.
+
+Run on the development machine:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Primary device checks:
+- Cold-open a new uncached message and confirm there is one short reveal, not two flashes.
+- Reopen the same message and confirm there is no blank attach frame.
+- Open do-not-reply@ses.binance.com mail in dark and light mode; social icons must stay horizontal and the full footer must remain visible.

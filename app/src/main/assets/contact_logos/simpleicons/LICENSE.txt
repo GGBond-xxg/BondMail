@@ -1,0 +1,7 @@
+The SVGs in this directory are sourced from Simple Icons v16.
+Simple Icons is released under CC0-1.0.
+
+Project: https://github.com/simple-icons/simple-icons
+Disclaimer: https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md
+
+Brand names and trademarks remain the property of their respective owners.

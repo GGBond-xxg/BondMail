@@ -1,0 +1,77 @@
+BondMail Kotlin v0.2.30.0 validation report
+
+Release identity
+- versionCode: 48
+- versionName: 0.2.30.0
+- Room database: 6
+- prepared HTML cache: layout-v24
+- upgrade baseline: unmodified v0.2.29.1
+
+Evidence reviewed
+- Full Debug log and key log from v0.2.29.1.
+- First-open/reopen screen recording.
+- Separate Gmail/Outlook read-state recording.
+- The log shows periodic Gmail FLAGS were fetched before a user open, while repository sync completed after the open. This establishes a stale-snapshot race rather than a provider-specific unread rule.
+- The log also confirms prepared-document and retained-WebView cache hits; remaining reopen flash occurs during destination composition and AndroidView reattachment.
+
+Implemented checks
+[PASS] Per-account AtomicLong flag generation exists.
+[PASS] Each IMAP refresh captures its flag generation before fetching remote FLAGS.
+[PASS] Remote FLAGS are applied only when the captured generation is still current.
+[PASS] A stale remote snapshot logs and skips FLAGS while still committing folder/sync metadata.
+[PASS] Interactive read/unread and star operations advance the generation before local mutation.
+[PASS] Interactive flag operations serialize remote commit with the same-account sync mutex.
+[PASS] Read/unread and star operations use current Room state rather than a stale UI object.
+[PASS] A failed remote read/star operation restores the previous local value.
+[PASS] Interactive body loading that marks SEEN protects the operation with generation changes.
+[PASS] IMAP SEEN success has an explicit provider-neutral diagnostic log.
+[PASS] Detail navigation stores a synchronous bounded initial-message snapshot before navigating.
+[PASS] A retained WebView is revealed only after one reattachment frame.
+[PASS] The loading placeholder no longer renders duplicate real subject/sender text.
+[PASS] The placeholder uses a neutral Gmail-shaped skeleton and delayed progress indicator.
+[PASS] Room schema, HTML transformation rules, OAuth/XOAUTH2 and body-prefetch limits are unchanged.
+
+Static validation
+- Kotlin/KTS files parsed with Kotlin PSI: 51
+- Kotlin PSI syntax errors: 0
+- i18n JSON files: zh, zh-CHT, en
+- keys per i18n file: 166
+- i18n key differences: 0
+- formatting-placeholder differences: 0
+- direct tr("...") references checked: 118
+- missing translation keys: 0
+- Android XML files parsed: 15
+- XML parse errors: 0
+- source invariant checks: 10
+- source invariant failures: 0
+- git diff --check whitespace errors: 0
+- forbidden transient directories/files found: 0
+
+Delivery verification
+- PROJECT_MANIFEST.sha256 entries: 124
+- final source files including manifest: 125
+- upgrade patch git apply --check: PASS
+- upgrade patch actual apply: PASS
+- patched source vs full source missing files: 0
+- patched source vs full source extra files: 0
+- patched source vs full source content differences: 0
+- patched source vs full source permission differences: 0
+- ZIP integrity test: PASS
+- ZIP extracted files: 125
+- ZIP extracted content differences: 0
+- ZIP extracted permission differences: 0
+- gradlew executable mode after extraction: 0755
+- excluded transient directories/files: .git, .gradle, .idea, .kotlin, build, local.properties
+
+Not executed in this environment
+- Android Compose type resolution
+- Room KSP/SQL generation
+- assembleDebug / assemblePerformance
+- minifyPerformanceWithR8
+- APK installation and device verification
+
+Reason
+- The environment has no Android SDK and Gradle Wrapper cannot resolve services.gradle.org.
+- Final Android compilation and real provider state synchronization must be verified locally with:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon

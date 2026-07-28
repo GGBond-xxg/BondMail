@@ -1,0 +1,52 @@
+BondMail v0.2.27.0 validation
+
+Static validation performed in the packaging environment.
+The environment has no Android SDK and cannot resolve services.gradle.org to download Gradle 8.11.1. Therefore APK/Compose/Room KSP/R8 compilation is not claimed here; the final Android build must be run on the user machine.
+
+User baseline evidence (v0.2.26.0 Debug/Performance test):
+- Cloudflare desktop newsletter and GitHub short mail rendered and scrolled correctly.
+- K-9-style staged list insertion, notification permission flow, credential replacement and background refresh recovery behaved correctly.
+- Remaining issues were NetEase compact cards, first-sync latency, recent body warm-up latency, a possible WebView renderer exit, and notification-deny animation polish.
+
+Static checks:
+[PASS] Kotlin PSI syntax: FILES=51 ERRORS=0
+[PASS] versionCode: 43
+[PASS] versionName: 0.2.27.0
+[PASS] Room database version: 6
+[PASS] HTML cache layout-v21
+[PASS] i18n key parity en: 166 keys; missing=0 extra=0
+[PASS] i18n key parity zh: 166 keys; missing=0 extra=0
+[PASS] i18n key parity zh-CHT: 166 keys; missing=0 extra=0
+[PASS] i18n placeholder parity: 0 mismatches
+[PASS] direct tr() references: 121 refs; missing=[]
+[PASS] Android XML parse: 15 files; errors=0
+[PASS] Initial IMAP window performs one UID/ENVELOPE/FLAGS fetch before UID sorting
+[PASS] Initial header-fetch timing diagnostic
+[PASS] K-9 staged Room/UI insertion: first 8 rows, then batches of 4
+[PASS] Initial small-body prefetch window: 24
+[PASS] Body prefetch chunk size: 8
+[PASS] Automatic body threshold remains 128 KiB
+[PASS] NetEase/163/126/yeah.net transactional mail forces FLUID layout
+[PASS] Compact HTML/CSS card scan and coverage fallback
+[PASS] Emoji-presentation fallback for common picture/shield symbols
+[PASS] WebView renderer-process recovery callback
+[PASS] Dead WebView discard path; single-item pool retained
+[PASS] Notification guide removes duplicate animateItem layer
+[PASS] Reject notification is low-emphasis; allow remains primary
+[PASS] Granted permission state uses neutral non-action color
+[PASS] R8 optional Tink ignore
+[PASS] R8 optional BouncyCastle ignore
+[PASS] Header/body separation retained
+[PASS] 163/126 credential IMAP+SMTP validation retained
+[PASS] source tree cleanliness: no build/.gradle/.idea/.kotlin/local.properties in delivery
+[PASS] gradlew executable mode: 0755
+[PASS] PROJECT_MANIFEST entries: 117, all hashes verified
+[PASS] v0.2.26.0 -> v0.2.27.0 patch applies cleanly to the released v0.2.26.0 source
+[PASS] Patched source matches the full v0.2.27.0 source file-for-file and byte-for-byte
+[PASS] Final ZIP integrity and extracted file/hash/permission comparison
+
+Packaging results:
+- Final source files: 118 regular files (including PROJECT_MANIFEST.sha256)
+- Patch baseline: unmodified BondMail_Kotlin_v0.2.26.0_source.zip
+- gradlew executable permission preserved
+- Forbidden paths excluded from ZIP: .git, .gradle, .idea, .kotlin, build, local.properties

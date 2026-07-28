@@ -1,0 +1,48 @@
+BondMail Kotlin v0.2.29.0 validation report
+
+Version
+- versionCode: 46
+- versionName: 0.2.29.0
+- Room database: 6
+- prepared HTML cache: layout-v23
+- upgrade baseline: unmodified v0.2.28.1
+
+Implemented checks
+[PASS] Detail top app bar shows the owning account display name.
+[PASS] Back, star, more and bottom action dock remain present.
+[PASS] Account display-name limit is centralized at 12 characters.
+[PASS] Add-account and edit-account fields use the shared 12-character limit and /12 counter.
+[PASS] Repository add/update paths enforce the same limit for app-password and OAuth accounts.
+[PASS] Existing overlong local account names are normalized during startup snapshot preload.
+[PASS] Full-page placeholder/WebView alpha cross-fade was removed to prevent duplicated text darkening.
+[PASS] WebView still waits for a committed visible frame before replacing the loading document.
+[PASS] Loading placeholder and final document use matching Gmail-style subject/card geometry.
+[PASS] Subject remains on the page canvas; sender metadata, date and original body share one rounded card.
+[PASS] FLUID sender CSS body-child selectors are retargeted to the new message-body wrapper.
+[PASS] DESKTOP_SCALED canvas remains intact inside the Gmail-style outer card.
+[PASS] HTML cache namespace was upgraded to layout-v23.
+[PASS] v0.2.28.1 body prefetch, Header/Body separation, WebView pooling/recovery, OAuth/XOAUTH2, 163 credential replacement and R8 rules remain present.
+
+Static validation
+- Kotlin/KTS files parsed with Kotlin PSI: 51
+- Kotlin PSI syntax errors: 0
+- i18n JSON files: zh, zh-CHT, en
+- keys per i18n file: 166
+- i18n key differences: 0
+- formatting-placeholder differences: 0
+- direct tr("...") references checked: 118
+- missing translation keys: 0
+- Android XML files parsed: 15
+- XML parse errors: 0
+
+Not executed in this environment
+- Android Compose type resolution
+- Room KSP/SQL generation
+- assembleDebug / assemblePerformance
+- minifyPerformanceWithR8
+- APK installation and device animation/WebView verification
+
+Reason
+- The delivery environment has no Android SDK and cannot obtain the complete Android/Gradle/Maven toolchain. Final Android compilation and device behavior must be verified locally with:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon

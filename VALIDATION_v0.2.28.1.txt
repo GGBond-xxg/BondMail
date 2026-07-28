@@ -1,0 +1,78 @@
+BondMail Kotlin v0.2.28.1 - Validation Report
+================================================
+
+Release identity
+----------------
+versionCode: 45
+versionName: 0.2.28.1
+Room database version: 6
+Prepared HTML cache version: layout-v22
+Upgrade baseline: unmodified BondMail v0.2.28.0
+
+Hotfix scope
+------------
+This hotfix resolves the Android Compose compiler failure reported at DetailScreen.kt:203:
+
+  @Composable invocations can only happen from the context of a @Composable function
+
+Root cause:
+- tr("no_subject") is a @Composable localization function;
+- v0.2.28.0 invoked it inside the calculation lambda passed to remember { ... };
+- remember's calculation lambda is not a composable context.
+
+Fix:
+- resolve noSubjectLabel = tr("no_subject") in the surrounding composable scope;
+- add noSubjectLabel to the remember key list;
+- use the resulting ordinary String inside the non-composable remember calculation.
+
+This preserves language-change correctness and does not change the v0.2.28.0 detail layout,
+body scheduling, WebView reuse, Header/Body separation, HTML dual layout, OAuth or bottom dock.
+
+Static and syntax checks
+------------------------
+Kotlin/KTS files: 51
+Kotlin PSI parser errors: 0
+
+Hotfix invariants:
+- composable tr("no_subject") resolved before remember calculation: PASS
+- no tr("no_subject") call remains inside MailWebHeader remember calculation: PASS
+- localized no-subject String included in remember keys: PASS
+- versionCode/versionName updated to 45 / 0.2.28.1: PASS
+
+Internationalization
+--------------------
+Files: en.json, zh-CHT.json, zh.json
+Keys per file: 166
+Key differences: 0
+Formatting-placeholder differences: 0
+No translation resources were changed by this hotfix.
+
+Android resources
+-----------------
+Android XML files: 15
+XML parse errors: 0
+
+Source hygiene
+--------------
+Forbidden generated/private paths found: 0
+Checked exclusions include .git, .gradle, .idea, .kotlin, build and local.properties.
+gradlew executable mode: 0755
+
+Build-environment limitation
+----------------------------
+A Gradle compile was attempted in the delivery environment, but Gradle Wrapper could not download
+Gradle 8.11.1 because services.gradle.org was unreachable. This report therefore does not claim a
+full Android build succeeded here.
+
+Observed result:
+java.net.UnknownHostException: services.gradle.org
+
+The reported Compose error has been corrected at its source. Run on the development machine:
+
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Packaging verification
+----------------------
+The external validation performed after packaging covers patch application, source comparison,
+ZIP integrity, archive extraction comparison, permissions and SHA256 results.

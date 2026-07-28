@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+.idea/
+local.properties
+.DS_Store
+/build/
+**/build/
+.cxx/
+.externalNativeBuild/
+captures/
+*.jks
+*.keystore
+secrets.properties
+google-services.json
+app/schemas/*.json
+hs_err_pid*.log
+replay_pid*.log

@@ -1,0 +1,99 @@
+BondMail Kotlin v0.2.37.0 validation
+Date: 2026-07-27
+Baseline: v0.2.36.0
+
+Summary: PASS 73 / FAIL 0
+
+Validation checks
+PASS  versionCode = 58
+PASS  versionName = 0.2.37.0
+PASS  IMAP client identification reports 0.2.37.0
+PASS  Room database remains version 8
+PASS  MIME parser remains version 8
+PASS  prepared HTML cache key is layout-v32
+PASS  CircularRevealSwitch dependency is not added in this mail-content release
+PASS  launcher foreground uses a reduced 0.88 safe-zone scale
+PASS  launcher foreground is an outlined transparent envelope rather than a solid glyph
+PASS  dedicated Android 13+ monochrome launcher resource exists
+PASS  monochrome resource is transparent except for the envelope strokes
+PASS  both adaptive icon variants reference the dedicated monochrome resource
+PASS  full-colour launcher background uses the softer blue-grey token
+PASS  detail screen owns a shared top-pull target and animated offset
+PASS  shared top pull is bounded to 60dp
+PASS  top pull settles with a damped spring
+PASS  top-pull resistance increases toward the limit
+PASS  WebView top-pull gesture uses rawY so translated content does not reverse the delta
+PASS  WebView private overscroll is disabled in favour of the shared sheet motion
+PASS  HTML/preview container follows the shared top-pull offset
+PASS  native subject/sender overlay follows the same top-pull offset
+PASS  header drag can drive and release the shared top pull
+PASS  new WebViews remain natively transparent until visual commit
+PASS  HTML reveal uses the WebView ViewPropertyAnimator, not only Compose alpha
+PASS  mail reveal uses the emphasized decelerate path interpolator
+PASS  first-open and revisit reveal durations are 260ms and 150ms
+PASS  reveal waits for onPageFinished
+PASS  reveal waits for a visual-state callback
+PASS  reveal waits for two stable animation frames
+PASS  onPageCommitVisible is only a late 2400/4200ms fallback
+PASS  exact retained pages attach immediately without replaying the reveal
+PASS  pooled WebViews cancel old animation and reset alpha/translation
+PASS  pure-text placeholder card shadow is removed
+PASS  placeholder border opacity is reduced to 0.20
+PASS  final HTML card shadow is reduced
+PASS  Grab normal @grab.com identities are recognized
+PASS  Grab escaped grab_com sender identities are recognized
+PASS  Grab is forced through the preserved desktop canvas path
+PASS  fixed-canvas known senders retain the 600px fallback
+PASS  Grab uses sender-scoped 106 percent text zoom
+PASS  Binance responsive and fixed-template decisions remain independent of Grab
+PASS  Facebook/Meta sender detection covers facebookmail, facebook and meta domains
+PASS  Facebook/Meta mail receives sender-scoped 132 percent text zoom
+PASS  Facebook branding enhancement is gated by sender identity
+PASS  Facebook logo scan excludes tiny and named tracking resources
+PASS  Facebook logo selection uses explicit brand signatures before dimension fallback
+PASS  Facebook wide and square logo targets are 128px and 52px
+PASS  Facebook logo CSS preserves image proportions
+PASS  momentum scroll-to-top helper is present
+PASS  long lists first establish accelerated upward velocity
+PASS  long invisible middle is skipped only after velocity is established
+PASS  final visible rows use emphasized deceleration
+PASS  scroll-to-top ends at exact index zero and offset zero
+PASS  motion-disabled mode returns immediately to the top
+PASS  Home screen uses momentum scroll-to-top
+PASS  Contacts screen uses momentum scroll-to-top
+PASS  5 JSON source files parse successfully
+PASS  en/zh/zh-CHT contain the same 178 translation keys
+PASS  printf placeholders match across en/zh/zh-CHT
+PASS  15 Android XML files parse successfully
+PASS  56 Kotlin/KTS files passed Kotlin PSI syntax parsing with zero errors
+PASS  MailWebViewCache.kt compiled against focused Android/Jsoup/coroutine stubs
+PASS  MailWebViewPool.kt compiled against focused Android/WebView stubs
+PASS  ScrollMotion.kt compiled against focused Compose lazy-list stubs
+PASS  native WebView hide/reveal functions compiled against focused Android stubs
+PASS  shared top-pull calculation and animation-spec inference compiled against focused Compose stubs
+PASS  git diff --check finds no whitespace errors
+PASS  changed source and documentation contain no trailing whitespace
+PASS  changed source and documentation contain no merge-conflict markers
+PASS  source tree contains no build/.gradle/.kotlin/local.properties/APK/AAB artifacts
+PASS  v0.2.37.0 changelog exists
+PASS  v0.2.37.0 test checklist is present at the top of TEST_CHECKLIST.md
+PASS  current README/implementation docs match the 132 percent Facebook zoom
+
+Build status
+NOT RUN  Full Android Gradle/Compose/Room KSP/R8 build in this environment.
+Reason: Gradle 8.11.1 is not cached, no Android SDK is installed, and the wrapper probe cannot resolve services.gradle.org.
+No APK/AAB is included or claimed.
+
+Run on the Windows development machine:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Primary device checks
+1. Compare the colour and Android themed launcher icons beside Gmail/Thunderbird; the outlined envelope must no longer look oversized or become a solid block.
+2. Pull down from HTML, subject, avatar, sender and date at scroll top; the entire mail sheet must move together and spring back without separating.
+3. Open an uncached HTML mail beside K-9; readable preview should remain until the complete page fades in, without a half-rendered frame.
+4. Reopen the same committed mail and run A -> B -> A; exact retained pages must attach immediately and never inherit stale alpha/translation or previous content.
+5. Open short plain-text mail; placeholder corners should have no heavy shadow and the final card should settle at natural height.
+6. Regress the reported Grab cancellation mail and Binance transaction mail in light/dark mode; Grab must fit fully while Binance formatting stays intact.
+7. Open Facebook/Meta registration/security mail; body text and logo should be readable, while trackers and ordinary message images remain unchanged.
+8. From tens and hundreds of rows, tap scroll-to-top; motion should accelerate, traverse the long middle without row-by-row jank, then decelerate into the first row.

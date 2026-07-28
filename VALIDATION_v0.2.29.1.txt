@@ -1,0 +1,65 @@
+BondMail Kotlin v0.2.29.1 validation report
+
+Version
+- versionCode: 47
+- versionName: 0.2.29.1
+- Room database: 6
+- prepared HTML cache: layout-v24
+- upgrade baseline: unmodified v0.2.29.0
+
+Implemented checks
+[PASS] Detail forward transition no longer applies route-level fadeIn.
+[PASS] Detail backward transition no longer applies route-level fadeOut.
+[PASS] Detail route remains fully opaque while retaining lightweight horizontal navigation motion.
+[PASS] Mailbox content underneath can no longer blend with detail subject/sender text.
+[PASS] Prepared HTML LRU supports synchronous in-memory lookup before the first detail frame.
+[PASS] Pooled WebView exposes retained-content reuse before AndroidView attachment.
+[PASS] Reopening the last fully committed message can skip the loading placeholder.
+[PASS] Cache reuse keys include remote-image state, theme colors, header, top inset and viewport width.
+[PASS] Style or viewport changes still invalidate the retained page correctly.
+[PASS] Compose placeholder and generated message shell both use Android sans-serif typography.
+[PASS] Gmail-style subject uses regular weight in both placeholder and final WebView document.
+[PASS] HTML cache namespace was upgraded to layout-v24.
+[PASS] IMAP/SMTP, OAuth/XOAUTH2, Room schema, body-prefetch priority and message layout classification are unchanged.
+
+Static validation
+- Kotlin/KTS files parsed with Kotlin PSI: 51
+- Kotlin PSI syntax errors: 0
+- i18n JSON files: zh, zh-CHT, en
+- keys per i18n file: 166
+- i18n key differences: 0
+- formatting-placeholder differences: 0
+- direct tr("...") references checked: 121
+- missing translation keys: 0
+- Android XML files parsed: 15
+- XML parse errors: 0
+- forbidden transient paths/files found: 0
+
+Not executed in this environment
+- Android Compose type resolution
+- Room KSP/SQL generation
+- assembleDebug / assemblePerformance
+- minifyPerformanceWithR8
+- APK installation and device transition/WebView verification
+
+Reason
+- The delivery environment has no Android SDK. Final Android compilation and device behavior must be verified locally with:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Delivery verification
+- PROJECT_MANIFEST.sha256 entries: 122
+- manifest verification failures: 0
+- final source files including manifest: 123
+- upgrade patch git apply --check: PASS
+- upgrade patch actual apply: PASS
+- patched source vs full source missing files: 0
+- patched source vs full source extra files: 0
+- patched source vs full source content differences: 0
+- patched source vs full source permission differences: 0
+- ZIP integrity test: PASS
+- ZIP extracted files: 123
+- ZIP extracted content differences: 0
+- ZIP extracted permission differences: 0
+- gradlew executable mode after extraction: 0755
+- excluded transient directories/files: .git, .gradle, .idea, .kotlin, build, local.properties

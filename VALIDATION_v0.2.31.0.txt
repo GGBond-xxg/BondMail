@@ -1,0 +1,79 @@
+BondMail Kotlin v0.2.31.0 validation report
+============================================
+
+Version
+-------
+- versionCode: 49
+- versionName: 0.2.31.0
+- minSdk: 26
+- targetSdk: 36
+- Room database: 7
+- HTML prepared-document cache: layout-v24
+- Upgrade baseline: unmodified v0.2.30.0
+
+Implemented scope
+-----------------
+- Opening any remote message immediately writes the local read state before navigation and then
+  commits IMAP \Seen on the serialized account lane. The list keeps an optimistic read overlay so
+  a delayed Room/IMAP snapshot cannot make the row look unread again while returning from detail.
+- Added an Unread mailbox between Inbox and Starred for single-account and all-account views.
+- Sent now combines real provider Sent-folder mail with local queued/sending/failed placeholders.
+  SMTP delivery and Sent-folder reconciliation are separated by a stable Message-ID so a retry of
+  IMAP reconciliation cannot resend the message.
+- Drafts combines provider Drafts-folder mail with local drafts. Exiting a meaningful composer
+  opens a Save / Discard / Cancel decision. Saved drafts are queued to an IMAP APPEND worker and
+  safely replace a previous server draft only after the new copy is accepted.
+- Sent and Drafts folder resolution supports IMAP special-use attributes, common aliases, Gmail,
+  Outlook/Microsoft 365, NetEase and general fallback names.
+- Detail forward/back transitions are opaque, shorter Telegram-like horizontal movements. The
+  Android predictive-back opt-in remains enabled and Navigation Compose owns the back gesture.
+- Detail HTML reveal uses a small one-time alpha/scale reveal over the stable skeleton to hide the
+  remaining WebView first-frame flash without drawing a second real text layer.
+- Existing OAuth/XOAUTH2, app-password replacement, K-9-style incremental inbox sync, body
+  prefetch, FLUID/DESKTOP HTML modes and Cloudflare/GitHub/NetEase/Bybit fixes remain intact.
+
+Static validation performed
+---------------------------
+- Kotlin PSI syntax parsing: 49 Kotlin/KTS files, 0 syntax errors.
+- git diff --check: passed.
+- Translation JSON: en, zh, zh-CHT each contain 175 keys.
+- Translation key parity: passed.
+- Translation format-placeholder parity: passed.
+- Direct tr("...") references: 130, missing keys: 0.
+- Android XML parse: 15 files, 0 parse errors.
+- Source invariants checked: version 49/0.2.31.0, Room 7 migration, unread queries/UI,
+  open-to-read path, optimistic overlay, Sent/Drafts synchronization, draft worker/dialog,
+  delivery-state UI, Telegram-style transition functions and predictive-back manifest opt-in.
+
+Patch / archive validation
+--------------------------
+- The final patch is generated from the unmodified v0.2.30.0 source baseline.
+- git apply --check is executed against a clean copy of that baseline.
+- The patch is actually applied and the result is compared against the complete v0.2.31.0 source.
+- Final ZIP integrity, extracted file set, SHA256 contents and executable permissions are checked.
+- gradlew must retain executable mode 0755 in the source tree and extracted archive.
+- Generated artifacts, build caches, .git, .gradle, .idea, .kotlin, build directories and
+  local.properties are excluded from the source ZIP.
+
+Build limitation
+----------------
+This environment does not contain the Android SDK or a cached Gradle 8.11.1 distribution, and it
+cannot resolve services.gradle.org. Therefore Android Compose type resolution, Room KSP, R8 and APK
+assembly were not run here. No APK build success is claimed. Compile locally with:
+
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Recommended device checks
+-------------------------
+1. Open an unread Gmail, Outlook and 163 message; return immediately and confirm it stays read.
+2. Mark a message unread manually, refresh, and confirm the server/local state remains unread.
+3. Open Unread and confirm only unread Inbox messages are listed.
+4. Send mail while watching Sent: Queued/Sending should animate to Sent, without duplicate mail.
+5. Save a draft, confirm it appears locally, then verify it appears in provider webmail Drafts.
+6. Edit and save the same remote draft; confirm the older server copy is replaced, not duplicated.
+7. Discard a local or remote draft and confirm the matching server copy is removed when applicable.
+8. Test edge-swipe predictive back on detail, provider and credential pages; the destination should
+   be previewed and the completed/cancelled transition should remain fast and opaque.
+9. Reopen HTML messages and confirm the small reveal hides the first WebView frame without a
+   coarse-to-thin text swap or a full-page white flash.

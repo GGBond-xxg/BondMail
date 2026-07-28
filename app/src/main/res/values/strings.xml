@@ -1,0 +1,5 @@
+<resources>
+    <!-- Android system-facing strings only. Compose UI strings are in assets/i18n/*.json. -->
+    <string name="app_name">邮箱</string>
+    <string name="notifications">新邮件通知</string>
+</resources>

@@ -1,0 +1,85 @@
+BondMail Kotlin v0.2.35.0 validation
+Date: 2026-07-27
+Baseline: v0.2.34.0
+
+Source/version checks
+PASS  versionCode = 55
+PASS  versionName = 0.2.35.0
+PASS  Room database remains 8; no schema change was introduced
+PASS  MIME parser remains 8
+PASS  prepared HTML cache = layout-v28
+PASS  IMAP client identification reports 0.2.35.0
+PASS  source archive contains no .gradle, .kotlin, build, local.properties, APK or AAB artifacts
+
+First-unread open transaction checks
+PASS  list tap and detail destination use the same prepareMessageForOpen(messageId) single-flight
+PASS  the open-flight is installed before navigation reaches the first DAO suspension
+PASS  explicit BODY.PEEK uses the interactive Store lane even when remote Seen is deferred
+PASS  foreground BODY and background prefetch use separate account and per-message lanes
+PASS  local unread=false is written immediately; remote Seen runs only after content succeeds
+PASS  owner/waiter exits cannot create duplicate remote Seen jobs
+PASS  pending Seen tokens preserve the local read intent against stale server FLAGS
+PASS  a newer explicit mark-unread clears the pending token and wins over delayed Seen
+PASS  all paths needing both locks use BODY -> accountSync order
+PASS  direct notification/deep-link detail entry captures the initial Room unread state once
+PASS  old messageOpenPrimeJobs duplicate priming path is absent
+
+Stable header and HTML reveal checks
+PASS  the first-frame MessageEntity snapshot is retained per detail message
+PASS  subject, avatar, sender, address, recipient and date use one native MailStableHeaderOverlay
+PASS  visible header text is frozen for the detail session; later MIME attachment discovery only fills a reserved 16 dp slot
+PASS  hidden Compose/HTML header geometry remains in document flow while visible text is not painted twice
+PASS  native header follows the WebView physical scrollY value
+PASS  Compose and hidden HTML header typography use matching sizes, line heights, fontScale and zero letter spacing
+PASS  both prepared-document cache entry points include fontScale in their inputs/cache key
+PASS  Room invalidation delay is bridged by immediateOpenResult; no empty interim plain-text document is required
+PASS  first display waits for page finished + visual-state callback + drawing frames; commit-visible is fallback only
+PASS  cached/reused WebView content waits for an attachment frame and does not expose an empty Surface
+PASS  BODY failure keeps the title/sender/preview and shows a bottom retry action
+PASS  renderer failure/recovery path remains present
+
+HTML layout regression checks
+PASS  Binance/binance.us mail can recover a 600 px desktop canvas from conditional-comment markup
+PASS  sibling MJML/social icon tables and links are detected as one horizontal strip
+PASS  row/cell/icon inline constraints protect the footer from sender mobile CSS width:100% stacking
+PASS  SVG declared height is preserved
+PASS  icon-only footer content is excluded from main content-width classification
+PASS  known NetEase mobile transactional mail remains FLUID
+PASS  algorithmic WebView darkening remains enabled
+
+Executable/static validation
+PASS  55 Kotlin/KTS files passed lexical string/comment and (), [], {} balance scanning
+PASS  MailWebViewCache.kt compiled successfully with focused Android/Jsoup/coroutine stubs; only unused-stub warnings were emitted
+PASS  standalone Kotlin parser passes contained no syntax-error markers for DetailScreen.kt and MailWebViewCache.kt; unresolved Android/Compose references are expected without the Android classpath
+PASS  5 JSON source files parsed successfully
+PASS  15 XML source files parsed successfully
+PASS  changed code/docs contain no trailing whitespace
+PASS  no merge-conflict markers are present
+PASS  isolated concurrency model: shared owner/waiter BODY result
+PASS  isolated concurrency model: read request joining a pre-open flight
+PASS  isolated concurrency model: BODY failure does not submit remote Seen and retry succeeds
+PASS  isolated concurrency model: newer mark-unread wins over deferred Seen
+
+CircularRevealSwitch review
+PASS  uploaded module source was inspected
+PASS  no library dependency or theme behavior was added in this mail-content release
+PASS  direct integration was intentionally deferred because the module relies on AppCompatDelegate/ActivityCompat recreation, can replace touch listeners, and its own README warns about recreation flicker
+RECOMMENDATION  implement a BondMail-specific no-recreate screenshot overlay for the requested button/system-origin circular reveal in a separate theme-motion release
+
+Build status
+NOT RUN  Full Android Gradle/Compose/Room KSP/R8 build in this environment.
+Reason: no Android SDK is installed. Gradle 8.11.1 and Android/Maven dependencies are not cached, and outbound DNS/network download is unavailable. No APK is included or claimed.
+
+Run on the Windows development machine:
+  .\gradlew.bat --stop
+  .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
+
+Primary device checks
+1. Cold-start, then make the first tap an uncached unread Gmail/Outlook/163 message; it must open on that first tap.
+2. Repeat while visible-body prefetch is active; interactive BODY must not wait for the prefetch Store.
+3. Watch the whole preview-to-HTML transition frame by frame; subject/sender/date/avatar must not change weight, wrap or position.
+4. Open from a system notification/deep link and verify the unread message loads and remains read after sync.
+5. Fail the network during first open; the preview must stay visible and retry must recover.
+6. Reopen the same message immediately; no blank WebView attachment frame or old-message residue.
+7. Open the Binance USDC notification in light/dark mode; full footer must remain visible and social icons horizontal.
+8. Test default/large/maximum system font size; the body start must not jump when HTML appears.

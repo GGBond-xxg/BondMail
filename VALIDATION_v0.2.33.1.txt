@@ -1,0 +1,12 @@
+BondMail Kotlin v0.2.33.1 validation
+
+PASS  versionCode = 53
+PASS  versionName = 0.2.33.1
+PASS  SmtpClient.describeAttachments is internal
+PASS  No public function exposes internal MailAttachmentInfo in SmtpClient.kt
+PASS  Room database remains 8
+PASS  HTML cache remains layout-v25
+
+Build note:
+- This environment has no configured Android SDK, so a full Android Gradle build was not run here.
+- The reported Kotlin visibility error is removed at its source by matching the function visibility to its internal return type.
