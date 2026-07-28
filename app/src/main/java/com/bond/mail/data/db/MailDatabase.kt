@@ -10,8 +10,9 @@ import androidx.room.RoomDatabase
         MessageEntity::class,
         OutboxEntity::class,
         NotificationStateEntity::class,
+        SavedContactEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class MailDatabase : RoomDatabase() {
@@ -20,4 +21,5 @@ abstract class MailDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun outboxDao(): OutboxDao
     abstract fun notificationStateDao(): NotificationStateDao
+    abstract fun savedContactDao(): SavedContactDao
 }

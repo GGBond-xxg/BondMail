@@ -2,6 +2,7 @@ package com.bond.mail.ui.components
 
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bond.mail.ui.i18n.tr
 import androidx.core.content.ContextCompat
@@ -30,7 +30,11 @@ import androidx.lifecycle.LifecycleEventObserver
 
 @Composable
 fun BiometricGate(enabled: Boolean, content: @Composable () -> Unit) {
-    val activity = LocalContext.current as FragmentActivity
+    val activity = LocalActivity.current as? FragmentActivity
+    if (activity == null) {
+        content()
+        return
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
     val authenticationAvailable = remember(activity) {

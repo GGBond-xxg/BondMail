@@ -793,6 +793,11 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
     )
     val sending = MutableStateFlow(false)
     val error = MutableStateFlow<UiFailure?>(null)
+    val savedContacts = container.repository.savedContacts.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyList(),
+    )
 
     fun queue(
         accountId: String,
@@ -810,11 +815,14 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
         sending.value = true
         error.value = null
         runCatching {
+            val resolvedTo = container.repository.resolveRecipients(to)
+            val resolvedCc = container.repository.resolveRecipients(cc)
+            val resolvedBcc = container.repository.resolveRecipients(bcc)
             val task = container.repository.queueSend(
                 accountId = accountId,
-                recipients = to,
-                cc = cc,
-                bcc = bcc,
+                recipients = resolvedTo,
+                cc = resolvedCc,
+                bcc = resolvedBcc,
                 subject = subject,
                 body = body,
                 attachmentUris = attachmentUris,
@@ -843,11 +851,14 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
         sending.value = true
         error.value = null
         runCatching {
+            val resolvedTo = container.repository.resolveRecipients(to)
+            val resolvedCc = container.repository.resolveRecipients(cc)
+            val resolvedBcc = container.repository.resolveRecipients(bcc)
             val task = container.repository.saveDraft(
                 accountId = accountId,
-                recipients = to,
-                cc = cc,
-                bcc = bcc,
+                recipients = resolvedTo,
+                cc = resolvedCc,
+                bcc = resolvedBcc,
                 subject = subject,
                 body = body,
                 attachmentUris = attachmentUris,

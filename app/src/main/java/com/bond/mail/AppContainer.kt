@@ -91,8 +91,36 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration8To9 = object : Migration(8, 9) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS saved_contacts (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            database.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_saved_contacts_email ON saved_contacts(email)",
+            )
+        }
+    }
+
     val database: MailDatabase = Room.databaseBuilder(context, MailDatabase::class.java, "bond_mail.db")
-        .addMigrations(migration1To2, migration2To3, migration3To4, migration4To5, migration5To6, migration6To7, migration7To8)
+        .addMigrations(
+            migration1To2,
+            migration2To3,
+            migration3To4,
+            migration4To5,
+            migration5To6,
+            migration6To7,
+            migration7To8,
+            migration8To9,
+        )
         .build()
     val settings = SettingsStore(context)
     val credentials = CredentialStore(context)

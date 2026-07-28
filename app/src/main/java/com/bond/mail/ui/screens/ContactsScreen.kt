@@ -33,15 +33,20 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -56,6 +61,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,10 +92,26 @@ fun ContactsScreen(
     val contacts by container.repository.contacts.collectAsState(
         initial = container.repository.startupContactsSnapshot(),
     )
+    val savedContacts by container.repository.savedContacts.collectAsState(initial = emptyList())
     var query by rememberSaveable { mutableStateOf("") }
-    val filteredContacts = remember(contacts, query) {
+    var showAddContact by rememberSaveable { mutableStateOf(false) }
+    var contactName by rememberSaveable { mutableStateOf("") }
+    var contactEmail by rememberSaveable { mutableStateOf("") }
+    var contactError by remember { mutableStateOf<String?>(null) }
+    var contactSaving by remember { mutableStateOf(false) }
+    val invalidContactLabel = tr("invalid_contact")
+    val frequentContacts = remember(savedContacts, query) {
+        savedContacts.filter { contact ->
+            query.isBlank() ||
+                contact.name.contains(query, ignoreCase = true) ||
+                contact.email.contains(query, ignoreCase = true)
+        }
+    }
+    val filteredContacts = remember(contacts, savedContacts, query) {
+        val savedAddresses = savedContacts.mapTo(mutableSetOf()) { it.email.lowercase() }
         contacts
             .asSequence()
+            .filterNot { it.senderAddress.lowercase() in savedAddresses }
             .filter { contact ->
                 query.isBlank() ||
                     contact.senderName.contains(query, ignoreCase = true) ||
@@ -143,7 +166,7 @@ fun ContactsScreen(
         ) {
             item(key = "contacts-title") {
                 Text(
-                    tr("contacts"),
+                    if (frequentContacts.isEmpty()) tr("contacts") else tr("saved_contacts"),
                     modifier = Modifier.padding(start = 14.dp, top = 4.dp, bottom = 2.dp),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
@@ -151,7 +174,34 @@ fun ContactsScreen(
                 )
             }
 
-            if (filteredContacts.isEmpty()) {
+            if (frequentContacts.isNotEmpty()) {
+                itemsIndexed(
+                    items = frequentContacts,
+                    key = { _, contact -> "saved-${contact.id}" },
+                    contentType = { _, _ -> "saved-contact-card" },
+                ) { index, contact ->
+                    ContactItem(
+                        name = contact.name,
+                        email = contact.email,
+                        settings = settings,
+                        shape = MailContentDefaults.itemShape(index, frequentContacts.size),
+                        onCompose = onCompose,
+                    )
+                }
+                if (filteredContacts.isNotEmpty()) {
+                    item(key = "all-contacts-title") {
+                        Text(
+                            tr("contacts"),
+                            modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 2.dp),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            if (filteredContacts.isEmpty() && frequentContacts.isEmpty()) {
                 item(key = "contacts-empty") {
                     Box(
                         modifier = Modifier
@@ -171,66 +221,13 @@ fun ContactsScreen(
                     key = { _, contact -> contact.senderAddress.lowercase() },
                     contentType = { _, _ -> "contact-card" },
                 ) { index, contact ->
-                    GroupedListSurface(
-                        onClick = { onCompose(contact.senderAddress) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateItem(),
+                    ContactItem(
+                        name = contact.senderName.ifBlank { contact.senderAddress },
+                        email = contact.senderAddress,
+                        settings = settings,
                         shape = MailContentDefaults.itemShape(index, filteredContacts.size),
-                        containerColor = MaterialTheme.bondSurfaces.content,
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 78.dp)
-                                .padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            BrandAvatar(
-                                contact.senderName,
-                                contact.senderAddress,
-                                46.dp,
-                                settings.dynamicColor && settings.monetBrandIcons,
-                            )
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    contact.senderName.ifBlank { contact.senderAddress },
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 16.sp,
-                                        lineHeight = 21.sp,
-                                    ),
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    contact.senderAddress,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.sp,
-                                        lineHeight = 18.sp,
-                                    ),
-                                    fontWeight = FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            IconButton(
-                                onClick = { onCompose(contact.senderAddress) },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape),
-                            ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = tr("compose_mail"),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
-                    }
+                        onCompose = onCompose,
+                    )
                 }
             }
         }
@@ -292,6 +289,20 @@ fun ContactsScreen(
                                 }
                             },
                         )
+                        IconButton(
+                            onClick = {
+                                contactName = ""
+                                contactEmail = ""
+                                contactError = null
+                                showAddContact = true
+                            },
+                        ) {
+                            Icon(
+                                Icons.Default.PersonAdd,
+                                contentDescription = tr("add_contact"),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
             }
@@ -324,6 +335,117 @@ fun ContactsScreen(
                     Icons.Default.KeyboardArrowUp,
                     contentDescription = tr("scroll_to_top"),
                     modifier = Modifier.size(26.dp),
+                )
+            }
+        }
+
+        if (showAddContact) {
+            AlertDialog(
+                onDismissRequest = { showAddContact = false },
+                title = { Text(tr("add_contact")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedTextField(
+                            value = contactName,
+                            onValueChange = {
+                                contactName = it
+                                contactError = null
+                            },
+                            label = { Text(tr("contact_name")) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        )
+                        OutlinedTextField(
+                            value = contactEmail,
+                            onValueChange = {
+                                contactEmail = it
+                                contactError = null
+                            },
+                            label = { Text(tr("email_address")) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Done,
+                            ),
+                        )
+                        contactError?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !contactSaving,
+                        onClick = {
+                            scrollScope.launch {
+                                contactSaving = true
+                                runCatching {
+                                    container.repository.saveContact(contactName, contactEmail)
+                                }.onSuccess {
+                                    showAddContact = false
+                                }.onFailure {
+                                    contactError = invalidContactLabel
+                                }
+                                contactSaving = false
+                            }
+                        },
+                    ) { Text(tr("save")) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddContact = false }) {
+                        Text(tr("cancel"))
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContactItem(
+    name: String,
+    email: String,
+    settings: AppSettings,
+    shape: androidx.compose.ui.graphics.Shape,
+    onCompose: (String) -> Unit,
+) {
+    GroupedListSurface(
+        onClick = { onCompose(email) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        containerColor = MaterialTheme.bondSurfaces.content,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 78.dp)
+                .padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BrandAvatar(name, email, 46.dp, settings.dynamicColor && settings.monetBrandIcons)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 21.sp),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    email,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 18.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(onClick = { onCompose(email) }, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = tr("compose_mail"),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
                 )
             }
         }

@@ -17,3 +17,5 @@ app/schemas/*.json
 hs_err_pid*.log
 replay_pid*.log
 /VALIDATION_*.txt
+/.codex-video-frames/
+/ICON/

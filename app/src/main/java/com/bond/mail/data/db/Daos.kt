@@ -229,6 +229,9 @@ interface MessageDao {
     """)
     suspend fun contactsSnapshot(): List<ContactRow>
 
+    @Query("UPDATE messages SET senderName = :name WHERE LOWER(senderAddress) = LOWER(:email)")
+    suspend fun applyContactName(email: String, name: String)
+
     @Query("""
         SELECT id, accountId, folderType, senderName, senderAddress, recipients, subject, preview, receivedAt, unread, starred, deliveryState, NULL AS localTaskId
         FROM messages
@@ -251,6 +254,24 @@ interface MessageDao {
         parserVersion: Int,
         limit: Int,
     ): List<String>
+}
+
+@Dao
+interface SavedContactDao {
+    @Query("SELECT * FROM saved_contacts ORDER BY updatedAt DESC, name COLLATE NOCASE")
+    fun observeAll(): Flow<List<SavedContactEntity>>
+
+    @Query("SELECT * FROM saved_contacts ORDER BY updatedAt DESC, name COLLATE NOCASE")
+    suspend fun allNow(): List<SavedContactEntity>
+
+    @Query("SELECT * FROM saved_contacts WHERE LOWER(email) = LOWER(:email) LIMIT 1")
+    suspend fun byEmail(email: String): SavedContactEntity?
+
+    @Upsert
+    suspend fun upsert(contact: SavedContactEntity)
+
+    @Query("DELETE FROM saved_contacts WHERE id = :id")
+    suspend fun deleteById(id: String)
 }
 
 @Dao

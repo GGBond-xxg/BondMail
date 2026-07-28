@@ -25,7 +25,9 @@ internal object MailWebViewPool {
     private val retainedContentKeys = WeakHashMap<WebView, String>()
     private val presentedContentKeys = LinkedHashSet<String>()
 
-    private const val MAX_CACHED_WEB_VIEWS = 4
+    // Two retained pages cover the common A -> B -> A path without letting several image-heavy
+    // newsletters compete for Chromium tile memory in the same renderer.
+    private const val MAX_CACHED_WEB_VIEWS = 2
     private const val MAX_PRESENTED_CONTENT_KEYS = 96
 
     fun acquire(context: Context, preferredContentKey: String? = null): WebView {

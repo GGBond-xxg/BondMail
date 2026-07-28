@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -86,7 +85,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bond.mail.ui.ComposeViewModel
@@ -127,6 +125,7 @@ fun ComposeScreen(
     onQueued: () -> Unit,
 ) {
     val accounts by viewModel.accounts.collectAsState()
+    val savedContacts by viewModel.savedContacts.collectAsState()
     val sending by viewModel.sending.collectAsState()
     val error by viewModel.error.collectAsState()
     val context = LocalContext.current
@@ -203,9 +202,6 @@ fun ComposeScreen(
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val density = LocalDensity.current
-        val imeVisible = WindowInsets.ime.getBottom(density) > 0
-        val currentImeVisible by rememberUpdatedState(imeVisible)
         val hasMeaningfulDraft = to.isNotBlank() || cc.isNotBlank() || bcc.isNotBlank() ||
             subject.isNotBlank() || body.isNotBlank() || attachments.isNotEmpty()
         val confirmDraftClose by rememberUpdatedState(
@@ -216,10 +212,6 @@ fun ComposeScreen(
             skipHiddenState = false,
             confirmValueChange = { target ->
                 when {
-                    // Focusing a field normally asks BottomSheetScaffold to expand before it
-                    // scrolls the field above the IME. That moves the whole composer to the very
-                    // top of the screen. Keep the established partial position while typing.
-                    target == SheetValue.Expanded && currentImeVisible -> false
                     target == SheetValue.Hidden && confirmDraftClose -> {
                         showDraftDecision = true
                         false
@@ -270,6 +262,12 @@ fun ComposeScreen(
             }
         }
 
+        fun expandForInput() {
+            if (sheetState.targetValue != SheetValue.Expanded) {
+                scope.launch { sheetState.expand() }
+            }
+        }
+
         LaunchedEffect(sheetState) {
             snapshotFlow { sheetState.currentValue }.collect { value ->
                 if (value != SheetValue.Hidden) {
@@ -282,12 +280,6 @@ fun ComposeScreen(
 
         LaunchedEffect(Unit) {
             sheetState.partialExpand()
-        }
-
-        LaunchedEffect(imeVisible) {
-            if (imeVisible && sheetState.currentValue == SheetValue.Expanded) {
-                sheetState.partialExpand()
-            }
         }
 
         // Back always exits the composer, even when the sheet was manually expanded to full height.
@@ -445,7 +437,10 @@ fun ComposeScreen(
                             label = { Text(tr("to")) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .onFocusChanged { recipientFocused = it.isFocused },
+                                .onFocusChanged {
+                                    recipientFocused = it.isFocused
+                                    if (it.isFocused) expandForInput()
+                                },
                             singleLine = true,
                             trailingIcon = {
                                 IconButton(
@@ -499,7 +494,9 @@ fun ComposeScreen(
                                     value = cc,
                                     onValueChange = { cc = it },
                                     label = { Text(tr("cc")) },
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { if (it.isFocused) expandForInput() },
                                     singleLine = true,
                                     shape = RoundedCornerShape(18.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -512,7 +509,9 @@ fun ComposeScreen(
                                     value = bcc,
                                     onValueChange = { bcc = it },
                                     label = { Text(tr("bcc")) },
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { if (it.isFocused) expandForInput() },
                                     singleLine = true,
                                     shape = RoundedCornerShape(18.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -521,6 +520,61 @@ fun ComposeScreen(
                                         disabledContainerColor = MaterialTheme.bondSurfaces.input,
                                     ),
                                 )
+                            }
+                        }
+
+                        val contactSuggestions = remember(to, recipientFocused, savedContacts) {
+                            if (!recipientFocused) {
+                                emptyList()
+                            } else {
+                                val token = currentRecipientToken(to)
+                                if (token.isBlank()) emptyList()
+                                else savedContacts
+                                    .asSequence()
+                                    .filter { contact ->
+                                        contact.name.contains(token, ignoreCase = true) ||
+                                            contact.email.contains(token, ignoreCase = true)
+                                    }
+                                    .take(4)
+                                    .toList()
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = contactSuggestions.isNotEmpty(),
+                            enter = fadeIn(tween(BondMotionDuration.EffectShort)) +
+                                expandVertically(animationSpec = tween(BondMotionDuration.ElementEnter)),
+                            exit = fadeOut(tween(BondMotionDuration.EffectQuick)) +
+                                shrinkVertically(animationSpec = tween(BondMotionDuration.EffectShort)),
+                        ) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                color = MaterialTheme.bondSurfaces.section,
+                            ) {
+                                Column {
+                                    contactSuggestions.forEach { contact ->
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    to = applyContactRecipient(to, contact.email)
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 11.dp),
+                                        ) {
+                                            Text(
+                                                contact.name,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                contact.email,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -600,7 +654,9 @@ fun ComposeScreen(
                             value = subject,
                             onValueChange = { subject = it },
                             label = { Text(tr("subject")) },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { if (it.isFocused) expandForInput() },
                             singleLine = true,
                             shape = RoundedCornerShape(18.dp),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -615,6 +671,7 @@ fun ComposeScreen(
                             label = { Text(tr("body")) },
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .onFocusChanged { if (it.isFocused) expandForInput() }
                                 // A 250 dp field cannot fit together with the headers and IME,
                                 // so focus relocation scrolls the whole sheet far past its top.
                                 // Bound the editor and let OutlinedTextField scroll long bodies
@@ -725,6 +782,18 @@ private fun recipientDomainSuggestions(input: String): List<String> {
         .filter { domain -> typedDomain.isBlank() || domain.startsWith(typedDomain, ignoreCase = true) }
         .take(3)
         .toList()
+}
+
+private fun currentRecipientToken(input: String): String {
+    val tokenStart = maxOf(input.lastIndexOf(','), input.lastIndexOf(';')) + 1
+    return input.substring(tokenStart).trim()
+}
+
+private fun applyContactRecipient(input: String, email: String): String {
+    val tokenStart = maxOf(input.lastIndexOf(','), input.lastIndexOf(';')) + 1
+    val prefix = input.substring(0, tokenStart)
+    val spacing = if (prefix.isNotEmpty() && !prefix.endsWith(' ')) " " else ""
+    return "$prefix$spacing$email"
 }
 
 private fun applyRecipientDomain(input: String, domain: String): String {

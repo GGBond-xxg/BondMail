@@ -24,6 +24,15 @@ Copyright (c) Microsoft Corporation
 
 The full MIT License text is included at `licenses/MSAL-MIT.txt`.
 
+## Simple Icons
+
+BondMail bundles selected monochrome brand SVGs from Simple Icons. The icons are
+distributed under CC0 1.0 Universal; brand names and trademarks remain the property
+of their respective owners.
+
+The bundled CC0 text is included at
+`app/src/main/assets/contact_logos/simpleicons/LICENSE.txt`.
+
 ## Google Play services authentication / Google Identity Services
 
 BondMail v0.2.24.0 uses `com.google.android.gms:play-services-auth` for the Android Google Identity Services authorization flow. The dependency is obtained from Google's Maven repository and is governed by the applicable Android SDK / Google APIs terms. BondMail does not redistribute a Google Client Secret.

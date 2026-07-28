@@ -14,3 +14,5 @@ because BondMail applies either Monet colors or the configured fixed brand color
 Simple Icons source and usage:
 https://simpleicons.org/
 https://github.com/simple-icons/simple-icons
+
+Bundled Simple Icons were refreshed from the official simple-icons npm package v16.21.0.

@@ -42,9 +42,8 @@ class MainActivity : FragmentActivity() {
         useSystemManagedRefreshRate()
         UiPerformanceGate.onForeground()
 
-        // Never initialize Chromium before the first inbox frame. MailApp warms one detached
-        // WebView only after Compose has drawn and the inbox has remained idle, so cold start stays
-        // clean while the first message avoids paying the full Chromium construction cost.
+        // The application has already prepared the detached WebView behind the launch splash.
+        // Keep database preload here so the first visible inbox frame still contains local mail.
         lifecycleScope.launch {
             withTimeoutOrNull(1_500L) {
                 runCatching { container.repository.preloadStartupSnapshot() }

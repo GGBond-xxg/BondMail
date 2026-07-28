@@ -115,6 +115,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
@@ -127,7 +128,6 @@ import com.bond.mail.data.model.UiFailure
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.ui.components.BiometricGate
 import com.bond.mail.ui.components.FloatingCircleAction
-import com.bond.mail.ui.components.MailWebViewPool
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
@@ -189,6 +189,7 @@ private fun MessageEntity.withLatestListState(row: MessageListRow): MessageEntit
 fun MailApp(container: AppContainer, initialMessageId: String?) {
     val settings by container.settings.settings.collectAsState(initial = AppSettings())
     val nav = rememberNavController()
+    val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val context = LocalContext.current
     val motionEnabled = bondMotionEnabled()
@@ -306,7 +307,6 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
     var notificationPermissionGranted by remember { mutableStateOf(hasNotificationPermission()) }
     var showPermissionGuide by rememberSaveable { mutableStateOf(false) }
     var previousAccountCount by rememberSaveable { mutableIntStateOf(accounts.size) }
-    var webWarmupGeneration by remember { mutableIntStateOf(0) }
 
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -343,7 +343,6 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                         showPermissionGuide = false
                         appScope.launch { container.settings.setNotifications(true) }
                     }
-                    webWarmupGeneration += 1
                 }
                 Lifecycle.Event.ON_STOP -> {
                     container.setAppForeground(false)
@@ -410,21 +409,6 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
         if (!initialMessageId.isNullOrBlank()) {
             selectedMessage = null
             navigateOnce("detail/${Uri.encode(initialMessageId)}")
-        }
-    }
-
-    LaunchedEffect(webWarmupGeneration) {
-        // Let the inbox submit its first frame, then initialize Chromium promptly. Waiting for a
-        // long global "idle" window meant foreground sync could postpone warm-up for several
-        // seconds, so the first message click paid WebView construction on the navigation frame.
-        // A short post-frame delay keeps cold-start painting clean while normally finishing before
-        // a human can select the first row. The effect is re-armed on every foreground resume.
-        delay(120L)
-        if (
-            lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) &&
-            !MailWebViewPool.isReadyOrInUse()
-        ) {
-            MailWebViewPool.prewarm(context.applicationContext)
         }
     }
 
@@ -836,7 +820,7 @@ private fun FloatingBottomDock(
 
                 Surface(
                     modifier = Modifier
-                        .offset(x = indicatorX)
+                        .offset { IntOffset(indicatorX.roundToPx(), 0) }
                         .width(indicatorWidth)
                         .height(48.dp),
                     shape = RoundedCornerShape(24.dp),

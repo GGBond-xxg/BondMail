@@ -104,6 +104,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -132,6 +133,7 @@ import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.components.BrandAvatar
 import com.bond.mail.ui.components.MailContentHeightHint
 import com.bond.mail.ui.components.MailWebHeader
+import com.bond.mail.ui.components.contactLogoSvgMarkup
 import com.bond.mail.ui.components.MailWebViewCache
 import com.bond.mail.ui.components.MailWebViewPool
 import com.bond.mail.ui.components.PreparedMailDocument
@@ -247,6 +249,9 @@ fun DetailScreen(
         }
     }
     val detailDateLabel = remember(item.receivedAt) { formatDetailMailTime(item.receivedAt) }
+    val avatarSvg = remember(senderName, item.senderAddress) {
+        contactLogoSvgMarkup(context, senderName, item.senderAddress)
+    }
     val currentMailHeader = remember(
         item.subject,
         noSubjectLabel,
@@ -255,6 +260,7 @@ fun DetailScreen(
         owningAccount?.email,
         item.recipients,
         detailDateLabel,
+        avatarSvg,
         detailAttachments,
         settings.dynamicColor,
         settings.monetBrandIcons,
@@ -266,6 +272,7 @@ fun DetailScreen(
             recipient = owningAccount?.email ?: item.recipients,
             dateLabel = detailDateLabel,
             avatarText = senderInitials(senderName, item.senderAddress),
+            avatarSvg = avatarSvg,
             monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
             attachments = detailAttachments,
         )
@@ -736,7 +743,7 @@ private fun MessageActionDock(
             tonalElevation = 0.dp,
             shadowElevation = 6.dp,
         ) {
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
@@ -820,7 +827,8 @@ private fun MailHtmlView(
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val fontScale = density.fontScale.coerceIn(0.75f, 2.50f)
-    val viewportWidthCssPx = LocalConfiguration.current.screenWidthDp.coerceAtLeast(240)
+    val windowWidthPx = LocalWindowInfo.current.containerSize.width
+    val viewportWidthCssPx = (windowWidthPx / density.density).roundToInt().coerceAtLeast(240)
     // WebView scroll callbacks report physical pixels, while the HTML spacer is expressed in
     // density-independent CSS pixels. Convert the chrome thresholds to device pixels so the app
     // bar does not leave an unconsumed blank strip on high-density phones.
@@ -871,6 +879,8 @@ private fun MailHtmlView(
         buildString {
             append(cacheKey)
             append("|domain=").append(senderDomain)
+            append("|sender=").append(header.senderName.hashCode())
+            append("|avatar=").append(header.avatarSvg.hashCode())
             append("|attachments=").append(header.attachments.hashCode())
             append("|fg=").append(foregroundCss)
             append("|bg=").append(backgroundCss)
@@ -954,6 +964,12 @@ private fun MailHtmlView(
     // The exact detached WebView already contains a visually committed page. Keep it visible while
     // AndroidView reattaches the same instance; otherwise every revisit shows the preview for one frame.
     var pageVisible by remember(requestedContentKey) {
+        mutableStateOf(retainedContentAvailable)
+    }
+    // Paint the local HTML before allowing remote image decoding. Large Samsung newsletters can
+    // otherwise decode and upload several hero images on the same frames as detail navigation.
+    // Enabling WebSettings after the main document commits starts those resources without reloading.
+    var mainDocumentCommitted by remember(requestedContentKey) {
         mutableStateOf(retainedContentAvailable)
     }
     var placeholderVisible by remember(requestedContentKey) {
@@ -1225,6 +1241,7 @@ private fun MailHtmlView(
                                 // this point. Start navigation immediately instead of waiting for a
                                 // second visual-state callback and two more frames. Remote images can
                                 // continue decoding while the page moves in from the right.
+                                mainDocumentCommitted = true
                                 requestReveal(view, committedVisible = true)
                             }
 
@@ -1392,9 +1409,10 @@ private fun MailHtmlView(
                 },
                 update = { webView ->
                     webView.setBackgroundColor(background)
-                    runCatching { webView.settings.blockNetworkLoads = !loadImages }
-                    webView.settings.blockNetworkImage = !loadImages
-                    webView.settings.mixedContentMode = if (loadImages) {
+                    val allowRemoteResources = loadImages && mainDocumentCommitted
+                    runCatching { webView.settings.blockNetworkLoads = !allowRemoteResources }
+                    webView.settings.blockNetworkImage = !allowRemoteResources
+                    webView.settings.mixedContentMode = if (allowRemoteResources) {
                         WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                     } else {
                         WebSettings.MIXED_CONTENT_NEVER_ALLOW
@@ -1419,7 +1437,7 @@ private fun MailHtmlView(
                     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
                         WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
                     }
-                    holder.waitForResourceSettle = document.hasRemoteImages && loadImages
+                    holder.waitForResourceSettle = document.hasRemoteImages && allowRemoteResources
 
                     val contentKey = requestedContentKey
                     val retainedContentKey = MailWebViewPool.retainedContentKey(webView)
@@ -1462,6 +1480,7 @@ private fun MailHtmlView(
                         holder.scrollToTopOnCommit = messageChanged
                         if (messageChanged || !holder.hasCommittedContent) {
                             holder.hasCommittedContent = false
+                            mainDocumentCommitted = false
                             if (holder.topPullActive) {
                                 holder.topPullActive = false
                                 latestOnTopPullRelease()
@@ -1625,11 +1644,11 @@ private data class MailHeaderLayout(
 @Composable
 private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
     val density = LocalDensity.current
-    val configuration = LocalConfiguration.current
+    val windowWidthPx = LocalWindowInfo.current.containerSize.width
     val textMeasurer = rememberTextMeasurer()
     val availableWidthPx = with(density) {
         // Detail content uses 12 dp outer gutters and the subject itself keeps 4 dp on each side.
-        (configuration.screenWidthDp.dp - 32.dp).coerceAtLeast(220.dp).roundToPx()
+        (windowWidthPx - 32.dp.roundToPx()).coerceAtLeast(220.dp.roundToPx())
     }
     val fontScale = density.fontScale
 

@@ -13,6 +13,7 @@ import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.db.NotificationStateEntity
 import com.bond.mail.data.db.OutboxEntity
+import com.bond.mail.data.db.SavedContactEntity
 import com.bond.mail.data.mail.ImapClient
 import com.bond.mail.data.mail.MailAttachmentCodec
 import com.bond.mail.data.mail.MailLog
@@ -124,6 +125,7 @@ class MailRepository(
 
     val accounts: Flow<List<AccountEntity>> = database.accountDao().observeAll()
     val contacts = database.messageDao().observeContacts()
+    val savedContacts = database.savedContactDao().observeAll()
 
     @Volatile
     private var startupSnapshotLoaded = false
@@ -231,6 +233,49 @@ class MailRepository(
     suspend fun messageNow(id: String) = database.messageDao().byId(id)
     suspend fun draftNow(taskId: String) = database.outboxDao().byId(taskId)
     fun search(accountId: String?, query: String) = database.messageDao().searchRows(accountId, query)
+
+    suspend fun saveContact(name: String, email: String): SavedContactEntity {
+        val cleanName = name.trim()
+        val cleanEmail = email.trim()
+        require(cleanName.isNotBlank()) { "Contact name is required" }
+        require(android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
+            "Valid contact email is required"
+        }
+        val now = System.currentTimeMillis()
+        val existing = database.savedContactDao().byEmail(cleanEmail)
+        val contact = SavedContactEntity(
+            id = existing?.id ?: UUID.randomUUID().toString(),
+            name = cleanName,
+            email = cleanEmail,
+            createdAt = existing?.createdAt ?: now,
+            updatedAt = now,
+        )
+        database.withTransaction {
+            database.savedContactDao().upsert(contact)
+            // Existing mail rows immediately use the saved name in lists, search and detail.
+            database.messageDao().applyContactName(cleanEmail, cleanName)
+        }
+        return contact
+    }
+
+    suspend fun deleteSavedContact(id: String) {
+        database.savedContactDao().deleteById(id)
+    }
+
+    suspend fun resolveRecipients(value: String): String {
+        val contacts = database.savedContactDao().allNow()
+        if (contacts.isEmpty()) return value
+        val byName = contacts.groupBy { it.name.trim().lowercase() }
+        return value
+            .split(',', ';')
+            .map { token ->
+                val clean = token.trim()
+                if ('@' in clean) clean
+                else byName[clean.lowercase()]?.singleOrNull()?.email ?: clean
+            }
+            .filter(String::isNotBlank)
+            .joinToString(", ")
+    }
 
     suspend fun addAppPasswordAccount(
         providerId: String,

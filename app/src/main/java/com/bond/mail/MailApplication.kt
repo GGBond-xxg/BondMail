@@ -2,6 +2,7 @@ package com.bond.mail
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import com.bond.mail.data.mail.MailLog
 import com.bond.mail.ui.components.MailWebViewPool
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +19,17 @@ class MailApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Chromium construction is synchronous. Pay that cost while the system splash is still
+        // covering startup, never on the user's first message tap. A missing or updating system
+        // WebView must not make the whole mail app unable to launch.
+        runCatching { MailWebViewPool.prewarm(this) }
+            .onFailure { error ->
+                MailLog.w(
+                    MailLog.WEB,
+                    "webview prewarm skipped cause=${MailLog.causeSummary(error)}",
+                    error,
+                )
+            }
 
         // WorkManager's periodic registration is not needed for the first frame. Queue it off the
         // main thread so a cold launch is spent on local mail data and Compose only.

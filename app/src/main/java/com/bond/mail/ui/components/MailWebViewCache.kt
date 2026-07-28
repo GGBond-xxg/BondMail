@@ -19,6 +19,7 @@ internal data class MailWebHeader(
     val recipient: String,
     val dateLabel: String,
     val avatarText: String,
+    val avatarSvg: String? = null,
     val monetBrandIcons: Boolean = true,
     val attachments: List<MailAttachmentInfo> = emptyList(),
 )
@@ -199,8 +200,13 @@ internal object MailWebViewCache {
         val binanceSender = isBinanceSender(senderDomain)
         val bybitSender = senderDomain.contains("bybit.com") ||
             senderIdentity.contains("bybit")
+        val bochkSender = senderDomain.contains("bochk.com") ||
+            senderIdentity.contains("bochk") ||
+            senderIdentity.contains("bank of china hong kong")
         val samsungSender = senderDomain.contains("samsung") ||
             senderIdentity.contains("samsung")
+        val instagramSender = senderDomain.contains("instagram.com") ||
+            senderIdentity.contains("instagram")
         val grabSender = isGrabTransactionalSender(senderDomain, senderIdentity)
         val facebookSender = isFacebookSender(senderDomain, senderIdentity)
         val forceKnownSenderResponsive = binanceSender && responsiveMediaRules
@@ -213,6 +219,7 @@ internal object MailWebViewCache {
         // while leaving a transparent tracking pixel in src. WebView does not execute the sender's
         // lazy-loading JavaScript, so promote those safe URL attributes before rendering.
         normalizeImageSources(document)
+        markRemoteImagesAsync(document)
         normalizeKnownBrandLogoImages(document)
         if (samsungSender) {
             markSamsungLogoImages(document)
@@ -244,11 +251,11 @@ internal object MailWebViewCache {
             if (nativeDarkCanvas) {
                 body.addClass("bondmail-native-dark-mail")
             }
-            if (bybitSender) {
+            if (bybitSender || bochkSender) {
                 // This template becomes only partially dark in Android WebView: its canvas turns
                 // black but several inline text colors stay nearly black. Apple Mail preserves
-                // the authored light message, so keep the complete Bybit body on a light canvas.
-                body.addClass("bondmail-bybit-light-mail")
+                // the authored light message, so keep the complete body on a light canvas.
+                body.addClass("bondmail-force-light-mail")
             }
         }
         if (samsungSender) {
@@ -269,7 +276,16 @@ internal object MailWebViewCache {
             preferTransactionalCard = forceTransactionalFluid,
         ) ?: if (forceTransactionalFluid) viewportWidthCssPx else null
         val desktopCandidate = detectDesktopCanvas(document)
-        val knownSenderCanvasWidthPx = if (preferDesktopCanvas) {
+        val knownSenderCanvasWidthPx = if (
+            instagramSender &&
+            compactContentWidthPx != null &&
+            compactContentWidthPx in 360..440
+        ) {
+            // Meta digest templates use a fixed 394px content table plus 16px side cells. Reflowing
+            // every table independently clips the third column on a 360px viewport, so preserve the
+            // complete 426px outer canvas and scale it as one unit.
+            compactContentWidthPx + INSTAGRAM_SIDE_GUTTERS_PX
+        } else if (preferDesktopCanvas) {
             // Known fixed-canvas transactional templates are consistently authored around 600px,
             // but some variants expose that width only through Outlook conditionals that Jsoup no
             // longer sees as a normal element. Falling back to 600 keeps the complete table intact.
@@ -302,6 +318,7 @@ internal object MailWebViewCache {
         }
         val textZoomPercent = when {
             facebookSender -> FACEBOOK_TEXT_ZOOM_PERCENT
+            instagramSender -> 100
             documentLayout == MailDocumentLayout.DESKTOP_SCALED && grabSender -> GRAB_TEXT_ZOOM_PERCENT
             documentLayout == MailDocumentLayout.DESKTOP_SCALED -> DESKTOP_TEXT_ZOOM_PERCENT
             else -> 100
@@ -671,6 +688,13 @@ internal object MailWebViewCache {
               #bondmail-message-header .bondmail-meta{
                 visibility:visible!important;opacity:1!important
               }
+              #bondmail-message-header .bondmail-avatar svg{
+                width:58%!important;height:58%!important;display:block!important;
+                fill:$avatarForegroundCss!important;color:$avatarForegroundCss!important
+              }
+              #bondmail-message-header .bondmail-avatar svg path{
+                fill:currentColor!important
+              }
               #bondmail-message-header .bondmail-meta{
                 min-width:0!important;max-width:calc(100% - 57px)!important;flex:1!important;
                 display:flex!important;flex-direction:column!important;gap:2px!important;padding-top:0!important;
@@ -698,12 +722,11 @@ internal object MailWebViewCache {
                 line-height:${paperclipLineHeightCssPx}px!important;color:$mutedCss!important;white-space:nowrap!important
               }
               #bondmail-message-header .bondmail-address{
-                display:-webkit-box!important;max-width:100%!important;
+                display:block!important;max-width:100%!important;
                 font-size:${addressFontSizeCssPx}px!important;line-height:${addressLineHeightCssPx}px!important;font-weight:400!important;
                 color:$foregroundCss!important;-webkit-text-fill-color:$foregroundCss!important;
-                white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;
-                -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
-                overflow-wrap:anywhere!important;word-break:break-word!important
+                white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+                overflow-wrap:normal!important;word-break:normal!important
               }
               #bondmail-message-header .bondmail-muted{
                 display:-webkit-box!important;max-width:100%!important;
@@ -741,6 +764,10 @@ internal object MailWebViewCache {
               img.bondmail-dark-logo{
                 box-sizing:border-box!important
               }
+              #bondmail-message-body img{
+                color:transparent!important;-webkit-text-fill-color:transparent!important;
+                font-size:0!important
+              }
               img.bondmail-google-logo{
                 display:block!important;width:auto!important;height:auto!important;
                 max-width:96px!important;max-height:48px!important;object-fit:contain!important
@@ -758,21 +785,21 @@ internal object MailWebViewCache {
                 background:#f5f5f5!important;padding:6px 10px!important;
                 border-radius:8px!important
               }
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body{
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body{
                 background:#ffffff!important;color:#111111!important;
                 -webkit-text-fill-color:#111111!important;color-scheme:light!important;
                 filter:none!important
               }
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body *{
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body *{
                 color:#111111!important;-webkit-text-fill-color:#111111!important
               }
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body a,
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body a *{
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body a,
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body a *{
                 color:#1689d8!important;-webkit-text-fill-color:#1689d8!important
               }
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body img,
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body video,
-              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body svg{
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body img,
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body video,
+              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body svg{
                 filter:none!important
               }
               body.bondmail-samsung-mail img.bondmail-samsung-logo{
@@ -2108,9 +2135,11 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v38|")
+        append("layout-v44|")
         append(key)
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
+        append("|sender=").append(header.senderName.hashCode())
+        append("|avatar=").append(header.avatarSvg.hashCode())
         append("|attachments=").append(header.attachments.hashCode())
         append('|').append(foregroundCss)
         append('|').append(backgroundCss)
@@ -2161,7 +2190,10 @@ internal object MailWebViewCache {
             .appendChild(
                 Element("div")
                     .addClass("bondmail-avatar")
-                    .text(header.avatarText),
+                    .apply {
+                        if (header.avatarSvg != null) html(header.avatarSvg)
+                        else text(header.avatarText)
+                    },
             )
             .appendChild(
                 Element("div")
@@ -2282,6 +2314,23 @@ internal object MailWebViewCache {
             if (GOOGLE_LOGO_HINT.containsMatchIn(identity)) {
                 image.addClass("bondmail-google-logo")
             }
+        }
+    }
+
+    /**
+     * Keep image decode work off the document commit path without changing when an image is fetched.
+     * Native lazy loading is intentionally avoided here: this WebView initially blocks the network
+     * and enables it after commit, a sequence where some Chromium versions do not re-arm lazy images.
+     */
+    private fun markRemoteImagesAsync(document: Document) {
+        document.select("img").forEach { image ->
+            val source = image.attr("src").trim()
+            if (!source.startsWith("https://", ignoreCase = true) &&
+                !source.startsWith("http://", ignoreCase = true)
+            ) {
+                return@forEach
+            }
+            if (!image.hasAttr("decoding")) image.attr("decoding", "async")
         }
     }
 
@@ -2493,6 +2542,7 @@ internal object MailWebViewCache {
     )
 
     private const val KNOWN_DESKTOP_CANVAS_FALLBACK_PX = 600
+    private const val INSTAGRAM_SIDE_GUTTERS_PX = 32
     private const val DESKTOP_TEXT_ZOOM_PERCENT = 118
     private const val GRAB_TEXT_ZOOM_PERCENT = 106
     private const val FACEBOOK_TEXT_ZOOM_PERCENT = 132

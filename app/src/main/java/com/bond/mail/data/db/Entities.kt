@@ -152,3 +152,15 @@ data class ContactRow(
     val lastSeenAt: Long,
     val messageCount: Int,
 )
+
+@Entity(
+    tableName = "saved_contacts",
+    indices = [Index(value = ["email"], unique = true)],
+)
+data class SavedContactEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val email: String,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
