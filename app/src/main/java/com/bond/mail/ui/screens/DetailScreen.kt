@@ -195,43 +195,15 @@ fun DetailScreen(
             onFirstContentReady()
         }
     }
-    var chromeVisible by remember(messageId) { mutableStateOf(true) }
-    val contentScrollYpx = remember(messageId) { mutableIntStateOf(0) }
-    var activeMailWebView by remember(messageId) { mutableStateOf<WebView?>(null) }
+    // Keep only the top app bar fixed. The bottom action dock still follows scroll direction so it
+    // gets out of the way while reading and returns when the user scrolls back.
+    var bottomChromeVisible by remember(messageId) { mutableStateOf(true) }
     var confirmDelete by remember(messageId) { mutableStateOf(false) }
     val motionEnabled = bondMotionEnabled()
-    val detailDensity = LocalDensity.current
-    val maxTopPullPx = with(detailDensity) { 60.dp.toPx() }
-    var topPullTargetPx by remember(messageId) { mutableFloatStateOf(0f) }
-    var topPullDragging by remember(messageId) { mutableStateOf(false) }
-    val topPullOffsetPx by animateFloatAsState(
-        targetValue = topPullTargetPx,
-        animationSpec = when {
-            !motionEnabled || topPullDragging -> snap()
-            else -> spring(
-                dampingRatio = 0.78f,
-                stiffness = 470f,
-            )
-        },
-        label = "mail-top-pull-settle",
-    )
-    val updateTopPull: (Float) -> Float = { fingerDeltaPx ->
-        val current = topPullTargetPx.coerceIn(0f, maxTopPullPx)
-        val normalized = (current / maxTopPullPx).coerceIn(0f, 1f)
-        val response = if (fingerDeltaPx >= 0f) {
-            (0.50f - normalized * 0.31f).coerceAtLeast(0.19f)
-        } else {
-            0.94f
-        }
-        val next = (current + fingerDeltaPx * response).coerceIn(0f, maxTopPullPx)
-        topPullDragging = next > 0.5f
-        topPullTargetPx = next
-        next
-    }
-    val releaseTopPull: () -> Unit = {
-        topPullDragging = false
-        topPullTargetPx = 0f
-    }
+    // Use Chromium's native scrolling only. Returning zero keeps the existing WebView listener
+    // compatible while disabling BondMail's custom rubber-band displacement.
+    val updateTopPull: (Float) -> Float = { 0f }
+    val releaseTopPull: () -> Unit = {}
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val detailTopBarHeight = statusBarInset + 64.dp
     val messageContentTopInset = detailTopBarHeight
@@ -428,17 +400,17 @@ fun DetailScreen(
     }
 
     val topChromeOffset = animateChromeOffset(
-        visible = chromeVisible,
+        visible = true,
         hiddenOffset = -detailTopBarHeight,
         label = "detail-top-chrome-slide",
     )
     val bottomChromeOffset = animateChromeOffset(
-        visible = chromeVisible,
+        visible = bottomChromeVisible,
         hiddenOffset = 124.dp,
         label = "detail-bottom-chrome-slide",
     )
     val remoteButtonBottom by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (chromeVisible) 88.dp else 14.dp,
+        targetValue = if (bottomChromeVisible) 88.dp else 14.dp,
         animationSpec = tween(
             durationMillis = BondMotionDuration.ChromeReveal,
             easing = BondMotionEasing.Standard,
@@ -452,6 +424,13 @@ fun DetailScreen(
             color = MaterialTheme.bondSurfaces.page,
         ) {}
 
+        // Keep Chromium and the native title/sender raster in one translated container. Applying
+        // the pull offset independently to AndroidView and Compose can land on different platform
+        // frames, briefly leaving the sender metadata over the first rows of the message body.
+        // One parent transform makes the complete mail sheet move atomically.
+        Box(
+            modifier = Modifier.fillMaxSize(),
+        ) {
         val hasDisplayBody = item.hasDisplayBody()
         when {
             bodyLoading && !hasDisplayBody -> {
@@ -525,20 +504,20 @@ fun DetailScreen(
                     headerLayout = headerLayout,
                     motionEnabled = motionEnabled,
                     loadImages = loadImages,
-                    topContentInset = messageContentTopInset,
-                    topPullOffsetPx = topPullOffsetPx,
+                    // The fixed app bar owns its own viewport area. Keeping Chromium below it
+                    // prevents a naturally scrolling sender row from being clipped behind chrome.
+                    topContentInset = 0.dp,
                     onTopPullDelta = updateTopPull,
                     onTopPullRelease = releaseTopPull,
-                    onWebViewChanged = { webView -> activeMailWebView = webView },
+                    onWebViewChanged = {},
                     onRemoteImagesChanged = { hasRemoteImages = it },
                     onExternalLink = { externalUrl = it },
-                    onChromeVisibilityChanged = { visible -> chromeVisible = visible },
-                    onContentScrollChanged = { scrollY -> contentScrollYpx.intValue = scrollY },
+                    onChromeVisibilityChanged = { visible -> bottomChromeVisible = visible },
+                    onContentScrollChanged = {},
                     onRenderStarted = { renderFailed = false },
                     onDocumentReady = reportFirstContentReady,
                     onRenderFailure = { renderFailed = true },
                     onRendererGone = {
-                        contentScrollYpx.intValue = 0
                         if (rendererRecoveryCount < 1) {
                             rendererRecoveryCount += 1
                             renderFailed = false
@@ -547,13 +526,18 @@ fun DetailScreen(
                             renderFailed = true
                         }
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = 12.dp,
+                            top = messageContentTopInset,
+                            end = 12.dp,
+                        ),
                 )
                 if (renderFailed) {
                     MailContentFailure(
                         topContentInset = messageContentTopInset,
                         onRetry = {
-                            contentScrollYpx.intValue = 0
                             renderFailed = false
                             renderRetryToken += 1
                         },
@@ -579,21 +563,7 @@ fun DetailScreen(
             }
         }
 
-        // The HTML keeps equivalent subject/header boxes only as layout spacers. This native layer
-        // is the sole visible raster of the title and sender metadata, so the transition can change
-        // the body from preview text to styled HTML without changing font weight, wrapping, or card
-        // geometry above it. Physical-pixel translation keeps it attached to WebView scrolling.
-        MailStableHeaderOverlay(
-            header = mailHeader,
-            headerLayout = headerLayout,
-            topContentInset = messageContentTopInset,
-            contentScrollYpx = contentScrollYpx,
-            topPullOffsetPx = topPullOffsetPx,
-            onTopPullDelta = updateTopPull,
-            onTopPullRelease = releaseTopPull,
-            webView = activeMailWebView,
-            modifier = Modifier.fillMaxSize(),
-        )
+        }
 
         Surface(
             modifier = Modifier
@@ -835,7 +805,6 @@ private fun MailHtmlView(
     motionEnabled: Boolean,
     loadImages: Boolean,
     topContentInset: Dp,
-    topPullOffsetPx: Float,
     onTopPullDelta: (Float) -> Float,
     onTopPullRelease: () -> Unit,
     onWebViewChanged: (WebView?) -> Unit,
@@ -1059,9 +1028,7 @@ private fun MailHtmlView(
         placeholderVisible = !pageVisible
     }
 
-    Box(
-        modifier = modifier.offset { IntOffset(0, topPullOffsetPx.roundToInt()) },
-    ) {
+    Box(modifier = modifier) {
         val document = prepared
         val placeholderAlpha by animateFloatAsState(
             targetValue = if (placeholderVisible) 1f else 0f,
@@ -1466,6 +1433,7 @@ private fun MailHtmlView(
                         holder.scrollToTopOnCommit = false
                         holder.requestedChromeVisible = true
                         webView.scrollTo(0, 0)
+                        webView.postOnAnimation { webView.scrollTo(0, 0) }
                         latestOnContentScrollChanged(0)
                         latestOnChromeVisibilityChanged(true)
                         // This exact WebView still owns the fully committed pixels for this key.
@@ -1761,21 +1729,23 @@ private fun MailStableHeaderOverlay(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Offset the complete header layer before painting its background. If offset is
+                // applied after background/padding, only the text moves while an opaque page-sized
+                // rectangle remains pinned over the WebView body.
+                .offset {
+                    IntOffset(
+                        0,
+                        -contentScrollYpx.value.coerceAtLeast(0),
+                    )
+                }
                 // Paint the native subject/sender surface edge-to-edge. The child rows already
                 // own their readable horizontal insets; applying padding before background made
                 // fixed-width newsletters look as if the sender header were shifted to one side.
                 .background(MaterialTheme.bondSurfaces.page)
                 .padding(top = topContentInset)
-                // WebView reports physical pixels and this lambda-offset consumes physical pixels,
-                // so there is deliberately no density conversion here. Unlike graphicsLayer
-                // translation, a layout offset moves the pointer hit region together with the visible
-                // header; once the header scrolls away it cannot keep blocking links underneath.
-                .offset {
-                    IntOffset(
-                        0,
-                        -contentScrollYpx.value.coerceAtLeast(0) + latestTopPullOffsetPx.roundToInt(),
-                    )
-                }
+                // WebView reports physical pixels and the offset above consumes physical pixels,
+                // so there is deliberately no density conversion. Its outer position also moves
+                // the pointer hit region; once the header leaves, it cannot block body links.
                 // The visible title/sender layer is native Compose and sits above WebView. Give
                 // only this header a vertical drag that drives the underlying document directly;
                 // body links and gestures remain entirely owned by Chromium.

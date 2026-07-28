@@ -13,8 +13,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 59
-        versionName = "0.2.38.0"
+        versionCode = 67
+        versionName = "0.2.46.0"
         vectorDrawables.useSupportLibrary = true
     }
 

@@ -199,6 +199,8 @@ internal object MailWebViewCache {
         val binanceSender = isBinanceSender(senderDomain)
         val bybitSender = senderDomain.contains("bybit.com") ||
             senderIdentity.contains("bybit")
+        val samsungSender = senderDomain.contains("samsung") ||
+            senderIdentity.contains("samsung")
         val grabSender = isGrabTransactionalSender(senderDomain, senderIdentity)
         val facebookSender = isFacebookSender(senderDomain, senderIdentity)
         val forceKnownSenderResponsive = binanceSender && responsiveMediaRules
@@ -212,6 +214,9 @@ internal object MailWebViewCache {
         // lazy-loading JavaScript, so promote those safe URL attributes before rendering.
         normalizeImageSources(document)
         normalizeKnownBrandLogoImages(document)
+        if (samsungSender) {
+            markSamsungLogoImages(document)
+        }
         if (darkMode) {
             markDarkModeLogoImages(document)
         }
@@ -239,9 +244,15 @@ internal object MailWebViewCache {
             if (nativeDarkCanvas) {
                 body.addClass("bondmail-native-dark-mail")
             }
-            if (bybitSender && nativeDarkCanvas) {
-                body.addClass("bondmail-bybit-dark-fix")
+            if (bybitSender) {
+                // This template becomes only partially dark in Android WebView: its canvas turns
+                // black but several inline text colors stay nearly black. Apple Mail preserves
+                // the authored light message, so keep the complete Bybit body on a light canvas.
+                body.addClass("bondmail-bybit-light-mail")
             }
+        }
+        if (samsungSender) {
+            body.addClass("bondmail-samsung-mail")
         }
         normalizeEmojiPresentation(document)
         // Preserve direct text nodes from malformed/plain HTML messages while still giving them
@@ -384,7 +395,7 @@ internal object MailWebViewCache {
         // uses CSS px. At initial-scale=1 one CSS px maps to one dp, so multiply only typography by
         // the current Android font scale. This keeps line wrapping and card geometry identical while
         // Chromium replaces the preview body underneath the stable native header.
-        val safeTopInsetCssPx = topContentInsetCssPx.coerceIn(72, 200)
+        val safeTopInsetCssPx = topContentInsetCssPx.coerceIn(0, 200)
         val safeSubjectBlockHeightCssPx = subjectBlockHeightCssPx.coerceIn(48, 260)
         val safeSenderBlockHeightCssPx = senderBlockHeightCssPx.coerceIn(64, 180)
         val subjectFontSizeCssPx = formatCssNumber(22f * fontScale)
@@ -599,12 +610,13 @@ internal object MailWebViewCache {
                 font-family:sans-serif!important
               }
               #bondmail-message-subject .bondmail-subject-text{
-                display:block!important;margin:0!important;padding:0!important;
+                display:block!important;margin:0!important;padding:16px 4px 12px!important;
+                box-sizing:border-box!important;
                 max-width:100%!important;font-size:${subjectFontSizeCssPx}px!important;line-height:${subjectLineHeightCssPx}px!important;
-                font-weight:400!important;letter-spacing:0!important;color:$foregroundCss!important;
+                font-weight:600!important;letter-spacing:0!important;color:$foregroundCss!important;
                 -webkit-text-fill-color:$foregroundCss!important;white-space:normal!important;
                 overflow-wrap:anywhere!important;word-break:break-word!important;
-                visibility:hidden!important;opacity:0!important
+                visibility:visible!important;opacity:1!important
               }
               #bondmail-message-card{
                 position:relative!important;z-index:1!important;display:block!important;
@@ -617,12 +629,12 @@ internal object MailWebViewCache {
               }
               #bondmail-message-header{
                 position:relative!important;z-index:2147483647!important;display:flex!important;
-                align-items:flex-start!important;gap:0!important;width:100%!important;
+                align-items:flex-start!important;gap:11px!important;width:100%!important;
                 min-width:0!important;max-width:100%!important;
                 min-height:${safeSenderBlockHeightCssPx}px!important;
                 height:${safeSenderBlockHeightCssPx}px!important;
                 max-height:${safeSenderBlockHeightCssPx}px!important;
-                padding:0!important;margin:0!important;
+                padding:13px 14px 11px!important;margin:0!important;
                 box-sizing:border-box!important;border:0!important;
                 background:transparent!important;color:$foregroundCss!important;
                 overflow:hidden!important;
@@ -657,7 +669,7 @@ internal object MailWebViewCache {
               }
               #bondmail-message-header .bondmail-avatar,
               #bondmail-message-header .bondmail-meta{
-                visibility:hidden!important;opacity:0!important
+                visibility:visible!important;opacity:1!important
               }
               #bondmail-message-header .bondmail-meta{
                 min-width:0!important;max-width:calc(100% - 57px)!important;flex:1!important;
@@ -746,18 +758,28 @@ internal object MailWebViewCache {
                 background:#f5f5f5!important;padding:6px 10px!important;
                 border-radius:8px!important
               }
-              body.bondmail-bybit-dark-fix #bondmail-message-body,
-              body.bondmail-bybit-dark-fix #bondmail-message-body p,
-              body.bondmail-bybit-dark-fix #bondmail-message-body div,
-              body.bondmail-bybit-dark-fix #bondmail-message-body td,
-              body.bondmail-bybit-dark-fix #bondmail-message-body span,
-              body.bondmail-bybit-dark-fix #bondmail-message-body h1,
-              body.bondmail-bybit-dark-fix #bondmail-message-body h2,
-              body.bondmail-bybit-dark-fix #bondmail-message-body h3{
-                color:#e8eaed!important;-webkit-text-fill-color:#e8eaed!important
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body{
+                background:#ffffff!important;color:#111111!important;
+                -webkit-text-fill-color:#111111!important;color-scheme:light!important;
+                filter:none!important
               }
-              body.bondmail-bybit-dark-fix #bondmail-message-body a{
-                color:#8ab4f8!important;-webkit-text-fill-color:#8ab4f8!important
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body *{
+                color:#111111!important;-webkit-text-fill-color:#111111!important
+              }
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body a,
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body a *{
+                color:#1689d8!important;-webkit-text-fill-color:#1689d8!important
+              }
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body img,
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body video,
+              body.bondmail-dark-mode.bondmail-bybit-light-mail #bondmail-message-body svg{
+                filter:none!important
+              }
+              body.bondmail-samsung-mail img.bondmail-samsung-logo{
+                display:block!important;visibility:visible!important;opacity:1!important;
+                width:auto!important;height:auto!important;min-width:0!important;
+                max-width:280px!important;max-height:90px!important;
+                margin:24px auto 28px!important;object-fit:contain!important
               }
               body.bondmail-facebook-mail .bondmail-brand-logo-host{
                 width:auto!important;min-width:0!important;max-width:100%!important;
@@ -2086,7 +2108,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v35|")
+        append("layout-v38|")
         append(key)
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|attachments=").append(header.attachments.hashCode())
@@ -2136,20 +2158,14 @@ internal object MailWebViewCache {
         )
         return Element("section")
             .attr("id", "bondmail-message-header")
-            .attr("aria-hidden", "true")
             .appendChild(
                 Element("div")
                     .addClass("bondmail-avatar")
-                    // Inline hiding applies before the generated stylesheet is parsed, preventing
-                    // one compositor frame of duplicate Chromium text beneath the native overlay.
-                    .attr("style", "visibility:hidden;opacity:0")
-                    .attr("aria-hidden", "true")
                     .text(header.avatarText),
             )
             .appendChild(
                 Element("div")
                     .addClass("bondmail-meta")
-                    .attr("style", "visibility:hidden;opacity:0")
                     .appendChild(nameRow)
                     .appendChild(Element("div").addClass("bondmail-address").text(header.senderAddress))
                     .appendChild(Element("div").addClass("bondmail-muted").text(header.recipient)),
@@ -2183,11 +2199,9 @@ internal object MailWebViewCache {
     private fun createSubject(header: MailWebHeader): Element =
         Element("section")
             .attr("id", "bondmail-message-subject")
-            .attr("aria-hidden", "true")
             .appendChild(
                 Element("h1")
                     .addClass("bondmail-subject-text")
-                    .attr("style", "visibility:hidden;opacity:0")
                     .text(header.subject),
             )
 
@@ -2267,6 +2281,21 @@ internal object MailWebViewCache {
             }
             if (GOOGLE_LOGO_HINT.containsMatchIn(identity)) {
                 image.addClass("bondmail-google-logo")
+            }
+        }
+    }
+
+    private fun markSamsungLogoImages(document: Document) {
+        document.select("img").forEach { image ->
+            val identity = buildString {
+                append(image.attr("src")).append(' ')
+                append(image.attr("alt")).append(' ')
+                append(image.attr("title")).append(' ')
+                append(image.className()).append(' ')
+                append(image.id())
+            }
+            if (SAMSUNG_LOGO_HINT.containsMatchIn(identity)) {
+                image.addClass("bondmail-samsung-logo")
             }
         }
     }
@@ -2412,6 +2441,9 @@ internal object MailWebViewCache {
 
     private val GOOGLE_LOGO_HINT = Regex(
         """(?i)(?:google|gmail)[/_.\-\s]*(?:logo|wordmark)|(?:logo|wordmark)[/_.\-\s]*(?:google|gmail)""",
+    )
+    private val SAMSUNG_LOGO_HINT = Regex(
+        """(?i)samsung.{0,64}(?:logo|wordmark)|(?:logo|wordmark).{0,64}samsung|[/_-]samsung[/_.-]""",
     )
 
     private val FLUID_WIDTH_DECLARATION = Regex(

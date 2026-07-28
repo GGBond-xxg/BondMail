@@ -124,7 +124,6 @@ import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.model.AuthType
 import com.bond.mail.data.model.UiFailure
-import com.bond.mail.data.performance.UiPerformanceGate
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.ui.components.BiometricGate
 import com.bond.mail.ui.components.FloatingCircleAction
@@ -415,17 +414,14 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
     }
 
     LaunchedEffect(webWarmupGeneration) {
-        // Build Chromium only after the inbox has painted and remained quiet. The delay keeps the
-        // one-time renderer cost away from cold start and from the user's first list gesture. The
-        // effect is re-armed on resume so a cached WebView discarded under memory pressure can be
-        // prepared again without affecting interactive navigation.
-        delay(900L)
+        // Let the inbox submit its first frame, then initialize Chromium promptly. Waiting for a
+        // long global "idle" window meant foreground sync could postpone warm-up for several
+        // seconds, so the first message click paid WebView construction on the navigation frame.
+        // A short post-frame delay keeps cold-start painting clean while normally finishing before
+        // a human can select the first row. The effect is re-armed on every foreground resume.
+        delay(120L)
         if (
             lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) &&
-            UiPerformanceGate.awaitUiIdleWindow(
-                settleDelayMs = 700L,
-                maximumWaitMs = 6_000L,
-            ) &&
             !MailWebViewPool.isReadyOrInUse()
         ) {
             MailWebViewPool.prewarm(context.applicationContext)
