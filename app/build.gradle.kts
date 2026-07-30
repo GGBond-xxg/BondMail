@@ -13,8 +13,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 72
-        versionName = "0.2.51.0"
+        versionCode = 100
+        versionName = "1.0.0"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -36,6 +36,18 @@ android {
 
 
     buildTypes {
+        getByName("release") {
+            // Ship the same optimized runtime that is exercised by the local performance build.
+            // The only remaining difference is signing: release uses the publishing key, while
+            // performance uses the local debug key so it can be installed directly over test data.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+
         // Non-debuggable build signed with the local debug key for fair frame-rate testing.
         // It replaces the debug APK without clearing app data. R8/resource shrinking keeps this
         // release-like test package much smaller than the previous unshrunk performance APK.
@@ -52,7 +64,6 @@ android {
                 "proguard-rules.pro",
             )
             matchingFallbacks += listOf("release")
-            versionNameSuffix = "-performance"
         }
     }
 

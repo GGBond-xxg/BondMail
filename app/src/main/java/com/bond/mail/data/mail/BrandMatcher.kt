@@ -17,6 +17,7 @@ object BrandMatcher {
         "twitter" to "X", "x.com" to "X", "facebook" to "F", "instagram" to "IG",
         "linkedin" to "IN", "tiktok" to "TT", "whatsapp" to "WA", "reddit" to "R",
         "spotify" to "SP", "github" to "GH", "gitlab" to "GL", "google" to "G",
+        "outlook.com" to "O", "hotmail.com" to "O", "live.com" to "O",
         "microsoft" to "MS", "openai" to "AI", "chatgpt" to "AI", "cloudflare" to "CF",
         "amazon" to "A", "aws" to "AWS", "slack" to "SL", "zoom" to "Z",
         "dropbox" to "DB", "adobe" to "AD", "figma" to "FI", "notion" to "NO",

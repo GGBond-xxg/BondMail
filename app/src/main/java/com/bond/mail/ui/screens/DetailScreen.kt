@@ -123,6 +123,7 @@ import androidx.webkit.WebViewFeature
 import com.bond.mail.AppContainer
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.MessageEntity
+import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.mail.MailAttachmentCodec
 import com.bond.mail.data.mail.MailAttachmentInfo
 import com.bond.mail.data.mail.MailLog
@@ -130,7 +131,9 @@ import com.bond.mail.data.mail.MimeParser
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.ui.components.FloatingCircleAction
-import com.bond.mail.ui.components.BrandAvatar
+import com.bond.mail.ui.components.ContactAvatar
+import com.bond.mail.ui.components.brandAvatarPalette
+import com.bond.mail.ui.components.contactAvatarText
 import com.bond.mail.ui.components.MailContentHeightHint
 import com.bond.mail.ui.components.MailWebHeader
 import com.bond.mail.ui.components.contactLogoSvgMarkup
@@ -177,6 +180,7 @@ fun DetailScreen(
     val accounts by container.repository.accounts.collectAsState(
         initial = container.repository.startupAccountsSnapshot(),
     )
+    val savedContacts by container.repository.savedContacts.collectAsState(initial = emptyList())
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val latestOnMessageSnapshot by rememberUpdatedState(onMessageSnapshot)
@@ -249,17 +253,28 @@ fun DetailScreen(
         }
     }
     val detailDateLabel = remember(item.receivedAt) { formatDetailMailTime(item.receivedAt) }
-    val avatarSvg = remember(senderName, item.senderAddress) {
-        contactLogoSvgMarkup(context, senderName, item.senderAddress)
+    val savedContact = remember(savedContacts, item.senderAddress) {
+        savedContacts.firstOrNull { contact ->
+            contact.email.equals(item.senderAddress.trim(), ignoreCase = true)
+        }
+    }
+    val customContactAvatar = savedContact?.avatarText?.trim().takeUnless { it.isNullOrBlank() }
+    val avatarSvg = remember(senderName, item.senderAddress, customContactAvatar) {
+        if (customContactAvatar == null) {
+            contactLogoSvgMarkup(context, senderName, item.senderAddress)
+        } else {
+            null
+        }
     }
     val currentMailHeader = remember(
         item.subject,
         noSubjectLabel,
         senderName,
         item.senderAddress,
-        owningAccount?.email,
+        owningAccount?.visibleEmail,
         item.recipients,
         detailDateLabel,
+        customContactAvatar,
         avatarSvg,
         detailAttachments,
         settings.dynamicColor,
@@ -269,9 +284,10 @@ fun DetailScreen(
             subject = item.subject.ifBlank { noSubjectLabel },
             senderName = senderName,
             senderAddress = item.senderAddress,
-            recipient = owningAccount?.email ?: item.recipients,
+            recipient = owningAccount?.visibleEmail ?: item.recipients,
             dateLabel = detailDateLabel,
-            avatarText = senderInitials(senderName, item.senderAddress),
+            avatarText = customContactAvatar ?: contactAvatarText(senderName, item.senderAddress),
+            customAvatarText = customContactAvatar,
             avatarSvg = avatarSvg,
             monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
             attachments = detailAttachments,
@@ -283,6 +299,7 @@ fun DetailScreen(
     // Attachments may still arrive with the body and are kept separately below.
     val stableHeaderBase = remember(
         messageId,
+        customContactAvatar,
         settings.dynamicColor,
         settings.monetBrandIcons,
     ) {
@@ -838,6 +855,8 @@ private fun MailHtmlView(
     val gestureRevealThresholdPx = with(density) { 44.dp.toPx() }
     val topContentInsetCssPx = topContentInset.value.roundToInt()
     val subjectBlockHeightCssPx = headerLayout.subjectBlockHeight.value.roundToInt().coerceAtLeast(1)
+    val subjectFontSizeSp = headerLayout.subjectFontSize.value
+    val subjectLineHeightSp = headerLayout.subjectLineHeight.value
     val senderBlockHeightCssPx = headerLayout.senderBlockHeight.value.roundToInt().coerceAtLeast(1)
     val senderDomain = remember(header.senderAddress) {
         header.senderAddress.substringAfterLast('@', "").lowercase()
@@ -848,8 +867,13 @@ private fun MailHtmlView(
     val link = MaterialTheme.colorScheme.primary.toArgb()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val headerSurface = MaterialTheme.bondSurfaces.content.toArgb()
-    val avatarBackground = MaterialTheme.colorScheme.secondaryContainer.toArgb()
-    val avatarForeground = MaterialTheme.colorScheme.onSecondaryContainer.toArgb()
+    val avatarPalette = brandAvatarPalette(
+        senderName = header.senderName,
+        senderAddress = header.senderAddress,
+        monet = header.monetBrandIcons,
+    )
+    val avatarBackground = avatarPalette.background.toArgb()
+    val avatarForeground = avatarPalette.foreground.toArgb()
     val darkMode = backgroundColor.luminance() < 0.5f
     val foregroundCss = remember(foreground) { foreground.toCssColor() }
     val backgroundCss = remember(background) { background.toCssColor() }
@@ -872,6 +896,8 @@ private fun MailHtmlView(
         darkMode,
         topContentInsetCssPx,
         subjectBlockHeightCssPx,
+        subjectFontSizeSp,
+        subjectLineHeightSp,
         senderBlockHeightCssPx,
         viewportWidthCssPx,
         fontScale,
@@ -892,6 +918,8 @@ private fun MailHtmlView(
             append("|dark=").append(darkMode)
             append("|top=").append(topContentInsetCssPx)
             append("|subjectHeight=").append(subjectBlockHeightCssPx)
+            append("|subjectFont=").append(subjectFontSizeSp)
+            append("|subjectLineHeight=").append(subjectLineHeightSp)
             append("|senderHeight=").append(senderBlockHeightCssPx)
             append("|viewport=").append(viewportWidthCssPx)
             append("|fontScale=").append(fontScale)
@@ -911,6 +939,8 @@ private fun MailHtmlView(
         darkMode,
         topContentInsetCssPx,
         subjectBlockHeightCssPx,
+        subjectFontSizeSp,
+        subjectLineHeightSp,
         senderBlockHeightCssPx,
         viewportWidthCssPx,
         fontScale,
@@ -928,6 +958,8 @@ private fun MailHtmlView(
             darkMode = darkMode,
             topContentInsetCssPx = topContentInsetCssPx,
             subjectBlockHeightCssPx = subjectBlockHeightCssPx,
+            subjectFontSizeSp = subjectFontSizeSp,
+            subjectLineHeightSp = subjectLineHeightSp,
             senderBlockHeightCssPx = senderBlockHeightCssPx,
             viewportWidthCssPx = viewportWidthCssPx,
             fontScale = fontScale,
@@ -947,6 +979,8 @@ private fun MailHtmlView(
         darkMode,
         topContentInsetCssPx,
         subjectBlockHeightCssPx,
+        subjectFontSizeSp,
+        subjectLineHeightSp,
         senderBlockHeightCssPx,
         viewportWidthCssPx,
         fontScale,
@@ -1001,6 +1035,8 @@ private fun MailHtmlView(
         darkMode,
         topContentInsetCssPx,
         subjectBlockHeightCssPx,
+        subjectFontSizeSp,
+        subjectLineHeightSp,
         senderBlockHeightCssPx,
         viewportWidthCssPx,
         fontScale,
@@ -1026,6 +1062,8 @@ private fun MailHtmlView(
                 darkMode = darkMode,
                 topContentInsetCssPx = topContentInsetCssPx,
                 subjectBlockHeightCssPx = subjectBlockHeightCssPx,
+                subjectFontSizeSp = subjectFontSizeSp,
+                subjectLineHeightSp = subjectLineHeightSp,
                 senderBlockHeightCssPx = senderBlockHeightCssPx,
                 viewportWidthCssPx = viewportWidthCssPx,
                 fontScale = fontScale,
@@ -1052,7 +1090,7 @@ private fun MailHtmlView(
                 snap()
             } else {
                 tween(
-                    durationMillis = 220,
+                    durationMillis = 110,
                     easing = BondMotionEasing.EmphasizedDecelerate,
                 )
             },
@@ -1565,7 +1603,7 @@ private fun MailHtmlView(
     }
 }
 
-private val MAIL_DOCUMENT_REVEAL_INTERPOLATOR = PathInterpolator(0.05f, 0.70f, 0.10f, 1.00f)
+private val MAIL_DOCUMENT_REVEAL_INTERPOLATOR = PathInterpolator(0.15f, 0.75f, 0.20f, 1.00f)
 
 private fun WebView.hideMailDocument() {
     animate().cancel()
@@ -1588,11 +1626,7 @@ private fun WebView.revealMailDocument(
         showMailDocumentImmediately()
         return
     }
-    val duration = if (previouslyPresented) {
-        BondMotionDuration.MailContentRevisit
-    } else {
-        BondMotionDuration.MailContentReveal
-    }
+    val duration = BondMotionDuration.MailContentReveal
     animate()
         .alpha(1f)
         .translationY(0f)
@@ -1647,8 +1681,10 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
     val textMeasurer = rememberTextMeasurer()
     val availableWidthPx = with(density) {
-        // Detail content uses 12 dp outer gutters and the subject itself keeps 4 dp on each side.
-        (windowWidthPx - 32.dp.roundToPx()).coerceAtLeast(220.dp.roundToPx())
+        // Match the subject to the sender avatar edge: 12 dp document gutters plus 14 dp header
+        // insets on each side. Measure at that exact width so long subjects gain another line of
+        // height before the sender row is placed, rather than being covered by it.
+        (windowWidthPx - 52.dp.roundToPx()).coerceAtLeast(220.dp.roundToPx())
     }
     val fontScale = density.fontScale
 
@@ -1660,8 +1696,9 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
         )
 
         // Keep a short subject prominent, but step down before a long transactional subject turns
-        // into three oversized lines. This is closer to the density of phone mail clients:
-        // one line may use 22 sp, a two-line title uses 20 sp, and a three-line title uses 18 sp.
+        // into three oversized lines. Measure every candidate without an artificial line cap:
+        // measuring with maxLines can report the capped count even when the full subject needs more
+        // room, which makes the following sender row cover the remaining glyphs.
         val candidates = listOf(
             SubjectStyle(22.sp, 28.sp, preferredMaxLines = 1),
             SubjectStyle(20.sp, 26.sp, preferredMaxLines = 2),
@@ -1677,11 +1714,11 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
                     letterSpacing = 0.sp,
                 ),
                 softWrap = true,
-                maxLines = candidate.preferredMaxLines,
+                maxLines = Int.MAX_VALUE,
                 overflow = TextOverflow.Clip,
                 constraints = Constraints(maxWidth = availableWidthPx),
             )
-            result.lineCount <= candidate.preferredMaxLines && !result.hasVisualOverflow
+            result.lineCount <= candidate.preferredMaxLines
         } ?: candidates.last()
 
         val finalMeasure = textMeasurer.measure(
@@ -1693,7 +1730,10 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
                 letterSpacing = 0.sp,
             ),
             softWrap = true,
-            maxLines = 3,
+            // Normal mail subjects fit in one to three lines. Keep extra room for unusually long
+            // subjects instead of silently cropping the last line; pathological subjects still
+            // receive a visible ellipsis after six lines.
+            maxLines = 6,
             overflow = TextOverflow.Ellipsis,
             constraints = Constraints(maxWidth = availableWidthPx),
         )
@@ -2042,14 +2082,14 @@ private fun MailSubjectHeader(
         modifier = modifier
             .fillMaxWidth()
             .height(headerLayout.subjectBlockHeight)
-            .padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 12.dp)
+            .padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 12.dp)
             .mailHeaderContentVisibility(contentVisible),
         color = MaterialTheme.colorScheme.onSurface,
         fontSize = headerLayout.subjectFontSize,
         lineHeight = headerLayout.subjectLineHeight,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.sp,
-        maxLines = 3,
+        maxLines = 6,
         overflow = TextOverflow.Ellipsis,
     )
 }
@@ -2070,9 +2110,10 @@ private fun MailSenderHeaderContent(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(11.dp),
     ) {
-        BrandAvatar(
-            senderName = header.senderName,
-            senderAddress = header.senderAddress,
+        ContactAvatar(
+            name = header.senderName,
+            email = header.senderAddress,
+            customText = header.customAvatarText,
             size = 46.dp,
             monet = header.monetBrandIcons,
         )
@@ -2187,19 +2228,6 @@ private fun formatDetailMailTime(epochMillis: Long): String {
         dateTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
     } else {
         dateTime.format(DateTimeFormatter.ofPattern("M/d"))
-    }
-}
-
-private fun senderInitials(senderName: String, senderAddress: String): String {
-    val source = senderName.ifBlank { senderAddress.substringBefore('@') }.trim()
-    if (source.isBlank()) return "@"
-    val words = source.split(Regex("[\\s._-]+"))
-        .map(String::trim)
-        .filter(String::isNotBlank)
-    return when {
-        words.size >= 2 -> "${words.first().first()}${words.last().first()}".uppercase()
-        source.length >= 2 -> source.take(2).uppercase()
-        else -> source.take(1).uppercase()
     }
 }
 

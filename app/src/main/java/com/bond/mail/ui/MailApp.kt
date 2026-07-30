@@ -55,7 +55,6 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Drafts
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandMore
@@ -105,6 +104,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -119,14 +119,18 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
+import com.bond.mail.background.ContinuousMailSyncService
+import com.bond.mail.background.MailNotificationManager
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.model.AuthType
 import com.bond.mail.data.model.UiFailure
+import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.ui.components.BiometricGate
+import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
@@ -144,10 +148,14 @@ import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.screens.AccountCredentialsScreen
+import com.bond.mail.ui.screens.AboutScreen
+import com.bond.mail.ui.screens.AppLicenseScreen
 import com.bond.mail.ui.screens.ComposeScreen
 import com.bond.mail.ui.screens.ContactsScreen
 import com.bond.mail.ui.screens.DetailScreen
 import com.bond.mail.ui.screens.HomeScreen
+import com.bond.mail.ui.screens.OpenSourceLicensesScreen
+import com.bond.mail.ui.screens.PrivacyPolicyScreen
 import com.bond.mail.ui.screens.ProviderPickerScreen
 import com.bond.mail.ui.screens.SettingsScreen
 import kotlinx.coroutines.delay
@@ -159,6 +167,10 @@ private const val MAIN = "main"
 private const val PROVIDERS = "providers"
 private const val CREDENTIALS = "credentials/{providerId}"
 private const val DETAIL = "detail/{messageId}"
+private const val ABOUT = "about"
+private const val OPEN_SOURCE_LICENSES = "about/open-source"
+private const val APP_LICENSE = "about/app-license"
+private const val PRIVACY_POLICY = "about/privacy"
 private const val DETAIL_SNAPSHOT_LIMIT = 16
 private const val COLLAPSED_ACCOUNT_LIMIT = 3
 
@@ -187,7 +199,8 @@ private fun MessageEntity.withLatestListState(row: MessageListRow): MessageEntit
 
 @Composable
 fun MailApp(container: AppContainer, initialMessageId: String?) {
-    val settings by container.settings.settings.collectAsState(initial = AppSettings())
+    val loadedSettings by container.settings.settings.collectAsState(initial = null)
+    val settings = loadedSettings ?: AppSettings()
     val nav = rememberNavController()
     val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -405,11 +418,50 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
         previousAccountCount = accounts.size
     }
 
+    LaunchedEffect(
+        loadedSettings,
+        notificationPermissionGranted,
+    ) {
+        val currentSettings = loadedSettings ?: return@LaunchedEffect
+        // Sub-15-minute polling must be promoted while the activity is visible; Android 12+
+        // generally rejects starting foreground services after an app is already backgrounded.
+        container.scheduler.scheduleBackgroundSync(
+            enabled = true,
+            intervalMinutes = currentSettings.syncMinutes,
+        )
+        ContinuousMailSyncService.reconcile(
+            context = context.applicationContext,
+            enabled = currentSettings.notifications && notificationPermissionGranted,
+            intervalMinutes = currentSettings.syncMinutes,
+        )
+    }
+
     LaunchedEffect(initialMessageId) {
         if (!initialMessageId.isNullOrBlank()) {
             selectedMessage = null
             navigateOnce("detail/${Uri.encode(initialMessageId)}")
         }
+    }
+
+    fun openBackgroundSettings() {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${context.packageName}"),
+            ),
+        )
+    }
+
+    fun openBackgroundNotificationSettings() {
+        val channelIntent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            putExtra(
+                Settings.EXTRA_CHANNEL_ID,
+                MailNotificationManager.BACKGROUND_SYNC_CHANNEL_ID,
+            )
+        }
+        runCatching { context.startActivity(channelIntent) }
+            .onFailure { openNotificationSettings() }
     }
 
     LaunchedEffect(settings.syncMinutes) {
@@ -448,6 +500,9 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                             onRequestNotificationPermission = ::requestNotificationPermission,
                             onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
                             onOpenNotificationSettings = ::openNotificationSettings,
+                            onOpenBackgroundSettings = ::openBackgroundSettings,
+                            onOpenBackgroundNotificationSettings = ::openBackgroundNotificationSettings,
+                            onOpenAbout = { navigateOnce(ABOUT) },
                             onAddAccount = { navigateOnce(PROVIDERS) },
                             onOpenMessage = { message ->
                                 if (message.folderType == "DRAFTS" || message.deliveryState == "DRAFT") {
@@ -510,6 +565,51 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                                     !settings.notificationPermissionPromptDismissed
                             },
                         )
+                    }
+
+                    composable(
+                        route = ABOUT,
+                        enterTransition = { bondForwardEnter(motionEnabled) },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { bondBackwardExit(motionEnabled) },
+                    ) {
+                        AboutScreen(
+                            onBack = { nav.popBackStack() },
+                            onOpenSourceLicenses = { navigateOnce(OPEN_SOURCE_LICENSES) },
+                            onOpenAppLicense = { navigateOnce(APP_LICENSE) },
+                            onOpenPrivacyPolicy = { navigateOnce(PRIVACY_POLICY) },
+                        )
+                    }
+
+                    composable(
+                        route = OPEN_SOURCE_LICENSES,
+                        enterTransition = { bondForwardEnter(motionEnabled) },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { bondBackwardExit(motionEnabled) },
+                    ) {
+                        OpenSourceLicensesScreen(onBack = { nav.popBackStack() })
+                    }
+
+                    composable(
+                        route = APP_LICENSE,
+                        enterTransition = { bondForwardEnter(motionEnabled) },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { bondBackwardExit(motionEnabled) },
+                    ) {
+                        AppLicenseScreen(onBack = { nav.popBackStack() })
+                    }
+
+                    composable(
+                        route = PRIVACY_POLICY,
+                        enterTransition = { bondForwardEnter(motionEnabled) },
+                        exitTransition = { androidx.compose.animation.ExitTransition.None },
+                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                        popExitTransition = { bondBackwardExit(motionEnabled) },
+                    ) {
+                        PrivacyPolicyScreen(onBack = { nav.popBackStack() })
                     }
 
                     composable(
@@ -597,6 +697,9 @@ private fun MainTabs(
     onRequestNotificationPermission: () -> Unit,
     onDismissPermissionGuide: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onOpenBackgroundSettings: () -> Unit,
+    onOpenBackgroundNotificationSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
     onCompose: (String) -> Unit,
@@ -654,8 +757,8 @@ private fun MainTabs(
                         scope.launch { drawerState.close() }
                         onAddAccount()
                     },
-                    onSaveAccountSettings = { id, name, secret, onFinished ->
-                        settingsVm.saveAccountSettings(id, name, secret) { failure ->
+                    onSaveAccountSettings = { id, name, email, avatar, secret, onFinished ->
+                        settingsVm.saveAccountSettings(id, name, email, avatar, secret) { failure ->
                             if (failure == null && secret.isNotBlank()) {
                                 // Reconnect immediately with the newly verified app password so the
                                 // repaired mailbox does not wait for the next periodic sync.
@@ -756,6 +859,9 @@ private fun MainTabs(
                             viewModel = settingsVm,
                             notificationPermissionGranted = notificationPermissionGranted,
                             onOpenNotificationSettings = onOpenNotificationSettings,
+                            onOpenBackgroundSettings = onOpenBackgroundSettings,
+                            onOpenBackgroundNotificationSettings = onOpenBackgroundNotificationSettings,
+                            onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->
                                 if (tab == selectedTab) mainChromeVisible = visible
@@ -906,7 +1012,7 @@ private fun MailDrawerContent(
     currentFolder: String,
     onChooseMailbox: (String?, String) -> Unit,
     onAddAccount: () -> Unit,
-    onSaveAccountSettings: (String, String, String, (UiFailure?) -> Unit) -> Unit,
+    onSaveAccountSettings: (String, String, String, String, String, (UiFailure?) -> Unit) -> Unit,
     onStartOAuthReauthorization: (
         String,
         String,
@@ -930,6 +1036,8 @@ private fun MailDrawerContent(
     val orderedAccounts = remember { mutableStateListOf<AccountEntity>() }
     var editTarget by remember { mutableStateOf<AccountEntity?>(null) }
     var editDisplayName by remember { mutableStateOf("") }
+    var editDisplayEmail by remember { mutableStateOf("") }
+    var editAvatarText by remember { mutableStateOf("") }
     var replacementSecret by remember { mutableStateOf("") }
     var editBusy by remember { mutableStateOf(false) }
     var editFailure by remember { mutableStateOf<UiFailure?>(null) }
@@ -1016,6 +1124,8 @@ private fun MailDrawerContent(
                     onEdit = {
                         editTarget = account
                         editDisplayName = account.displayName
+                        editDisplayEmail = account.visibleEmail
+                        editAvatarText = account.avatarText.orEmpty()
                         replacementSecret = ""
                         editBusy = false
                         editFailure = null
@@ -1127,17 +1237,81 @@ private fun MailDrawerContent(
 
     editTarget?.let { account ->
         val usesAppPassword = account.authType == AuthType.APP_PASSWORD.name
+        val displayEmailValid = editDisplayEmail.trim().let { candidate ->
+            candidate.length == account.email.trim().length &&
+                candidate.equals(account.email.trim(), ignoreCase = true)
+        }
         AlertDialog(
             onDismissRequest = {
                 if (!editBusy) editTarget = null
             },
             title = { Text(tr("edit_mail_account")) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        account.email,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        AccountAvatar(
+                            account = account.copy(
+                                avatarText = editAvatarText.trim().ifBlank { null },
+                            ),
+                            size = 48.dp,
+                        )
+                        OutlinedTextField(
+                            modifier = Modifier.weight(1f),
+                            value = editAvatarText,
+                            onValueChange = {
+                                editAvatarText = it.take(16)
+                                editFailure = null
+                            },
+                            enabled = !editBusy,
+                            singleLine = true,
+                            label = { Text(tr("account_avatar")) },
+                            placeholder = { Text(tr("avatar_placeholder")) },
+                            supportingText = { Text(tr("avatar_single_glyph_hint")) },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        listOf("😀", "📮", "✉️", "⭐").forEach { emoji ->
+                            TextButton(
+                                onClick = {
+                                    editAvatarText = emoji
+                                    editFailure = null
+                                },
+                                enabled = !editBusy,
+                            ) {
+                                Text(emoji)
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = editDisplayEmail,
+                        onValueChange = {
+                            editDisplayEmail = it
+                            editFailure = null
+                        },
+                        enabled = !editBusy,
+                        singleLine = true,
+                        label = { Text(tr("display_email")) },
+                        isError = editDisplayEmail.isNotBlank() && !displayEmailValid,
+                        supportingText = {
+                            Text(
+                                if (displayEmailValid) {
+                                    tr("display_email_case_hint")
+                                } else {
+                                    tr("error_display_email_case_only")
+                                },
+                            )
+                        },
                     )
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
@@ -1235,13 +1409,15 @@ private fun MailDrawerContent(
             },
             confirmButton = {
                 TextButton(
-                    enabled = !editBusy && editDisplayName.isNotBlank(),
+                    enabled = !editBusy && editDisplayName.isNotBlank() && displayEmailValid,
                     onClick = {
                         editBusy = true
                         editFailure = null
                         onSaveAccountSettings(
                             account.id,
                             editDisplayName.trim(),
+                            editDisplayEmail.trim(),
+                            editAvatarText.trim(),
                             replacementSecret,
                         ) { failure ->
                             editBusy = false
@@ -1383,56 +1559,59 @@ private fun DraggableAccountRow(
                 .padding(start = 4.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.DragHandle,
-                contentDescription = tr("drag_to_reorder"),
-                modifier = Modifier
-                    .size(40.dp)
-                    .padding(8.dp)
-                    .pointerInput(account.id) {
-                        detectDragGesturesAfterLongPress(
-                            onDragEnd = {
-                                dragOffset = 0f
-                                if (orderChanged) onOrderCommitted()
-                                orderChanged = false
-                            },
-                            onDragCancel = {
-                                dragOffset = 0f
-                                if (orderChanged) onOrderCommitted()
-                                orderChanged = false
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragOffset += dragAmount.y
-                                var currentIndex = orderedAccounts.indexOfFirst { it.id == account.id }
-                                if (currentIndex < 0) return@detectDragGesturesAfterLongPress
-                                while (
-                                    dragOffset > rowHeightPx / 2f &&
-                                    currentIndex < maxReorderIndex.coerceAtMost(orderedAccounts.lastIndex)
-                                ) {
-                                    val moved = orderedAccounts.removeAt(currentIndex)
-                                    orderedAccounts.add(currentIndex + 1, moved)
-                                    dragOffset -= rowHeightPx
-                                    currentIndex += 1
-                                    orderChanged = true
-                                }
-                                while (dragOffset < -rowHeightPx / 2f && currentIndex > 0) {
-                                    val moved = orderedAccounts.removeAt(currentIndex)
-                                    orderedAccounts.add(currentIndex - 1, moved)
-                                    dragOffset += rowHeightPx
-                                    currentIndex -= 1
-                                    orderChanged = true
-                                }
-                            },
-                        )
-                    },
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            AccountAvatar(
+                account = account,
+                size = 40.dp,
+                modifier = Modifier.pointerInput(account.id) {
+                    detectDragGesturesAfterLongPress(
+                        onDragEnd = {
+                            dragOffset = 0f
+                            if (orderChanged) onOrderCommitted()
+                            orderChanged = false
+                        },
+                        onDragCancel = {
+                            dragOffset = 0f
+                            if (orderChanged) onOrderCommitted()
+                            orderChanged = false
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            dragOffset += dragAmount.y
+                            var currentIndex = orderedAccounts.indexOfFirst { it.id == account.id }
+                            if (currentIndex < 0) return@detectDragGesturesAfterLongPress
+                            while (
+                                dragOffset > rowHeightPx / 2f &&
+                                currentIndex < maxReorderIndex.coerceAtMost(orderedAccounts.lastIndex)
+                            ) {
+                                val moved = orderedAccounts.removeAt(currentIndex)
+                                orderedAccounts.add(currentIndex + 1, moved)
+                                dragOffset -= rowHeightPx
+                                currentIndex += 1
+                                orderChanged = true
+                            }
+                            while (dragOffset < -rowHeightPx / 2f && currentIndex > 0) {
+                                val moved = orderedAccounts.removeAt(currentIndex)
+                                orderedAccounts.add(currentIndex - 1, moved)
+                                dragOffset += rowHeightPx
+                                currentIndex -= 1
+                                orderChanged = true
+                            }
+                        },
+                    )
+                },
             )
+            Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
-                Text(account.displayName, maxLines = 1, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    account.email,
+                    account.displayName,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    account.visibleEmail,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

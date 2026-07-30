@@ -7,7 +7,10 @@ import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.FolderEntity
 import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.model.MailAuthMechanism
 import com.bond.mail.data.model.MailProvider
+import com.bond.mail.data.model.MailSecurity
+import com.bond.mail.data.model.mailLoginName
 import com.sun.mail.imap.IMAPFolder
 import com.sun.mail.imap.IMAPStore
 import kotlinx.coroutines.Dispatchers
@@ -108,7 +111,7 @@ class ImapClient(context: Context) {
         maxNewMessages: Int = 80,
     ): ImapSyncResult = withContext(Dispatchers.IO) {
         val startedAt = System.currentTimeMillis()
-        withStore(provider, account.email, secret, operation = "headers", poolLane = "sync") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "headers", poolLane = "sync") { store ->
             val folder = store.getFolder("INBOX") as IMAPFolder
             folder.open(Folder.READ_ONLY)
             try {
@@ -307,7 +310,7 @@ class ImapClient(context: Context) {
         initialWindow: Int = 50,
     ): ImapSyncResult = withContext(Dispatchers.IO) {
         require(canonicalType == "SENT" || canonicalType == "DRAFTS")
-        withStore(provider, account.email, secret, operation = "folder-${canonicalType.lowercase()}", poolLane = "sync") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "folder-${canonicalType.lowercase()}", poolLane = "sync") { store ->
             val folder = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = false)
                 ?: return@withStore ImapSyncResult(
                     folder = FolderEntity(
@@ -418,7 +421,7 @@ class ImapClient(context: Context) {
         replaceUid: Long? = null,
     ): RemoteAppendResult = withContext(Dispatchers.IO) {
         require(canonicalType == "SENT" || canonicalType == "DRAFTS")
-        withStore(provider, account.email, secret, operation = "append-${canonicalType.lowercase()}", poolLane = "interactive") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "append-${canonicalType.lowercase()}", poolLane = "interactive") { store ->
             val target = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = true)
                 ?: error("Unable to resolve $canonicalType folder")
 
@@ -826,7 +829,7 @@ class ImapClient(context: Context) {
         message: MessageEntity,
         seen: Boolean,
     ) = withContext(Dispatchers.IO) {
-        withStore(provider, account.email, secret, operation = "seen", poolLane = "interactive") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "seen", poolLane = "interactive") { store ->
             val folder = store.getFolder(message.remoteFolder) as IMAPFolder
             folder.open(Folder.READ_WRITE)
             try {
@@ -848,7 +851,7 @@ class ImapClient(context: Context) {
         message: MessageEntity,
         flagged: Boolean,
     ) = withContext(Dispatchers.IO) {
-        withStore(provider, account.email, secret, operation = "flag", poolLane = "interactive") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "flag", poolLane = "interactive") { store ->
             val folder = store.getFolder(message.remoteFolder) as IMAPFolder
             folder.open(Folder.READ_WRITE)
             try {
@@ -865,7 +868,7 @@ class ImapClient(context: Context) {
         secret: String,
         message: MessageEntity,
     ) = withContext(Dispatchers.IO) {
-        withStore(provider, account.email, secret, operation = "delete", poolLane = "interactive") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "delete", poolLane = "interactive") { store ->
             val folder = store.getFolder(message.remoteFolder) as IMAPFolder
             folder.open(Folder.READ_WRITE)
             try {
@@ -903,7 +906,7 @@ class ImapClient(context: Context) {
         canonicalType: String,
         internetMessageId: String,
     ): Int = withContext(Dispatchers.IO) {
-        withStore(provider, account.email, secret, operation = "delete-by-id", poolLane = "interactive") { store ->
+        withStore(provider, account.mailLoginName, secret, operation = "delete-by-id", poolLane = "interactive") { store ->
             val folder = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = false)
                 ?: return@withStore 0
             folder.open(Folder.READ_WRITE)
@@ -1022,29 +1025,37 @@ class ImapClient(context: Context) {
         waitForUsableNetwork()
         repeat(3) { attempt ->
             val attemptNumber = attempt + 1
+            val protocol = if (provider.imapSecurity == MailSecurity.SSL_TLS) "imaps" else "imap"
+            val propertyPrefix = "mail.$protocol"
             val props = Properties().apply {
-                put("mail.store.protocol", "imaps")
-                put("mail.imaps.host", provider.imapHost)
-                put("mail.imaps.port", provider.imapPort.toString())
-                put("mail.imaps.ssl.enable", "true")
-                put("mail.imaps.connectiontimeout", when (attempt) {
+                put("mail.store.protocol", protocol)
+                put("$propertyPrefix.host", provider.imapHost)
+                put("$propertyPrefix.port", provider.imapPort.toString())
+                put("$propertyPrefix.ssl.enable", (provider.imapSecurity == MailSecurity.SSL_TLS).toString())
+                if (provider.imapSecurity == MailSecurity.STARTTLS) {
+                    put("$propertyPrefix.starttls.enable", "true")
+                    put("$propertyPrefix.starttls.required", "true")
+                }
+                put("$propertyPrefix.connectiontimeout", when (attempt) {
                     0 -> "10000"
                     1 -> "15000"
                     else -> "20000"
                 })
                 val bodyTimeout = if (operation.startsWith("body")) 45000 else 25000
-                put("mail.imaps.timeout", bodyTimeout.toString())
-                put("mail.imaps.writetimeout", bodyTimeout.toString())
-                put("mail.imaps.peek", "true")
+                put("$propertyPrefix.timeout", bodyTimeout.toString())
+                put("$propertyPrefix.writetimeout", bodyTimeout.toString())
+                put("$propertyPrefix.peek", "true")
                 // Fetch MIME sections lazily. This mirrors Thunderbird's partial-body strategy:
                 // text/HTML and referenced inline images are downloaded when the parser accesses
                 // them, while large regular attachments are not pulled just to open the message.
-                put("mail.imaps.partialfetch", "true")
-                put("mail.imaps.fetchsize", "262144")
-                put("mail.imaps.connectionpoolsize", "2")
-                put("mail.imaps.connectionpooltimeout", STORE_IDLE_TIMEOUT_MS.toString())
-                put("mail.imaps.compress.enable", "true")
-                put("mail.imaps.ssl.checkserveridentity", "true")
+                put("$propertyPrefix.partialfetch", "true")
+                put("$propertyPrefix.fetchsize", "262144")
+                put("$propertyPrefix.connectionpoolsize", "2")
+                put("$propertyPrefix.connectionpooltimeout", STORE_IDLE_TIMEOUT_MS.toString())
+                put("$propertyPrefix.compress.enable", "true")
+                if (provider.imapSecurity != MailSecurity.NONE) {
+                    put("$propertyPrefix.ssl.checkserveridentity", "true")
+                }
                 // Keep JavaMail tolerant of real-world multipart output generated by mobile and
                 // web clients. Apple Mail accepts these messages, while strict JavaMail parsing can
                 // otherwise expose a multipart/mixed shell with no readable child body.
@@ -1056,24 +1067,35 @@ class ImapClient(context: Context) {
 
                 // Start with the platform default TLS negotiation. The second pass pins TLS 1.2
                 // for older NetEase/mobile middleboxes; the final pass returns to the default.
-                if (attempt == 1) put("mail.imaps.ssl.protocols", "TLSv1.2")
+                if (attempt == 1 && provider.imapSecurity != MailSecurity.NONE) {
+                    put("$propertyPrefix.ssl.protocols", "TLSv1.2")
+                }
 
                 if (provider.authType == AuthType.OAUTH2) {
                     // android-mail contains a built-in XOAUTH2 authenticator. The access token is supplied
                     // through Store.connect() as the password value, but LOGIN/PLAIN must be
                     // explicitly disabled so the server never interprets the token as a password.
-                    put("mail.imaps.auth.mechanisms", "XOAUTH2")
-                    put("mail.imaps.auth.login.disable", "true")
-                    put("mail.imaps.auth.plain.disable", "true")
-                } else if (provider.netEaseClientId) {
-                    // 163/126 are generally more stable with AUTH LOGIN than AUTH PLAIN.
-                    put("mail.imaps.auth.mechanisms", "LOGIN")
-                    put("mail.imaps.auth.plain.disable", "true")
-                    put("mail.imaps.auth.login.disable", "false")
+                    put("$propertyPrefix.auth.mechanisms", "XOAUTH2")
+                    put("$propertyPrefix.auth.login.disable", "true")
+                    put("$propertyPrefix.auth.plain.disable", "true")
+                } else {
+                    when (provider.authMechanism) {
+                        MailAuthMechanism.LOGIN -> {
+                            put("$propertyPrefix.auth.mechanisms", "LOGIN")
+                            put("$propertyPrefix.auth.plain.disable", "true")
+                            put("$propertyPrefix.auth.login.disable", "false")
+                        }
+                        MailAuthMechanism.PLAIN -> {
+                            put("$propertyPrefix.auth.mechanisms", "PLAIN")
+                            put("$propertyPrefix.auth.login.disable", "true")
+                            put("$propertyPrefix.auth.plain.disable", "false")
+                        }
+                        MailAuthMechanism.AUTO -> Unit
+                    }
                 }
             }
             val session = Session.getInstance(props)
-            val store = session.getStore("imaps")
+            val store = session.getStore(protocol)
             val attemptStartedAt = System.currentTimeMillis()
             MailLog.d(
                 MailLog.IMAP,

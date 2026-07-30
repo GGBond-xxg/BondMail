@@ -15,8 +15,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
 
-private const val THUNDERBIRD_SWITCH_DURATION_MS = 330
-private val ThunderbirdSwitcherEasing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
+private const val THUNDERBIRD_SWITCH_DURATION_MS = 285
+private val ThunderbirdSwitcherEasing = CubicBezierEasing(0.20f, 0f, 0f, 1f)
 
 fun bondFadeThrough(enabled: Boolean): ContentTransform {
     if (!enabled) return EnterTransition.None togetherWith ExitTransition.None

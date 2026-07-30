@@ -15,6 +15,9 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.model.CustomMailConfig
+import com.bond.mail.data.model.MailAuthMechanism
+import com.bond.mail.data.model.MailSecurity
 import com.bond.mail.data.model.ProviderRegistry
 import com.bond.mail.data.model.UiFailure
 import com.bond.mail.data.performance.UiPerformanceGate
@@ -43,6 +46,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope,
         SharingStarted.Eagerly,
         container.repository.startupAccountsSnapshot(),
+    )
+    val savedContacts = container.repository.savedContacts.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyList(),
     )
     val selectedAccount = MutableStateFlow<String?>(null)
     val folder = MutableStateFlow("INBOX")
@@ -345,7 +353,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                         accounts.value.singleOrNull()
                     }
                     val endpoint = targetAccount
-                        ?.let { account -> ProviderRegistry.byId(account.providerId) }
+                        ?.let(ProviderRegistry::forAccount)
                         ?.let { provider -> "${provider.imapHost}:${provider.imapPort}" }
                     error.value = container.repository.failure(failure, endpoint)
                 }
@@ -446,6 +454,14 @@ class AddAccountViewModel(
     val suffix = MutableStateFlow(selectedProvider.value.suffixes.firstOrNull().orEmpty())
     val displayName = MutableStateFlow("")
     val secret = MutableStateFlow("")
+    val customLoginName = MutableStateFlow("")
+    val customImapHost = MutableStateFlow("")
+    val customImapPort = MutableStateFlow("993")
+    val customImapSecurity = MutableStateFlow(MailSecurity.SSL_TLS)
+    val customSmtpHost = MutableStateFlow("")
+    val customSmtpPort = MutableStateFlow("587")
+    val customSmtpSecurity = MutableStateFlow(MailSecurity.STARTTLS)
+    val customAuthMechanism = MutableStateFlow(MailAuthMechanism.AUTO)
     val busy = MutableStateFlow(false)
     val error = MutableStateFlow<UiFailure?>(null)
     val savedAccountId = MutableStateFlow<String?>(null)
@@ -508,11 +524,38 @@ class AddAccountViewModel(
         busy.value = true
         error.value = null
         runCatching {
-            container.repository.addAppPasswordAccount(provider.id, email, displayName.value, secret.value)
+            if (provider.id == "custom") {
+                container.repository.addCustomAccount(
+                    email = email,
+                    displayName = displayName.value,
+                    secret = secret.value,
+                    config = CustomMailConfig(
+                        loginName = customLoginName.value.trim().ifBlank { email },
+                        imapHost = customImapHost.value.trim(),
+                        imapPort = customImapPort.value.toIntOrNull() ?: 0,
+                        imapSecurity = customImapSecurity.value,
+                        smtpHost = customSmtpHost.value.trim(),
+                        smtpPort = customSmtpPort.value.toIntOrNull() ?: 0,
+                        smtpSecurity = customSmtpSecurity.value,
+                        authMechanism = customAuthMechanism.value,
+                    ),
+                )
+            } else {
+                container.repository.addAppPasswordAccount(
+                    provider.id,
+                    email,
+                    displayName.value,
+                    secret.value,
+                )
+            }
         }.onSuccess { account ->
             savedAccountId.value = account.id
         }.onFailure {
-            val endpoint = "${provider.imapHost}:${provider.imapPort}"
+            val endpoint = if (provider.id == "custom") {
+                "${customImapHost.value}:${customImapPort.value}"
+            } else {
+                "${provider.imapHost}:${provider.imapPort}"
+            }
             error.value = container.repository.failure(it, endpoint)
         }
         busy.value = false
@@ -670,6 +713,8 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun saveAccountSettings(
         id: String,
         displayName: String,
+        displayEmail: String,
+        avatarText: String,
         replacementSecret: String,
         onFinished: (UiFailure?) -> Unit,
     ) = viewModelScope.launch {
@@ -679,7 +724,12 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
             }
             // Validate the replacement credential first. A mistyped authorization code should
             // not partially save the dialog by changing only the display name.
-            container.repository.updateAccountDisplayName(id, displayName)
+            container.repository.updateAccountIdentity(
+                accountId = id,
+                displayName = displayName,
+                displayEmail = displayEmail,
+                avatarText = avatarText,
+            )
         }.onSuccess {
             onFinished(null)
         }.onFailure { error ->
@@ -700,7 +750,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
             onFinished(false, UiFailure("error_connection_failed"))
             return@launch
         }
-        val provider = runCatching { ProviderRegistry.byId(account.providerId) }.getOrNull()
+        val provider = runCatching { ProviderRegistry.forAccount(account) }.getOrNull()
         if (provider?.authType != AuthType.OAUTH2) {
             onFinished(false, UiFailure("error_oauth_required"))
             return@launch
@@ -767,7 +817,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
             throw cancelled
         } catch (failure: Throwable) {
             val account = accounts.value.firstOrNull { it.id == accountId }
-            val provider = account?.let { runCatching { ProviderRegistry.byId(it.providerId) }.getOrNull() }
+            val provider = account?.let { runCatching { ProviderRegistry.forAccount(it) }.getOrNull() }
             val endpoint = provider?.let { "${it.imapHost}:${it.imapPort}" }
             onFinished(false, container.repository.failure(failure, endpoint))
         }

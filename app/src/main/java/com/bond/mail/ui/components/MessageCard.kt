@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.MessageListRow
+import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.settings.MailDensity
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
@@ -62,6 +62,7 @@ import java.time.format.FormatStyle
 fun MessageCard(
     message: MessageListRow,
     account: AccountEntity?,
+    contactAvatarText: String? = null,
     density: MailDensity,
     monetBrandIcons: Boolean,
     onOpen: () -> Unit,
@@ -114,7 +115,7 @@ fun MessageCard(
     val outgoingState = if (message.folderType == "DRAFTS") "DRAFT" else message.deliveryState
     val primaryLabel = if (outgoing) {
         message.recipients.substringBefore(',').trim().ifBlank {
-            account?.email ?: message.senderAddress
+            account?.visibleEmail ?: message.senderAddress
         }
     } else {
         message.senderName.ifBlank { message.senderAddress }
@@ -169,23 +170,19 @@ fun MessageCard(
                             },
                         )
                     } else {
-                        BrandAvatar(primaryLabel, if (outgoing) message.recipients else message.senderAddress, avatarSize, monetBrandIcons)
+                        ContactAvatar(
+                            name = primaryLabel,
+                            email = if (outgoing) message.recipients else message.senderAddress,
+                            customText = contactAvatarText,
+                            size = avatarSize,
+                            monet = monetBrandIcons,
+                        )
                         if (account != null) {
-                            Surface(
-                                modifier = Modifier.align(Alignment.BottomEnd).size(16.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shadowElevation = 0.dp,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = account.displayName.firstOrNull()?.uppercase() ?: "@",
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    )
-                                }
-                            }
+                            AccountBadge(
+                                account = account,
+                                size = 18.dp,
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                            )
                         }
                     }
                 }

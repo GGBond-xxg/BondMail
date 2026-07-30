@@ -19,6 +19,7 @@ internal data class MailWebHeader(
     val recipient: String,
     val dateLabel: String,
     val avatarText: String,
+    val customAvatarText: String? = null,
     val avatarSvg: String? = null,
     val monetBrandIcons: Boolean = true,
     val attachments: List<MailAttachmentInfo> = emptyList(),
@@ -74,6 +75,8 @@ internal object MailWebViewCache {
         darkMode: Boolean,
         topContentInsetCssPx: Int,
         subjectBlockHeightCssPx: Int,
+        subjectFontSizeSp: Float,
+        subjectLineHeightSp: Float,
         senderBlockHeightCssPx: Int,
         viewportWidthCssPx: Int,
         fontScale: Float,
@@ -92,6 +95,8 @@ internal object MailWebViewCache {
                 darkMode = darkMode,
                 topContentInsetCssPx = topContentInsetCssPx,
                 subjectBlockHeightCssPx = subjectBlockHeightCssPx,
+                subjectFontSizeSp = subjectFontSizeSp,
+                subjectLineHeightSp = subjectLineHeightSp,
                 senderBlockHeightCssPx = senderBlockHeightCssPx,
                 viewportWidthCssPx = viewportWidthCssPx,
                 fontScale = fontScale,
@@ -113,6 +118,8 @@ internal object MailWebViewCache {
         darkMode: Boolean,
         topContentInsetCssPx: Int,
         subjectBlockHeightCssPx: Int,
+        subjectFontSizeSp: Float,
+        subjectLineHeightSp: Float,
         senderBlockHeightCssPx: Int,
         viewportWidthCssPx: Int,
         fontScale: Float,
@@ -131,6 +138,8 @@ internal object MailWebViewCache {
             darkMode = darkMode,
             topContentInsetCssPx = topContentInsetCssPx,
             subjectBlockHeightCssPx = subjectBlockHeightCssPx,
+            subjectFontSizeSp = subjectFontSizeSp,
+            subjectLineHeightSp = subjectLineHeightSp,
             senderBlockHeightCssPx = senderBlockHeightCssPx,
             viewportWidthCssPx = viewportWidthCssPx,
             fontScale = fontScale,
@@ -152,6 +161,8 @@ internal object MailWebViewCache {
         darkMode: Boolean,
         topContentInsetCssPx: Int,
         subjectBlockHeightCssPx: Int,
+        subjectFontSizeSp: Float,
+        subjectLineHeightSp: Float,
         senderBlockHeightCssPx: Int,
         viewportWidthCssPx: Int,
         fontScale: Float,
@@ -169,6 +180,8 @@ internal object MailWebViewCache {
             darkMode = darkMode,
             topContentInsetCssPx = topContentInsetCssPx,
             subjectBlockHeightCssPx = subjectBlockHeightCssPx,
+            subjectFontSizeSp = subjectFontSizeSp,
+            subjectLineHeightSp = subjectLineHeightSp,
             senderBlockHeightCssPx = senderBlockHeightCssPx,
             viewportWidthCssPx = viewportWidthCssPx,
             fontScale = fontScale,
@@ -203,6 +216,8 @@ internal object MailWebViewCache {
         val bochkSender = senderDomain.contains("bochk.com") ||
             senderIdentity.contains("bochk") ||
             senderIdentity.contains("bank of china hong kong")
+        val appleSender = senderDomain == "apple.com" ||
+            senderDomain.endsWith(".apple.com")
         val samsungSender = senderDomain.contains("samsung") ||
             senderIdentity.contains("samsung")
         val instagramSender = senderDomain.contains("instagram.com") ||
@@ -219,6 +234,9 @@ internal object MailWebViewCache {
         // while leaving a transparent tracking pixel in src. WebView does not execute the sender's
         // lazy-loading JavaScript, so promote those safe URL attributes before rendering.
         normalizeImageSources(document)
+        if (appleSender) {
+            replaceAppleBrandLogo(document)
+        }
         markRemoteImagesAsync(document)
         normalizeKnownBrandLogoImages(document)
         if (samsungSender) {
@@ -251,15 +269,18 @@ internal object MailWebViewCache {
             if (nativeDarkCanvas) {
                 body.addClass("bondmail-native-dark-mail")
             }
-            if (bybitSender || bochkSender) {
+            if (bybitSender || bochkSender || appleSender) {
                 // This template becomes only partially dark in Android WebView: its canvas turns
-                // black but several inline text colors stay nearly black. Apple Mail preserves
-                // the authored light message, so keep the complete body on a light canvas.
+                // black while some panels, brand marks, or inline text keep the light palette.
+                // Preserve the complete authored light message instead of showing a split canvas.
                 body.addClass("bondmail-force-light-mail")
             }
         }
         if (samsungSender) {
             body.addClass("bondmail-samsung-mail")
+        }
+        if (appleSender) {
+            body.addClass("bondmail-apple-mail")
         }
         normalizeEmojiPresentation(document)
         // Preserve direct text nodes from malformed/plain HTML messages while still giving them
@@ -413,10 +434,13 @@ internal object MailWebViewCache {
         // the current Android font scale. This keeps line wrapping and card geometry identical while
         // Chromium replaces the preview body underneath the stable native header.
         val safeTopInsetCssPx = topContentInsetCssPx.coerceIn(0, 200)
-        val safeSubjectBlockHeightCssPx = subjectBlockHeightCssPx.coerceIn(48, 260)
+        val safeSubjectBlockHeightCssPx = subjectBlockHeightCssPx.coerceIn(48, 520)
         val safeSenderBlockHeightCssPx = senderBlockHeightCssPx.coerceIn(64, 180)
-        val subjectFontSizeCssPx = formatCssNumber(22f * fontScale)
-        val subjectLineHeightCssPx = formatCssNumber(28f * fontScale)
+        // The adaptive title size is selected by Compose before the document is prepared. WebView
+        // must use that exact size as well: keeping the old hard-coded 22/28 px typography while
+        // reserving a block measured at 18/24 sp made the final line appear underneath the sender.
+        val subjectFontSizeCssPx = formatCssNumber(subjectFontSizeSp * fontScale)
+        val subjectLineHeightCssPx = formatCssNumber(subjectLineHeightSp * fontScale)
         val avatarFontSizeCssPx = formatCssNumber(15f * fontScale)
         val senderNameFontSizeCssPx = formatCssNumber(16f * fontScale)
         val senderNameLineHeightCssPx = formatCssNumber(20f * fontScale)
@@ -560,7 +584,7 @@ internal object MailWebViewCache {
               body{
                 display:block!important;position:static!important;margin:0!important;
                 width:auto!important;min-width:0!important;max-width:100%!important;
-                height:auto!important;min-height:calc(100vh + 132px)!important;max-height:none!important;
+                height:auto!important;min-height:100vh!important;max-height:none!important;
                 padding:${safeTopInsetCssPx}px 0 0!important;box-sizing:border-box!important;
                 overflow-x:hidden!important;overflow-y:visible!important;
                 font-family:sans-serif;
@@ -618,7 +642,7 @@ internal object MailWebViewCache {
                 min-height:${safeSubjectBlockHeightCssPx}px!important;
                 max-height:${safeSubjectBlockHeightCssPx}px!important;
                 margin:0!important;padding:0!important;overflow:hidden!important;
-                box-sizing:border-box!important;background:transparent!important;
+                box-sizing:border-box!important;background:$headerSurfaceCss!important;
                 color:$foregroundCss!important;
                 font-family:sans-serif!important
               }
@@ -627,7 +651,9 @@ internal object MailWebViewCache {
                 font-family:sans-serif!important
               }
               #bondmail-message-subject .bondmail-subject-text{
-                display:block!important;margin:0!important;padding:16px 4px 12px!important;
+                display:-webkit-box!important;-webkit-box-orient:vertical!important;
+                -webkit-line-clamp:6!important;overflow:hidden!important;
+                margin:0!important;padding:16px 14px 12px!important;
                 box-sizing:border-box!important;
                 max-width:100%!important;font-size:${subjectFontSizeCssPx}px!important;line-height:${subjectLineHeightCssPx}px!important;
                 font-weight:600!important;letter-spacing:0!important;color:$foregroundCss!important;
@@ -653,7 +679,7 @@ internal object MailWebViewCache {
                 max-height:${safeSenderBlockHeightCssPx}px!important;
                 padding:13px 14px 11px!important;margin:0!important;
                 box-sizing:border-box!important;border:0!important;
-                background:transparent!important;color:$foregroundCss!important;
+                background:$headerSurfaceCss!important;color:$foregroundCss!important;
                 overflow:hidden!important;
                 font-family:sans-serif!important;isolation:isolate!important
               }
@@ -802,6 +828,13 @@ internal object MailWebViewCache {
               body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body svg{
                 filter:none!important
               }
+              body.bondmail-apple-mail svg.bondmail-apple-brand-logo{
+                display:block!important;width:24px!important;height:29px!important;
+                min-width:24px!important;max-width:24px!important;
+                min-height:29px!important;max-height:29px!important;
+                fill:#111111!important;color:#111111!important;
+                filter:none!important;background:transparent!important
+              }
               body.bondmail-samsung-mail img.bondmail-samsung-logo{
                 display:block!important;visibility:visible!important;opacity:1!important;
                 width:auto!important;height:auto!important;min-width:0!important;
@@ -830,7 +863,7 @@ internal object MailWebViewCache {
               }
               #bondmail-scroll-tail{
                 display:block!important;width:1px!important;min-width:1px!important;
-                height:max(124px,14vh)!important;min-height:124px!important;
+                height:24px!important;min-height:24px!important;
                 margin:0!important;padding:0!important;pointer-events:none!important;
                 visibility:hidden!important;clear:both!important
               }
@@ -2131,14 +2164,17 @@ internal object MailWebViewCache {
         darkMode: Boolean,
         topContentInsetCssPx: Int,
         subjectBlockHeightCssPx: Int,
+        subjectFontSizeSp: Float,
+        subjectLineHeightSp: Float,
         senderBlockHeightCssPx: Int,
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v44|")
+        append("layout-v48|")
         append(key)
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|sender=").append(header.senderName.hashCode())
+        append("|avatarText=").append(header.avatarText.hashCode())
         append("|avatar=").append(header.avatarSvg.hashCode())
         append("|attachments=").append(header.attachments.hashCode())
         append('|').append(foregroundCss)
@@ -2151,6 +2187,8 @@ internal object MailWebViewCache {
         append("|dark=").append(darkMode)
         append("|top=").append(topContentInsetCssPx)
         append("|subjectHeight=").append(subjectBlockHeightCssPx)
+        append("|subjectFont=").append(subjectFontSizeSp)
+        append("|subjectLineHeight=").append(subjectLineHeightSp)
         append("|senderHeight=").append(senderBlockHeightCssPx)
         append("|viewport=").append(viewportWidthCssPx)
         append("|fontScale=").append(fontScale)
@@ -2315,6 +2353,31 @@ internal object MailWebViewCache {
                 image.addClass("bondmail-google-logo")
             }
         }
+    }
+
+    /**
+     * Apple account notices sometimes reference a light-only remote mark. When remote resources are
+     * delayed or blocked, WebView renders its rounded image box without the Apple glyph. Replace
+     * only the explicitly identified brand image with the bundled vector so the header stays stable.
+     */
+    private fun replaceAppleBrandLogo(document: Document) {
+        val image = document.select("img").firstOrNull { candidate ->
+            val identity = buildString {
+                append(candidate.attr("src")).append(' ')
+                append(candidate.attr("alt")).append(' ')
+                append(candidate.attr("title")).append(' ')
+                append(candidate.className()).append(' ')
+                append(candidate.id())
+            }
+            APPLE_LOGO_HINT.containsMatchIn(identity)
+        } ?: return
+
+        val logo = Element("svg")
+            .addClass("bondmail-apple-brand-logo")
+            .attr("viewBox", "0 0 24 24")
+            .attr("aria-hidden", "true")
+        logo.appendChild(Element("path").attr("d", APPLE_LOGO_PATH))
+        image.replaceWith(logo)
     }
 
     /**
@@ -2487,6 +2550,21 @@ internal object MailWebViewCache {
     private val BRAND_LOGO_HINT = Regex(
         """(?i)(?:^|[/_.\-\s])(logo|wordmark|brand)(?:[/_.\-\s]|$)""",
     )
+
+    private val APPLE_LOGO_HINT = Regex(
+        """(?i)(?:\bapple\b|apple[_-]?logo|logo[_-]?apple)""",
+    )
+
+    private const val APPLE_LOGO_PATH =
+        "M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-" +
+            "4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 " +
+            "3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 " +
+            "1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-" +
+            "3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-" +
+            "4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 " +
+            "1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-" +
+            "3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 " +
+            "3.559-1.701"
 
     private val GOOGLE_LOGO_HINT = Regex(
         """(?i)(?:google|gmail)[/_.\-\s]*(?:logo|wordmark)|(?:logo|wordmark)[/_.\-\s]*(?:google|gmail)""",

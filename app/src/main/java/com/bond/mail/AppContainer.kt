@@ -110,6 +110,27 @@ class AppContainer(context: Context) {
         }
     }
 
+    private val migration9To10 = object : Migration(9, 10) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE accounts ADD COLUMN displayEmail TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN avatarText TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN loginName TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customImapHost TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customImapPort INTEGER")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customImapSecurity TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customSmtpHost TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customSmtpPort INTEGER")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customSmtpSecurity TEXT")
+            database.execSQL("ALTER TABLE accounts ADD COLUMN customAuthMechanism TEXT")
+        }
+    }
+
+    private val migration10To11 = object : Migration(10, 11) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE saved_contacts ADD COLUMN avatarText TEXT")
+        }
+    }
+
     val database: MailDatabase = Room.databaseBuilder(context, MailDatabase::class.java, "bond_mail.db")
         .addMigrations(
             migration1To2,
@@ -120,6 +141,8 @@ class AppContainer(context: Context) {
             migration6To7,
             migration7To8,
             migration8To9,
+            migration9To10,
+            migration10To11,
         )
         .build()
     val settings = SettingsStore(context)
@@ -142,8 +165,10 @@ class AppContainer(context: Context) {
         appForeground.set(foreground)
     }
 
+    fun isAppForeground(): Boolean = appForeground.get()
+
     fun backgroundNotificationMode(): NewMailNotificationMode =
-        if (appForeground.get()) {
+        if (isAppForeground()) {
             NewMailNotificationMode.CONSUME_SILENTLY
         } else {
             NewMailNotificationMode.ALERT
@@ -197,7 +222,7 @@ class AppContainer(context: Context) {
                 if (!repository.shouldNotify(message)) return@forEach
                 val shouldAlert = notificationMode == NewMailNotificationMode.ALERT &&
                     alertsEnabled &&
-                    !appForeground.get()
+                    !isAppForeground()
                 if (shouldAlert) notifications.show(message)
                 // Consume the UID even when alerts are disabled or this sync is visible in-app.
                 // Re-enabling notifications must not replay old mail as a burst of new alerts.

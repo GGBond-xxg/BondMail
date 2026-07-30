@@ -20,28 +20,35 @@ import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
 import com.bond.mail.data.mail.BrandMatcher
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 import kotlin.math.min
 
+data class BrandAvatarPalette(
+    val background: Color,
+    val foreground: Color,
+)
+
+fun contactAvatarText(senderName: String, senderAddress: String): String =
+    BrandMatcher.match(senderName, senderAddress).label
+
 @Composable
-fun BrandAvatar(
+fun brandAvatarPalette(
     senderName: String,
     senderAddress: String,
-    size: Dp = 48.dp,
-    monet: Boolean = true,
-) {
-    val context = LocalContext.current
+    monet: Boolean,
+): BrandAvatarPalette {
     val brand = remember(senderName, senderAddress) {
         BrandMatcher.match(senderName, senderAddress)
-    }
-    val logo = remember(brand.key, senderAddress) {
-        ContactLogoStore.load(context, brand.key, senderAddress)
     }
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
@@ -69,6 +76,27 @@ fun BrandAvatar(
     } else {
         Color.White
     }
+    return BrandAvatarPalette(background, foreground)
+}
+
+@Composable
+fun BrandAvatar(
+    senderName: String,
+    senderAddress: String,
+    size: Dp = 48.dp,
+    monet: Boolean = true,
+) {
+    val context = LocalContext.current
+    val brand = remember(senderName, senderAddress) {
+        BrandMatcher.match(senderName, senderAddress)
+    }
+    val logo = remember(brand.key, senderAddress) {
+        ContactLogoStore.load(context, brand.key, senderAddress)
+    }
+    val scheme = MaterialTheme.colorScheme
+    val palette = brandAvatarPalette(senderName, senderAddress, monet)
+    val background = palette.background
+    val foreground = palette.foreground
 
     Box(
         modifier = Modifier
@@ -81,8 +109,14 @@ fun BrandAvatar(
         if (logo != null) {
             BrandSvg(
                 logo = logo,
+                brandKey = brand.key,
                 tint = foreground,
                 modifier = Modifier.size(size * 0.54f),
+            )
+        } else if (brand.key in MICROSOFT_BRAND_KEYS) {
+            MicrosoftMark(
+                tint = foreground,
+                modifier = Modifier.size(size * 0.48f),
             )
         } else {
             Text(
@@ -97,15 +131,63 @@ fun BrandAvatar(
 }
 
 @Composable
+fun ContactAvatar(
+    name: String,
+    email: String,
+    customText: String?,
+    size: Dp = 48.dp,
+    monet: Boolean = true,
+) {
+    val glyph = customText?.trim().takeUnless { it.isNullOrBlank() }
+    if (glyph == null) {
+        BrandAvatar(
+            senderName = name,
+            senderAddress = email,
+            size = size,
+            monet = monet,
+        )
+        return
+    }
+
+    val palette = brandAvatarPalette(name, email, monet)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(palette.background)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = glyph,
+            color = palette.foreground,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            fontSize = (size.value * 0.40f).sp,
+            lineHeight = (size.value * 0.46f).sp,
+            fontWeight = FontWeight.Bold,
+            style = TextStyle(
+                platformStyle = PlatformTextStyle(includeFontPadding = false),
+            ),
+        )
+    }
+}
+
+@Composable
 private fun BrandSvg(
     logo: ContactLogo,
+    brandKey: String,
     tint: Color,
     modifier: Modifier,
 ) {
     Canvas(modifier) {
         val scale = min(size.width / logo.contentWidth, size.height / logo.contentHeight)
-        val offsetX = (size.width - logo.contentWidth * scale) / 2f - logo.contentLeft * scale
-        val offsetY = (size.height - logo.contentHeight * scale) / 2f - logo.contentTop * scale
+        val appleOffsetX = if (brandKey == "apple") size.width * 0.015f else 0f
+        val appleOffsetY = if (brandKey == "apple") size.height * 0.055f else 0f
+        val offsetX = (size.width - logo.contentWidth * scale) / 2f -
+            logo.contentLeft * scale + appleOffsetX
+        val offsetY = (size.height - logo.contentHeight * scale) / 2f -
+            logo.contentTop * scale + appleOffsetY
         withTransform({
             translate(offsetX, offsetY)
             scale(scale, scale, pivot = androidx.compose.ui.geometry.Offset.Zero)
@@ -114,6 +196,41 @@ private fun BrandSvg(
         }
     }
 }
+
+@Composable
+private fun MicrosoftMark(
+    tint: Color,
+    modifier: Modifier,
+) {
+    Canvas(modifier) {
+        val gap = size.minDimension * 0.09f
+        val tile = (size.minDimension - gap) / 2f
+        drawRect(tint, size = androidx.compose.ui.geometry.Size(tile, tile))
+        drawRect(
+            tint,
+            topLeft = androidx.compose.ui.geometry.Offset(tile + gap, 0f),
+            size = androidx.compose.ui.geometry.Size(tile, tile),
+        )
+        drawRect(
+            tint,
+            topLeft = androidx.compose.ui.geometry.Offset(0f, tile + gap),
+            size = androidx.compose.ui.geometry.Size(tile, tile),
+        )
+        drawRect(
+            tint,
+            topLeft = androidx.compose.ui.geometry.Offset(tile + gap, tile + gap),
+            size = androidx.compose.ui.geometry.Size(tile, tile),
+        )
+    }
+}
+
+private val MICROSOFT_BRAND_KEYS = setOf(
+    "microsoft",
+    "outlook",
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+)
 
 private data class ContactLogo(
     val contentLeft: Float,
@@ -228,9 +345,10 @@ private object ContactLogoStore {
         "mail.ru" -> "maildotru"
         "web.de" -> "webdotde"
         "qq.com" -> "qq"
-        "outlook" -> "microsoftoutlook"
+        "outlook", "outlook.com", "hotmail.com", "live.com" -> "microsoftoutlook"
         "icloud" -> "icloud"
         "x.com", "twitter" -> "x"
+        "chatgpt" -> "openai"
         "163.com", "126.com" -> "neteasecloudmusic"
         "bank of china", "bochk" -> "bocbank"
         "za bank" -> "zabank"
@@ -257,8 +375,9 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "web.de" -> Color(0xFFFFCC00)
     "mail.com" -> Color(0xFF004788)
     "mail.ru" -> Color(0xFF005FF9)
-    "microsoft", "outlook" -> Color(0xFF0078D4)
+    "microsoft", "outlook", "outlook.com", "hotmail.com", "live.com" -> Color(0xFF0078D4)
     "icloud", "apple" -> Color(0xFF555555)
+    "openai", "chatgpt" -> Color(0xFF111111)
     "cloudflare" -> Color(0xFFF48120)
     "steam" -> Color(0xFF1B2838)
     "grab" -> Color(0xFF00B14F)

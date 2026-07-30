@@ -72,23 +72,28 @@ internal object MailWebViewPool {
             Handler(Looper.getMainLooper()).post { prewarm(context.applicationContext) }
             return
         }
-        if (cached.isNotEmpty() || activeCount > 0) return
+        if (activeCount > 0 || cached.size >= MAX_CACHED_WEB_VIEWS) return
 
-        cached += createConfiguredWebView(context.applicationContext).apply {
-            settings.blockNetworkLoads = true
-            settings.blockNetworkImage = true
-            settings.loadsImagesAutomatically = false
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
-            // Loading a tiny local document starts the Chromium renderer as well as the Java shell.
-            // The detail screen replaces it while the useful native mail preview remains visible.
-            loadDataWithBaseURL(
-                "https://mail.bond.invalid/",
-                "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head>" +
-                    "<body style=\"margin:0;background:transparent\"></body></html>",
-                "text/html",
-                "UTF-8",
-                null,
-            )
+        // Fill the complete bounded pool behind the launch screen. Previously only the first
+        // message reused a warm WebView; opening a second different message synchronously created
+        // another Chromium shell on the tap frame and caused a small but perceptible hitch.
+        while (cached.size < MAX_CACHED_WEB_VIEWS) {
+            cached += createConfiguredWebView(context.applicationContext).apply {
+                settings.blockNetworkLoads = true
+                settings.blockNetworkImage = true
+                settings.loadsImagesAutomatically = false
+                settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                // Loading a tiny local document starts the Chromium renderer as well as the Java
+                // shell. The detail screen replaces it while the native preview remains visible.
+                loadDataWithBaseURL(
+                    "https://mail.bond.invalid/",
+                    "<html><head><meta name=\"viewport\" content=\"width=device-width\"></head>" +
+                        "<body style=\"margin:0;background:transparent\"></body></html>",
+                    "text/html",
+                    "UTF-8",
+                    null,
+                )
+            }
         }
     }
 

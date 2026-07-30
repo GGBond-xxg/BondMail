@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">郵箱</string>
     <string name="notifications">新郵件通知</string>
+    <string name="background_sync_channel">背景收信</string>
+    <string name="background_sync_active">背景收信已開啟</string>
+    <string name="background_sync_active_detail">每 %1$d 分鐘檢查一次新郵件</string>
 </resources>

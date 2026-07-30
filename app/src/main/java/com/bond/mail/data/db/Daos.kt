@@ -34,6 +34,17 @@ interface AccountDao {
     @Query("UPDATE accounts SET displayName = :displayName WHERE id = :id")
     suspend fun updateDisplayName(id: String, displayName: String)
 
+    @Query(
+        "UPDATE accounts SET displayName = :displayName, displayEmail = :displayEmail, " +
+            "avatarText = :avatarText WHERE id = :id",
+    )
+    suspend fun updateIdentity(
+        id: String,
+        displayName: String,
+        displayEmail: String?,
+        avatarText: String?,
+    )
+
     @Query("UPDATE accounts SET displayName = substr(displayName, 1, :maxLength) WHERE length(displayName) > :maxLength")
     suspend fun truncateDisplayNames(maxLength: Int)
 
@@ -266,6 +277,9 @@ interface SavedContactDao {
 
     @Query("SELECT * FROM saved_contacts WHERE LOWER(email) = LOWER(:email) LIMIT 1")
     suspend fun byEmail(email: String): SavedContactEntity?
+
+    @Query("SELECT * FROM saved_contacts WHERE id = :id LIMIT 1")
+    suspend fun byId(id: String): SavedContactEntity?
 
     @Upsert
     suspend fun upsert(contact: SavedContactEntity)

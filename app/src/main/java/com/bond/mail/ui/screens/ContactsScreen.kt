@@ -1,6 +1,7 @@
 package com.bond.mail.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,10 +31,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -67,13 +70,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bond.mail.AppContainer
+import com.bond.mail.data.db.SavedContactEntity
 import com.bond.mail.data.settings.AppSettings
-import com.bond.mail.ui.components.BrandAvatar
+import com.bond.mail.ui.components.ContactAvatar
 import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.ObserveLazyListChromeVisibility
+import com.bond.mail.ui.motion.BondMotionDuration
+import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.animateChromeOffset
 import com.bond.mail.ui.motion.animateToTopWithMomentum
 import com.bond.mail.ui.motion.bondMotionEnabled
@@ -95,11 +101,18 @@ fun ContactsScreen(
     val savedContacts by container.repository.savedContacts.collectAsState(initial = emptyList())
     var query by rememberSaveable { mutableStateOf("") }
     var showAddContact by rememberSaveable { mutableStateOf(false) }
+    var editingContactId by rememberSaveable { mutableStateOf<String?>(null) }
     var contactName by rememberSaveable { mutableStateOf("") }
     var contactEmail by rememberSaveable { mutableStateOf("") }
+    var contactAvatar by rememberSaveable { mutableStateOf("") }
     var contactError by remember { mutableStateOf<String?>(null) }
     var contactSaving by remember { mutableStateOf(false) }
+    var deleteContactTarget by remember { mutableStateOf<SavedContactEntity?>(null) }
+    var contactDeleting by remember { mutableStateOf(false) }
+    var deleteContactError by remember { mutableStateOf<String?>(null) }
     val invalidContactLabel = tr("invalid_contact")
+    val invalidContactAvatarLabel = tr("error_contact_avatar_single_glyph")
+    val deleteContactFailureLabel = tr("error_delete_contact_failed")
     val frequentContacts = remember(savedContacts, query) {
         savedContacts.filter { contact ->
             query.isBlank() ||
@@ -127,10 +140,30 @@ fun ContactsScreen(
     val listState = rememberLazyListState()
     val motionEnabled = bondMotionEnabled()
     val scrollScope = rememberCoroutineScope()
+    val listBottomContentPadding by animateDpAsState(
+        targetValue = if (chromeVisible) 112.dp else 18.dp,
+        animationSpec = tween(
+            durationMillis = BondMotionDuration.ChromeReveal,
+            easing = BondMotionEasing.Standard,
+        ),
+        label = "contact-list-bottom-content-padding",
+    )
+    val scrollToTopBottomPadding by animateDpAsState(
+        targetValue = if (chromeVisible) 88.dp else 18.dp,
+        animationSpec = tween(
+            durationMillis = BondMotionDuration.ChromeReveal,
+            easing = BondMotionEasing.Standard,
+        ),
+        label = "contact-list-scroll-top-bottom-padding",
+    )
     val showScrollToTop by remember(listState) {
         derivedStateOf {
-            listState.firstVisibleItemIndex >= 4 ||
-                (listState.firstVisibleItemIndex > 0 && listState.firstVisibleItemScrollOffset > 420)
+            val partiallyScrolled =
+                listState.firstVisibleItemIndex > 0 &&
+                    listState.firstVisibleItemScrollOffset > 420
+            val scrolledAwayFromTop =
+                listState.firstVisibleItemIndex >= 4 || partiallyScrolled
+            listState.canScrollForward && scrolledAwayFromTop
         }
     }
     ObserveLazyListChromeVisibility(
@@ -160,7 +193,7 @@ fun ContactsScreen(
                 start = MailContentDefaults.HorizontalInset,
                 end = MailContentDefaults.HorizontalInset,
                 top = topChromeHeight + 2.dp,
-                bottom = 112.dp,
+                bottom = listBottomContentPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
         ) {
@@ -183,9 +216,18 @@ fun ContactsScreen(
                     ContactItem(
                         name = contact.name,
                         email = contact.email,
+                        customAvatarText = contact.avatarText,
                         settings = settings,
                         shape = MailContentDefaults.itemShape(index, frequentContacts.size),
                         onCompose = onCompose,
+                        onEdit = {
+                            editingContactId = contact.id
+                            contactName = contact.name
+                            contactEmail = contact.email
+                            contactAvatar = contact.avatarText.orEmpty()
+                            contactError = null
+                            showAddContact = true
+                        },
                     )
                 }
                 if (filteredContacts.isNotEmpty()) {
@@ -224,6 +266,7 @@ fun ContactsScreen(
                     ContactItem(
                         name = contact.senderName.ifBlank { contact.senderAddress },
                         email = contact.senderAddress,
+                        customAvatarText = null,
                         settings = settings,
                         shape = MailContentDefaults.itemShape(index, filteredContacts.size),
                         onCompose = onCompose,
@@ -291,8 +334,10 @@ fun ContactsScreen(
                         )
                         IconButton(
                             onClick = {
+                                editingContactId = null
                                 contactName = ""
                                 contactEmail = ""
+                                contactAvatar = ""
                                 contactError = null
                                 showAddContact = true
                             },
@@ -313,7 +358,7 @@ fun ContactsScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(end = 18.dp, bottom = 88.dp),
+                .padding(end = 18.dp, bottom = scrollToTopBottomPadding),
             enter = fadeIn(tween(150)) +
                 scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
                 slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
@@ -342,9 +387,64 @@ fun ContactsScreen(
         if (showAddContact) {
             AlertDialog(
                 onDismissRequest = { showAddContact = false },
-                title = { Text(tr("add_contact")) },
+                title = {
+                    Text(
+                        if (editingContactId == null) tr("add_contact") else tr("edit_contact"),
+                    )
+                },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            ContactAvatar(
+                                name = contactName,
+                                email = contactEmail,
+                                customText = contactAvatar,
+                                size = 52.dp,
+                                monet = settings.dynamicColor && settings.monetBrandIcons,
+                            )
+                            OutlinedTextField(
+                                value = contactAvatar,
+                                onValueChange = {
+                                    contactAvatar = it.take(32)
+                                    contactError = null
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text(tr("contact_avatar")) },
+                                placeholder = { Text(tr("avatar_placeholder")) },
+                                supportingText = { Text(tr("contact_avatar_hint")) },
+                                singleLine = true,
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    contactAvatar = ""
+                                    contactError = null
+                                },
+                            ) {
+                                Text(tr("avatar_auto"))
+                            }
+                            listOf("😀", "📮", "✉️", "⭐").forEach { emoji ->
+                                TextButton(
+                                    onClick = {
+                                        contactAvatar = emoji
+                                        contactError = null
+                                    },
+                                ) {
+                                    Text(emoji)
+                                }
+                            }
+                        }
                         OutlinedTextField(
                             value = contactName,
                             onValueChange = {
@@ -380,11 +480,22 @@ fun ContactsScreen(
                             scrollScope.launch {
                                 contactSaving = true
                                 runCatching {
-                                    container.repository.saveContact(contactName, contactEmail)
+                                    container.repository.saveContact(
+                                        name = contactName,
+                                        email = contactEmail,
+                                        avatarText = contactAvatar,
+                                        contactId = editingContactId,
+                                    )
                                 }.onSuccess {
                                     showAddContact = false
-                                }.onFailure {
-                                    contactError = invalidContactLabel
+                                }.onFailure { error ->
+                                    contactError = if (
+                                        error.message.orEmpty().contains("Contact avatar", ignoreCase = true)
+                                    ) {
+                                        invalidContactAvatarLabel
+                                    } else {
+                                        invalidContactLabel
+                                    }
                                 }
                                 contactSaving = false
                             }
@@ -392,7 +503,81 @@ fun ContactsScreen(
                     ) { Text(tr("save")) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showAddContact = false }) {
+                    Row {
+                        if (editingContactId != null) {
+                            TextButton(
+                                enabled = !contactSaving,
+                                onClick = {
+                                    deleteContactTarget = savedContacts.firstOrNull {
+                                        it.id == editingContactId
+                                    }
+                                    deleteContactError = null
+                                    showAddContact = false
+                                },
+                            ) {
+                                Text(
+                                    tr("delete_contact"),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        TextButton(
+                            enabled = !contactSaving,
+                            onClick = { showAddContact = false },
+                        ) {
+                            Text(tr("cancel"))
+                        }
+                    }
+                },
+            )
+        }
+
+        deleteContactTarget?.let { contact ->
+            AlertDialog(
+                onDismissRequest = {
+                    if (!contactDeleting) deleteContactTarget = null
+                },
+                title = { Text(tr("confirm_delete_contact_title")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("${contact.name}\n${tr("delete_contact_local_only")}")
+                        deleteContactError?.let { error ->
+                            Text(
+                                error,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        enabled = !contactDeleting,
+                        onClick = {
+                            scrollScope.launch {
+                                contactDeleting = true
+                                runCatching {
+                                    container.repository.deleteSavedContact(contact.id)
+                                }.onSuccess {
+                                    deleteContactTarget = null
+                                    editingContactId = null
+                                }.onFailure {
+                                    deleteContactError = deleteContactFailureLabel
+                                }
+                                contactDeleting = false
+                            }
+                        },
+                    ) {
+                        Text(
+                            tr("delete"),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        enabled = !contactDeleting,
+                        onClick = { deleteContactTarget = null },
+                    ) {
                         Text(tr("cancel"))
                     }
                 },
@@ -405,9 +590,11 @@ fun ContactsScreen(
 private fun ContactItem(
     name: String,
     email: String,
+    customAvatarText: String?,
     settings: AppSettings,
     shape: androidx.compose.ui.graphics.Shape,
     onCompose: (String) -> Unit,
+    onEdit: (() -> Unit)? = null,
 ) {
     GroupedListSurface(
         onClick = { onCompose(email) },
@@ -422,7 +609,13 @@ private fun ContactItem(
                 .padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BrandAvatar(name, email, 46.dp, settings.dynamicColor && settings.monetBrandIcons)
+            ContactAvatar(
+                name = name,
+                email = email,
+                customText = customAvatarText,
+                size = 46.dp,
+                monet = settings.dynamicColor && settings.monetBrandIcons,
+            )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -440,10 +633,13 @@ private fun ContactItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = { onCompose(email) }, modifier = Modifier.size(40.dp).clip(CircleShape)) {
+            IconButton(
+                onClick = onEdit ?: { onCompose(email) },
+                modifier = Modifier.size(40.dp).clip(CircleShape),
+            ) {
                 Icon(
                     Icons.Default.Edit,
-                    contentDescription = tr("compose_mail"),
+                    contentDescription = if (onEdit == null) tr("compose_mail") else tr("edit_contact"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(22.dp),
                 )

@@ -1,6 +1,7 @@
 package com.bond.mail.background
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -29,6 +30,7 @@ class MailNotificationManager(private val context: Context) {
 
     init {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(NotificationManager::class.java)
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -47,23 +49,69 @@ class MailNotificationManager(private val context: Context) {
                 setSound(defaultSound, audioAttributes)
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
-            context.getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+            val backgroundSyncChannel = NotificationChannel(
+                BACKGROUND_SYNC_CHANNEL_ID,
+                context.getString(R.string.background_sync_channel),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = context.getString(R.string.background_sync_active)
+                setSound(null, null)
+                enableVibration(false)
+                enableLights(false)
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+                if (Build.VERSION.SDK_INT >= 33) setBlockable(true)
+            }
+            manager.createNotificationChannels(listOf(channel, backgroundSyncChannel))
         }
     }
 
-    fun show(message: MessageEntity) {
+    fun continuousSyncNotification(intervalMinutes: Int): Notification {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pending = PendingIntent.getActivity(
+            context,
+            ContinuousMailSyncService.FOREGROUND_NOTIFICATION_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(context, BACKGROUND_SYNC_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.background_sync_active))
+            .setContentText(
+                context.getString(R.string.background_sync_active_detail, intervalMinutes),
+            )
+            .setContentIntent(pending)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setOngoing(true)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .build()
+    }
+
+    fun canPostNotifications(): Boolean {
         if (
             Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) return false
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    @SuppressLint("MissingPermission")
+    fun show(message: MessageEntity) {
+        // Kept in one helper so both the runtime permission and the per-app notification switch
+        // are checked immediately before notify(). Lint cannot infer that contract across methods.
+        if (!canPostNotifications()) return
 
         val notificationManager = NotificationManagerCompat.from(context)
-        if (!notificationManager.areNotificationsEnabled()) return
-
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("message_id", message.id)
@@ -101,6 +149,7 @@ class MailNotificationManager(private val context: Context) {
     }
 
     companion object {
+        const val BACKGROUND_SYNC_CHANNEL_ID = "background_mail_sync_v1"
         private const val NOTIFICATION_LIGHT_COLOR = 0xFF0375FD.toInt()
         private val VIBRATION_PATTERN = longArrayOf(0L, 180L, 90L, 180L)
     }

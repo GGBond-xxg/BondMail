@@ -36,8 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bond.mail.data.db.AccountEntity
+import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.ui.SettingsViewModel
-import com.bond.mail.ui.components.BrandAvatar
+import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.i18n.tr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,12 +103,12 @@ fun AccountOrderScreen(
                     ) {
                         Icon(Icons.Default.DragHandle, contentDescription = null)
                         Spacer(Modifier.width(10.dp))
-                        BrandAvatar(account.displayName, account.email, 40.dp)
+                        AccountAvatar(account, 40.dp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(account.displayName, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                account.email,
+                                account.visibleEmail,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

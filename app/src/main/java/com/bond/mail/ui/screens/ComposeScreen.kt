@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -87,7 +89,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.ui.ComposeViewModel
+import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
@@ -401,9 +405,13 @@ fun ComposeScreen(
                                         .padding(horizontal = 16.dp, vertical = 13.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
+                                    accounts.firstOrNull { it.id == accountId }?.let { selectedAccount ->
+                                        AccountAvatar(selectedAccount, 30.dp)
+                                        Spacer(Modifier.width(10.dp))
+                                    }
                                     Text(
                                         accounts.firstOrNull { it.id == accountId }
-                                            ?.let { "${it.displayName} · ${it.email}" }
+                                            ?.let { "${it.displayName} · ${it.visibleEmail}" }
                                             ?: tr("from"),
                                         modifier = Modifier.weight(1f),
                                         maxLines = 1,
@@ -421,7 +429,8 @@ fun ComposeScreen(
                             ) {
                                 accounts.forEach { account ->
                                     DropdownMenuItem(
-                                        text = { Text("${account.displayName} · ${account.email}") },
+                                        text = { Text("${account.displayName} · ${account.visibleEmail}") },
+                                        leadingIcon = { AccountAvatar(account, 30.dp) },
                                         onClick = {
                                             accountId = account.id
                                             accountMenu = false

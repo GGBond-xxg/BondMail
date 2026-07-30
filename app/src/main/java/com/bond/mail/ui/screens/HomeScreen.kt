@@ -174,6 +174,7 @@ fun HomeScreen(
     chromeControllerEnabled: Boolean = true,
 ) {
     val accounts by viewModel.accounts.collectAsState()
+    val savedContacts by viewModel.savedContacts.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val selectedAccountId by viewModel.selectedAccount.collectAsState()
     val currentFolder by viewModel.folder.collectAsState()
@@ -185,6 +186,11 @@ fun HomeScreen(
     val motionEnabled = bondMotionEnabled()
     var topNotice by remember { mutableStateOf<String?>(null) }
     val accountById = remember(accounts) { accounts.associateBy { it.id } }
+    val contactAvatarByEmail = remember(savedContacts) {
+        savedContacts
+            .filter { !it.avatarText.isNullOrBlank() }
+            .associate { it.email.trim().lowercase() to it.avatarText }
+    }
     val selectedAccount = accountById[selectedAccountId]
     // Rows already present when a mailbox becomes active are cache restoration, not a new-mail
     // animation. IDs added later by the staged first sync receive a short K-9-style reveal.
@@ -205,7 +211,13 @@ fun HomeScreen(
     var searchTransformActive by remember { mutableStateOf(false) }
     val searchOverlayActive = showSearch || searchTransformActive
     LaunchedEffect(inSelectionMode, searchOverlayActive) {
-        if (inSelectionMode || searchOverlayActive) onChromeVisibilityChanged(true)
+        when {
+            inSelectionMode -> onChromeVisibilityChanged(true)
+            // Search owns the full result viewport. Keep the floating dock below the screen for
+            // the whole container transform so it cannot cover results or be restored by scroll.
+            searchOverlayActive -> onChromeVisibilityChanged(false)
+            else -> onChromeVisibilityChanged(true)
+        }
     }
     LaunchedEffect(selectedIds.size) {
         // AnimatedContent keeps the outgoing selection toolbar alive during fade-through. Preserve
@@ -320,10 +332,30 @@ fun HomeScreen(
     ) {
         val listState = rememberLazyListState()
         val scrollScope = rememberCoroutineScope()
+        val listBottomContentPadding by animateDpAsState(
+            targetValue = if (chromeVisible) 112.dp else 18.dp,
+            animationSpec = tween(
+                durationMillis = BondMotionDuration.ChromeReveal,
+                easing = BondMotionEasing.Standard,
+            ),
+            label = "mail-list-bottom-content-padding",
+        )
+        val scrollToTopBottomPadding by animateDpAsState(
+            targetValue = if (chromeVisible) 88.dp else 18.dp,
+            animationSpec = tween(
+                durationMillis = BondMotionDuration.ChromeReveal,
+                easing = BondMotionEasing.Standard,
+            ),
+            label = "mail-list-scroll-top-bottom-padding",
+        )
         val showScrollToTop by remember(listState) {
             derivedStateOf {
-                listState.firstVisibleItemIndex >= 4 ||
-                    (listState.firstVisibleItemIndex > 0 && listState.firstVisibleItemScrollOffset > 420)
+                val partiallyScrolled =
+                    listState.firstVisibleItemIndex > 0 &&
+                        listState.firstVisibleItemScrollOffset > 420
+                val scrolledAwayFromTop =
+                    listState.firstVisibleItemIndex >= 4 || partiallyScrolled
+                listState.canScrollForward && scrolledAwayFromTop
             }
         }
         val messageIds = remember(messages) { messages.map { message -> message.id } }
@@ -416,7 +448,10 @@ fun HomeScreen(
                                 }
                             }
                         },
-                    contentPadding = PaddingValues(top = topChromeHeight + 6.dp, bottom = 112.dp),
+                    contentPadding = PaddingValues(
+                        top = topChromeHeight + 6.dp,
+                        bottom = listBottomContentPadding,
+                    ),
                     verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
                 ) {
                 item(key = "folder-strip") {
@@ -524,6 +559,9 @@ fun HomeScreen(
                                 MessageCard(
                                     message = message,
                                     account = accountById[message.accountId],
+                                    contactAvatarText = contactAvatarByEmail[
+                                        message.contactAddressKey()
+                                    ],
                                     density = settings.density,
                                     monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
                                     selected = messageSelected,
@@ -547,7 +585,7 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(end = 18.dp, bottom = 88.dp),
+                .padding(end = 18.dp, bottom = scrollToTopBottomPadding),
             enter = fadeIn(tween(150)) +
                 scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
                 slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
@@ -772,6 +810,7 @@ fun HomeScreen(
             onQueryChange = { viewModel.searchQuery.value = it },
             results = messages,
             accountById = accountById,
+            contactAvatarByEmail = contactAvatarByEmail,
             settings = settings,
             onOpenMessage = { message ->
                 pendingSearchMessage = message
@@ -850,6 +889,17 @@ fun HomeScreen(
             )
         }
     }
+}
+
+private fun MessageListRow.contactAddressKey(): String {
+    val outgoing = folderType == "SENT" || folderType == "DRAFTS"
+    val raw = if (outgoing) recipients.substringBefore(',') else senderAddress
+    return raw
+        .trim()
+        .substringAfterLast('<')
+        .substringBefore('>')
+        .trim()
+        .lowercase()
 }
 
 @Composable
@@ -1149,6 +1199,7 @@ private fun SearchContainerOverlay(
     onQueryChange: (String) -> Unit,
     results: List<MessageListRow>,
     accountById: Map<String, AccountEntity>,
+    contactAvatarByEmail: Map<String, String?>,
     settings: AppSettings,
     onOpenMessage: (MessageListRow) -> Unit,
     onDismiss: () -> Unit,
@@ -1325,6 +1376,9 @@ private fun SearchContainerOverlay(
                                 MessageCard(
                                     message = message,
                                     account = accountById[message.accountId],
+                                    contactAvatarText = contactAvatarByEmail[
+                                        message.contactAddressKey()
+                                    ],
                                     density = settings.density,
                                     monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
                                     shape = MailContentDefaults.itemShape(index, results.size),

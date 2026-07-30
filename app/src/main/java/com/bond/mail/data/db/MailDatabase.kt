@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         NotificationStateEntity::class,
         SavedContactEntity::class,
     ],
-    version = 9,
+    version = 11,
     exportSchema = false,
 )
 abstract class MailDatabase : RoomDatabase() {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -74,16 +75,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.model.MailAuthMechanism
+import com.bond.mail.data.model.MailSecurity
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.model.ProviderRegistry
 import com.bond.mail.ui.AddAccountViewModel
-import com.bond.mail.ui.components.BrandAvatar
+import com.bond.mail.ui.components.GroupedListSurface
+import com.bond.mail.ui.components.ProviderAvatar
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.bondSurfaces
 
@@ -118,15 +124,14 @@ fun ProviderPickerScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(ProviderRegistry.providers.filter { it.visibleInPicker }, key = { it.id }) { provider ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onProviderSelected(provider.id) },
-                    shape = RoundedCornerShape(22.dp),
+                val providerLabel = if (provider.id == "custom") tr("provider_other") else provider.label
+                val itemShape = RoundedCornerShape(22.dp)
+                GroupedListSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = itemShape,
+                    containerColor = MaterialTheme.bondSurfaces.content,
+                    onClick = { onProviderSelected(provider.id) },
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.bondSurfaces.content,
-                    ),
                 ) {
                     Row(
                         modifier = Modifier
@@ -134,14 +139,10 @@ fun ProviderPickerScreen(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        BrandAvatar(
-                            provider.label,
-                            provider.suffixes.firstOrNull().orEmpty(),
-                            46.dp,
-                        )
+                        ProviderAvatar(provider, 46.dp)
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(provider.label, style = MaterialTheme.typography.titleMedium)
+                            Text(providerLabel, style = MaterialTheme.typography.titleMedium)
                             Text(
                                 if (provider.authType == AuthType.OAUTH2) {
                                     tr("provider_oauth")
@@ -177,6 +178,14 @@ fun AccountCredentialsScreen(
     val suffix by viewModel.suffix.collectAsState()
     val displayName by viewModel.displayName.collectAsState()
     val secret by viewModel.secret.collectAsState()
+    val customLoginName by viewModel.customLoginName.collectAsState()
+    val customImapHost by viewModel.customImapHost.collectAsState()
+    val customImapPort by viewModel.customImapPort.collectAsState()
+    val customImapSecurity by viewModel.customImapSecurity.collectAsState()
+    val customSmtpHost by viewModel.customSmtpHost.collectAsState()
+    val customSmtpPort by viewModel.customSmtpPort.collectAsState()
+    val customSmtpSecurity by viewModel.customSmtpSecurity.collectAsState()
+    val customAuthMechanism by viewModel.customAuthMechanism.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
     val savedAccountId by viewModel.savedAccountId.collectAsState()
@@ -223,11 +232,13 @@ fun AccountCredentialsScreen(
         suffixMenu = false
     }
 
+    val providerLabel = if (provider.id == "custom") tr("provider_other") else provider.label
+
     Scaffold(
         containerColor = MaterialTheme.bondSurfaces.page,
         topBar = {
             TopAppBar(
-                title = { Text(provider.label) },
+                title = { Text(providerLabel) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
@@ -254,14 +265,10 @@ fun AccountCredentialsScreen(
                         .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    BrandAvatar(
-                        provider.label,
-                        provider.suffixes.firstOrNull().orEmpty(),
-                        52.dp,
-                    )
+                    ProviderAvatar(provider, 52.dp)
                     Spacer(Modifier.width(14.dp))
                     Column {
-                        Text(provider.label, style = MaterialTheme.typography.titleLarge)
+                        Text(providerLabel, style = MaterialTheme.typography.titleLarge)
                         Text(
                             if (provider.authType == AuthType.OAUTH2) {
                                 tr("provider_oauth")
@@ -460,6 +467,121 @@ fun AccountCredentialsScreen(
                     )
                 }
 
+                if (provider.id == "custom") {
+                    item {
+                        OutlinedTextField(
+                            value = customLoginName,
+                            onValueChange = { viewModel.customLoginName.value = it },
+                            label = { Text(tr("login_name")) },
+                            placeholder = { Text(tr("login_name_email_default")) },
+                            supportingText = { Text(tr("login_name_hint")) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = !busy,
+                            shape = RoundedCornerShape(18.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.bondSurfaces.input,
+                                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
+                                disabledContainerColor = MaterialTheme.bondSurfaces.input,
+                            ),
+                        )
+                    }
+
+                    item {
+                        Text(
+                            tr("incoming_server"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    item {
+                        MailServerFields(
+                            host = customImapHost,
+                            onHostChange = { viewModel.customImapHost.value = it.trim() },
+                            port = customImapPort,
+                            onPortChange = {
+                                viewModel.customImapPort.value = it.filter(Char::isDigit).take(5)
+                            },
+                            hostLabel = tr("imap_server"),
+                            enabled = !busy,
+                        )
+                    }
+                    item {
+                        MailOptionSelector(
+                            label = tr("connection_security"),
+                            options = MailSecurity.entries,
+                            selected = customImapSecurity,
+                            optionLabel = { security ->
+                                tr(
+                                    when (security) {
+                                        MailSecurity.SSL_TLS -> "security_ssl_tls"
+                                        MailSecurity.STARTTLS -> "security_starttls"
+                                        MailSecurity.NONE -> "security_none"
+                                    },
+                                )
+                            },
+                            onSelected = { viewModel.customImapSecurity.value = it },
+                            enabled = !busy,
+                        )
+                    }
+
+                    item {
+                        Text(
+                            tr("outgoing_server"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    item {
+                        MailServerFields(
+                            host = customSmtpHost,
+                            onHostChange = { viewModel.customSmtpHost.value = it.trim() },
+                            port = customSmtpPort,
+                            onPortChange = {
+                                viewModel.customSmtpPort.value = it.filter(Char::isDigit).take(5)
+                            },
+                            hostLabel = tr("smtp_server"),
+                            enabled = !busy,
+                        )
+                    }
+                    item {
+                        MailOptionSelector(
+                            label = tr("connection_security"),
+                            options = MailSecurity.entries,
+                            selected = customSmtpSecurity,
+                            optionLabel = { security ->
+                                tr(
+                                    when (security) {
+                                        MailSecurity.SSL_TLS -> "security_ssl_tls"
+                                        MailSecurity.STARTTLS -> "security_starttls"
+                                        MailSecurity.NONE -> "security_none"
+                                    },
+                                )
+                            },
+                            onSelected = { viewModel.customSmtpSecurity.value = it },
+                            enabled = !busy,
+                        )
+                    }
+                    item {
+                        MailOptionSelector(
+                            label = tr("authentication_method"),
+                            options = MailAuthMechanism.entries,
+                            selected = customAuthMechanism,
+                            optionLabel = { mechanism ->
+                                tr(
+                                    when (mechanism) {
+                                        MailAuthMechanism.AUTO -> "auth_auto"
+                                        MailAuthMechanism.LOGIN -> "auth_login"
+                                        MailAuthMechanism.PLAIN -> "auth_plain"
+                                    },
+                                )
+                            },
+                            onSelected = { viewModel.customAuthMechanism.value = it },
+                            enabled = !busy,
+                        )
+                    }
+                }
+
                 item {
                     OutlinedTextField(
                         value = displayName,
@@ -482,7 +604,11 @@ fun AccountCredentialsScreen(
                     OutlinedTextField(
                         value = secret,
                         onValueChange = { viewModel.secret.value = it },
-                        label = { Text(tr("authorization_code")) },
+                        label = {
+                            Text(
+                                if (provider.id == "custom") tr("password") else tr("authorization_code"),
+                            )
+                        },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -508,7 +634,11 @@ fun AccountCredentialsScreen(
 
                 item {
                     Text(
-                        if (provider.netEaseClientId) tr("netease_tip") else tr("imap_smtp_tip"),
+                        when {
+                            provider.id == "custom" -> tr("custom_mail_tip")
+                            provider.netEaseClientId -> tr("netease_tip")
+                            else -> tr("imap_smtp_tip")
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -527,7 +657,18 @@ fun AccountCredentialsScreen(
                 item {
                     Button(
                         onClick = viewModel::save,
-                        enabled = !busy && username.isNotBlank() && secret.isNotBlank(),
+                        enabled = !busy &&
+                            username.isNotBlank() &&
+                            secret.isNotBlank() &&
+                            (
+                                provider.id != "custom" ||
+                                    (
+                                        customImapHost.isNotBlank() &&
+                                            customSmtpHost.isNotBlank() &&
+                                            (customImapPort.toIntOrNull() ?: 0) in 1..65535 &&
+                                            (customSmtpPort.toIntOrNull() ?: 0) in 1..65535
+                                        )
+                                ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(54.dp),
@@ -557,6 +698,97 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+@Composable
+private fun MailServerFields(
+    host: String,
+    onHostChange: (String) -> Unit,
+    port: String,
+    onPortChange: (String) -> Unit,
+    hostLabel: String,
+    enabled: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        OutlinedTextField(
+            value = host,
+            onValueChange = onHostChange,
+            label = { Text(hostLabel) },
+            placeholder = { Text("mail.example.com") },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            enabled = enabled,
+            shape = RoundedCornerShape(18.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.bondSurfaces.input,
+                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
+                disabledContainerColor = MaterialTheme.bondSurfaces.input,
+            ),
+        )
+        OutlinedTextField(
+            value = port,
+            onValueChange = onPortChange,
+            label = { Text(tr("port")) },
+            modifier = Modifier.width(104.dp),
+            singleLine = true,
+            enabled = enabled,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(18.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.bondSurfaces.input,
+                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
+                disabledContainerColor = MaterialTheme.bondSurfaces.input,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun <T> MailOptionSelector(
+    label: String,
+    options: List<T>,
+    selected: T,
+    optionLabel: @Composable (T) -> String,
+    onSelected: (T) -> Unit,
+    enabled: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            options.forEach { option ->
+                if (option == selected) {
+                    Button(
+                        onClick = { onSelected(option) },
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 9.dp),
+                    ) {
+                        Text(optionLabel(option), maxLines = 1, fontSize = 12.sp)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onSelected(option) },
+                        enabled = enabled,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 9.dp),
+                    ) {
+                        Text(optionLabel(option), maxLines = 1, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

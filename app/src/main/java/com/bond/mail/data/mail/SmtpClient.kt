@@ -6,7 +6,11 @@ import android.provider.OpenableColumns
 import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.OutboxEntity
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.model.MailAuthMechanism
 import com.bond.mail.data.model.MailProvider
+import com.bond.mail.data.model.MailSecurity
+import com.bond.mail.data.model.mailLoginName
+import com.bond.mail.data.model.visibleEmail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -81,14 +85,18 @@ class SmtpClient(context: Context) {
         secret: String,
         task: OutboxEntity,
     ): PreparedOutgoingMessage = withContext(Dispatchers.IO) {
-        val loginEmail = if (provider.netEaseClientId) account.email.lowercase() else account.email
-        val session = createSession(provider, loginEmail, secret, compatibilityMode = false)
+        val loginName = if (provider.netEaseClientId) {
+            account.mailLoginName.lowercase()
+        } else {
+            account.mailLoginName
+        }
+        val session = createSession(provider, loginName, secret, compatibilityMode = false)
         val message = createMessage(account, session, task)
         val transport = session.getTransport("smtp")
         try {
             // Connect explicitly so OAuth mailboxes always pass the short-lived access token to
             // the XOAUTH2 mechanism selected in this Session.
-            transport.connect(provider.smtpHost, provider.smtpPort, loginEmail, secret)
+            transport.connect(provider.smtpHost, provider.smtpPort, loginName, secret)
             transport.sendMessage(message, message.allRecipients)
         } finally {
             runCatching { transport.close() }
@@ -111,7 +119,7 @@ class SmtpClient(context: Context) {
     ): MimeMessage {
         val attachmentUris = parseAttachmentUris(task.attachmentsJson)
         return MimeMessage(session).apply {
-            setFrom(InternetAddress(account.email, account.displayName))
+            setFrom(InternetAddress(account.visibleEmail, account.displayName))
             if (task.recipients.isNotBlank()) {
                 setRecipients(Message.RecipientType.TO, InternetAddress.parse(task.recipients, false))
             }
@@ -244,13 +252,23 @@ class SmtpClient(context: Context) {
                 put("mail.smtp.auth.mechanisms", "XOAUTH2")
                 put("mail.smtp.auth.login.disable", "true")
                 put("mail.smtp.auth.plain.disable", "true")
-            } else if (provider.netEaseClientId) {
-                put("mail.smtp.auth.mechanisms", "LOGIN")
-                put("mail.smtp.auth.plain.disable", "true")
-                put("mail.smtp.auth.login.disable", "false")
+            } else {
+                when (provider.authMechanism) {
+                    MailAuthMechanism.LOGIN -> {
+                        put("mail.smtp.auth.mechanisms", "LOGIN")
+                        put("mail.smtp.auth.plain.disable", "true")
+                        put("mail.smtp.auth.login.disable", "false")
+                    }
+                    MailAuthMechanism.PLAIN -> {
+                        put("mail.smtp.auth.mechanisms", "PLAIN")
+                        put("mail.smtp.auth.login.disable", "true")
+                        put("mail.smtp.auth.plain.disable", "false")
+                    }
+                    MailAuthMechanism.AUTO -> Unit
+                }
             }
-            if (provider.smtpSsl) put("mail.smtp.ssl.enable", "true")
-            if (provider.smtpStartTls) {
+            if (provider.smtpSecurity == MailSecurity.SSL_TLS) put("mail.smtp.ssl.enable", "true")
+            if (provider.smtpSecurity == MailSecurity.STARTTLS) {
                 put("mail.smtp.starttls.enable", "true")
                 put("mail.smtp.starttls.required", "true")
             }

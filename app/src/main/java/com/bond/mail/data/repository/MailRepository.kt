@@ -1,5 +1,6 @@
 package com.bond.mail.data.repository
 
+import android.icu.text.BreakIterator
 import androidx.room.withTransaction
 import com.bond.mail.data.auth.OAuthAccountMismatchException
 import com.bond.mail.data.auth.OAuthCredentialBroker
@@ -21,9 +22,11 @@ import com.bond.mail.data.mail.MimeParser
 import com.bond.mail.data.mail.SmtpClient
 import com.bond.mail.data.performance.UiPerformanceGate
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.model.CustomMailConfig
 import com.bond.mail.data.model.DuplicateAccountException
 import com.bond.mail.data.model.ProviderRegistry
 import com.bond.mail.data.model.UiFailure
+import com.bond.mail.data.model.mailLoginName
 import com.bond.mail.data.security.CredentialStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -47,6 +50,8 @@ import org.json.JSONArray
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.net.IDN
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
@@ -234,19 +239,34 @@ class MailRepository(
     suspend fun draftNow(taskId: String) = database.outboxDao().byId(taskId)
     fun search(accountId: String?, query: String) = database.messageDao().searchRows(accountId, query)
 
-    suspend fun saveContact(name: String, email: String): SavedContactEntity {
+    suspend fun saveContact(
+        name: String,
+        email: String,
+        avatarText: String = "",
+        contactId: String? = null,
+    ): SavedContactEntity {
         val cleanName = name.trim()
         val cleanEmail = email.trim()
         require(cleanName.isNotBlank()) { "Contact name is required" }
         require(android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
             "Valid contact email is required"
         }
+        val cleanAvatar = avatarText.trim().take(32).ifBlank { null }
+        require(cleanAvatar == null || cleanAvatar.isSingleVisibleGrapheme()) {
+            "Contact avatar must contain one character or emoji"
+        }
         val now = System.currentTimeMillis()
-        val existing = database.savedContactDao().byEmail(cleanEmail)
+        val existing = contactId?.let { database.savedContactDao().byId(it) }
+            ?: database.savedContactDao().byEmail(cleanEmail)
+        val conflicting = database.savedContactDao().byEmail(cleanEmail)
+        require(conflicting == null || conflicting.id == existing?.id) {
+            "A contact with this email already exists"
+        }
         val contact = SavedContactEntity(
             id = existing?.id ?: UUID.randomUUID().toString(),
             name = cleanName,
             email = cleanEmail,
+            avatarText = cleanAvatar,
             createdAt = existing?.createdAt ?: now,
             updatedAt = now,
         )
@@ -320,6 +340,72 @@ class MailRepository(
         return account
     }
 
+    suspend fun addCustomAccount(
+        email: String,
+        displayName: String,
+        secret: String,
+        config: CustomMailConfig,
+    ): AccountEntity {
+        val originalEmail = email.trim()
+        val normalizedEmail = originalEmail.lowercase()
+        require(
+            normalizedEmail.substringBefore('@').isNotBlank() &&
+                normalizedEmail.substringAfter('@', "").isValidMailHost(),
+        ) {
+            "Invalid email address"
+        }
+        require(secret.isNotBlank()) { "Authorization code is required" }
+        require(config.loginName.isNotBlank()) { "Login name is required" }
+        require(config.imapHost.isValidMailHost() && config.smtpHost.isValidMailHost()) {
+            "Invalid mail server"
+        }
+        require(config.imapPort in 1..65535 && config.smtpPort in 1..65535) {
+            "Invalid mail server port"
+        }
+        if (database.accountDao().byEmail(normalizedEmail) != null) {
+            throw DuplicateAccountException()
+        }
+
+        val provider = ProviderRegistry.byId("custom").copy(
+            imapHost = config.imapHost.trim(),
+            imapPort = config.imapPort,
+            imapSecurity = config.imapSecurity,
+            smtpHost = config.smtpHost.trim(),
+            smtpPort = config.smtpPort,
+            smtpSecurity = config.smtpSecurity,
+            authMechanism = config.authMechanism,
+        )
+        val loginName = config.loginName.trim()
+        imap.test(provider, loginName, secret)
+        smtp.test(provider, loginName, secret)
+
+        if (database.accountDao().byEmail(normalizedEmail) != null) {
+            throw DuplicateAccountException()
+        }
+        val account = AccountEntity(
+            id = UUID.randomUUID().toString(),
+            providerId = provider.id,
+            email = originalEmail,
+            displayName = displayName.trim()
+                .take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
+                .ifBlank { originalEmail.substringBefore('@').take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH) },
+            authType = AuthType.APP_PASSWORD.name,
+            loginName = loginName,
+            customImapHost = provider.imapHost,
+            customImapPort = provider.imapPort,
+            customImapSecurity = provider.imapSecurity.name,
+            customSmtpHost = provider.smtpHost,
+            customSmtpPort = provider.smtpPort,
+            customSmtpSecurity = provider.smtpSecurity.name,
+            customAuthMechanism = provider.authMechanism.name,
+            sortOrder = (database.accountDao().maxSortOrder() ?: -1) + 1,
+            createdAt = System.currentTimeMillis(),
+        )
+        credentials.save(account.id, secret)
+        database.accountDao().upsert(account)
+        return account
+    }
+
     /**
      * Validate an OAuth token against both mailbox protocols before committing the local account.
      * The short-lived token is never written to Room or CredentialStore; provider SDK caches are
@@ -366,6 +452,33 @@ class MailRepository(
         database.accountDao().updateDisplayName(accountId, clean)
     }
 
+    suspend fun updateAccountIdentity(
+        accountId: String,
+        displayName: String,
+        displayEmail: String,
+        avatarText: String,
+    ) {
+        val account = database.accountDao().byId(accountId)
+            ?: throw IllegalArgumentException("Account not found")
+        val cleanName = displayName.trim().take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
+        require(cleanName.isNotBlank()) { "Display name is required" }
+        val cleanEmail = displayEmail.trim()
+        require(
+            cleanEmail.length == account.email.trim().length &&
+                cleanEmail.equals(account.email.trim(), ignoreCase = true),
+        ) { "Display email may only change letter casing" }
+        val cleanAvatar = avatarText.trim().take(16).ifBlank { null }
+        require(cleanAvatar == null || cleanAvatar.isSingleVisibleGrapheme()) {
+            "Avatar must contain one character or emoji"
+        }
+        database.accountDao().updateIdentity(
+            id = accountId,
+            displayName = cleanName,
+            displayEmail = cleanEmail.takeUnless { it == account.email.trim() },
+            avatarText = cleanAvatar,
+        )
+    }
+
     /**
      * Renew an existing OAuth mailbox without deleting its Room data, cached bodies or local state.
      * The provider result must resolve to the same mailbox address. Both IMAP and SMTP are verified
@@ -375,7 +488,7 @@ class MailRepository(
         accountSyncMutex(accountId).withLock {
             val account = database.accountDao().byId(accountId)
                 ?: throw IllegalArgumentException("Account not found")
-            val provider = ProviderRegistry.byId(account.providerId)
+            val provider = ProviderRegistry.forAccount(account)
             require(provider.authType == AuthType.OAUTH2) {
                 "App-password account cannot be reauthorized using OAuth"
             }
@@ -447,15 +560,15 @@ class MailRepository(
         accountSyncMutex(accountId).withLock {
             val account = database.accountDao().byId(accountId)
                 ?: throw IllegalArgumentException("Account not found")
-            val provider = ProviderRegistry.byId(account.providerId)
+            val provider = ProviderRegistry.forAccount(account)
             require(provider.authType == AuthType.APP_PASSWORD) {
                 "OAuth account must be reauthorized using the OAuth flow"
             }
 
             val loginEmail = if (provider.netEaseClientId) {
-                account.email.trim().lowercase()
+                account.mailLoginName.lowercase()
             } else {
-                account.email.trim()
+                account.mailLoginName
             }
 
             // A pooled connection may still be authenticated with the old secret. Remove it before
@@ -496,7 +609,7 @@ class MailRepository(
         }
         account?.let { removed ->
             runCatching {
-                imap.invalidate(ProviderRegistry.byId(removed.providerId), removed.email.trim())
+                imap.invalidate(ProviderRegistry.forAccount(removed), removed.mailLoginName)
             }
         }
         credentials.delete(accountId)
@@ -530,7 +643,7 @@ class MailRepository(
         val result = accountSyncMutex(accountId).withLock {
             val account = database.accountDao().byId(accountId) ?: return@withLock emptyList()
             wasInitialSync = account.lastSyncAt == null
-            val provider = ProviderRegistry.byId(account.providerId)
+            val provider = ProviderRegistry.forAccount(account)
             val startedAt = System.currentTimeMillis()
             MailLog.d(MailLog.APP, "syncAccount start provider=${provider.id} account=${MailLog.accountHint(account.email)}")
             runCatching { syncAccountInternal(account) }
@@ -576,7 +689,7 @@ class MailRepository(
         account: AccountEntity,
         folderType: String,
     ): List<MessageEntity> {
-        val provider = ProviderRegistry.byId(account.providerId)
+        val provider = ProviderRegistry.forAccount(account)
         val knownFolder = database.folderDao().byCanonicalType(account.id, folderType)
         val localCount = database.messageDao().countForFolder(account.id, folderType)
         val localMaxUid = database.messageDao().maxRemoteUid(account.id, folderType)
@@ -644,7 +757,7 @@ class MailRepository(
     }
 
     private suspend fun syncAccountInternal(account: AccountEntity): List<MessageEntity> {
-        val provider = ProviderRegistry.byId(account.providerId)
+        val provider = ProviderRegistry.forAccount(account)
         val knownFolder = database.folderDao().byCanonicalType(account.id, "INBOX")
         val localMessageCount = database.messageDao().countForFolder(account.id, "INBOX")
         val localMaxUid = database.messageDao().maxRemoteUid(account.id, "INBOX")
@@ -811,7 +924,7 @@ class MailRepository(
                     }
 
                     val account = requireAccount(local.accountId)
-                    val provider = ProviderRegistry.byId(account.providerId)
+                    val provider = ProviderRegistry.forAccount(account)
                     val protectsInteractiveSeen = markSeen && local.unread
                     if (protectsInteractiveSeen) {
                         advanceFlagGeneration(local.accountId)
@@ -1039,7 +1152,7 @@ class MailRepository(
                         withMailboxCredential(account) { credential ->
                             imap.setSeen(
                                 account = account,
-                                provider = ProviderRegistry.byId(account.providerId),
+                                provider = ProviderRegistry.forAccount(account),
                                 secret = credential,
                                 message = latest,
                                 seen = true,
@@ -1116,7 +1229,7 @@ class MailRepository(
             candidates.groupBy(MessageEntity::accountId).forEach { (candidateAccountId, localMessages) ->
                 if (!currentCoroutineContext().isActive) return@launch
                 val account = database.accountDao().byId(candidateAccountId) ?: return@forEach
-                val provider = ProviderRegistry.byId(account.providerId)
+                val provider = ProviderRegistry.forAccount(account)
                 val chunks = localMessages.chunked(BODY_PREFETCH_CHUNK_SIZE)
 
                 // Keep the newest first-screen bodies in a small fast batch, then continue with
@@ -1252,7 +1365,7 @@ class MailRepository(
             candidates.groupBy(MessageEntity::accountId).forEach { (accountId, accountMessages) ->
                 currentCoroutineContext().ensureActive()
                 val account = database.accountDao().byId(accountId) ?: return@forEach
-                val provider = ProviderRegistry.byId(account.providerId)
+                val provider = ProviderRegistry.forAccount(account)
                 accountMessages.chunked(BODY_PREFETCH_CHUNK_SIZE).forEach { chunk ->
                     currentCoroutineContext().ensureActive()
                     val result = runCatching {
@@ -1342,7 +1455,7 @@ class MailRepository(
                     withMailboxCredential(account) { credential ->
                         imap.setSeen(
                             account,
-                            ProviderRegistry.byId(account.providerId),
+                            ProviderRegistry.forAccount(account),
                             credential,
                             current,
                             seen = !newUnread,
@@ -1380,7 +1493,7 @@ class MailRepository(
                     withMailboxCredential(account) { credential ->
                         imap.setFlagged(
                             account,
-                            ProviderRegistry.byId(account.providerId),
+                            ProviderRegistry.forAccount(account),
                             credential,
                             current,
                             newValue,
@@ -1413,7 +1526,7 @@ class MailRepository(
                         withMailboxCredential(account) { credential ->
                             imap.deleteByInternetMessageId(
                                 account = account,
-                                provider = ProviderRegistry.byId(account.providerId),
+                                provider = ProviderRegistry.forAccount(account),
                                 secret = credential,
                                 canonicalType = "SENT",
                                 internetMessageId = message.internetMessageId.orEmpty(),
@@ -1444,7 +1557,7 @@ class MailRepository(
                     withMailboxCredential(account) { credential ->
                         imap.delete(
                             account,
-                            ProviderRegistry.byId(account.providerId),
+                            ProviderRegistry.forAccount(account),
                             credential,
                             message,
                         )
@@ -1550,7 +1663,7 @@ class MailRepository(
             }
             val prepared = runCatching {
                 withMailboxCredential(account) { credential ->
-                    smtp.send(account, ProviderRegistry.byId(account.providerId), credential, task)
+                    smtp.send(account, ProviderRegistry.forAccount(account), credential, task)
                 }
             }.getOrElse { error ->
                 database.withTransaction {
@@ -1599,7 +1712,7 @@ class MailRepository(
         val appended = withMailboxCredential(account) { credential ->
             imap.appendPreparedMessage(
                 account = account,
-                provider = ProviderRegistry.byId(account.providerId),
+                provider = ProviderRegistry.forAccount(account),
                 secret = credential,
                 canonicalType = "SENT",
                 raw = prepared.raw,
@@ -1693,7 +1806,7 @@ class MailRepository(
             withMailboxCredential(account) { credential ->
                 imap.delete(
                     account = account,
-                    provider = ProviderRegistry.byId(account.providerId),
+                    provider = ProviderRegistry.forAccount(account),
                     secret = credential,
                     message = MessageEntity(
                         id = task.sourceMessageId ?: "draft:${task.id}",
@@ -1837,7 +1950,7 @@ class MailRepository(
             val appended = withMailboxCredential(account) { credential ->
                 imap.appendPreparedMessage(
                     account = account,
-                    provider = ProviderRegistry.byId(account.providerId),
+                    provider = ProviderRegistry.forAccount(account),
                     secret = credential,
                     canonicalType = "DRAFTS",
                     raw = prepared.raw,
@@ -1910,7 +2023,7 @@ class MailRepository(
                     withMailboxCredential(account) { credential ->
                         imap.delete(
                             account = account,
-                            provider = ProviderRegistry.byId(account.providerId),
+                            provider = ProviderRegistry.forAccount(account),
                             secret = credential,
                             message = MessageEntity(
                                 id = "draft:$taskId",
@@ -2098,6 +2211,10 @@ class MailRepository(
             root is UnknownHostException -> UiFailure("error_host_unreachable", listOf(endpoint ?: "mail server"))
             root is ConnectException -> UiFailure("error_host_unreachable", listOf(endpoint ?: "mail server"))
             error.message.orEmpty().contains("Invalid email", true) -> UiFailure("error_invalid_email")
+            error.message.orEmpty().contains("Invalid mail server", true) ||
+                error.message.orEmpty().contains("Login name", true) -> UiFailure("error_custom_server_invalid")
+            error.message.orEmpty().contains("Display email", true) -> UiFailure("error_display_email_case_only")
+            error.message.orEmpty().contains("Avatar", true) -> UiFailure("error_avatar_single_glyph")
             error.message.orEmpty().contains("Authorization code", true) -> UiFailure("error_authorization_required")
             error.message.orEmpty().contains("OAuth provider", true) -> UiFailure("error_oauth_required")
             error.message.orEmpty().contains("OAuth token", true) ||
@@ -2125,4 +2242,29 @@ class MailRepository(
         }
         return current
     }
+}
+
+private fun String.isValidMailHost(): Boolean {
+    val value = trim().removePrefix("[").removeSuffix("]")
+    if (value.isBlank() || value.length > 253 || value.any(Char::isWhitespace)) return false
+    if (':' in value) {
+        return value.matches(Regex("[0-9a-fA-F:]+"))
+    }
+    val ascii = runCatching { IDN.toASCII(value) }.getOrNull() ?: return false
+    return ascii.split('.').all { label ->
+        label.isNotBlank() &&
+            label.length <= 63 &&
+            !label.startsWith('-') &&
+            !label.endsWith('-') &&
+            label.all { it.isLetterOrDigit() || it == '-' }
+    }
+}
+
+private fun String.isSingleVisibleGrapheme(): Boolean {
+    if (isBlank() || any { it == '\n' || it == '\r' || it == '\t' }) return false
+    val iterator = BreakIterator.getCharacterInstance(Locale.getDefault())
+    iterator.setText(this)
+    iterator.first()
+    val end = iterator.next()
+    return end == length && iterator.next() == BreakIterator.DONE
 }

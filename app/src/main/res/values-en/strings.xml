@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Mail</string>
     <string name="notifications">New mail notifications</string>
+    <string name="background_sync_channel">Background mail sync</string>
+    <string name="background_sync_active">Background mail sync is on</string>
+    <string name="background_sync_active_detail">Checking for new mail every %1$d minutes</string>
 </resources>

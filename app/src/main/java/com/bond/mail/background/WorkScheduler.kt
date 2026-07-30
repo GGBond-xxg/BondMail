@@ -11,16 +11,14 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
  * Schedules mail synchronization without pretending WorkManager can provide an exact alarm.
  *
- * Android only supports periodic WorkManager jobs at 15 minutes or longer. For the user-facing
- * 1/5/10 minute choices BondMail therefore uses a self-rescheduling one-time chain. The system can
- * still defer that work under Doze or OEM battery restrictions, but the configured interval is no
- * longer silently ignored as it was before v0.2.16.0.
+ * Android only supports periodic WorkManager jobs at 15 minutes or longer. The user-facing
+ * 1/5/10-minute choices are handled by [ContinuousMailSyncService], because a self-rescheduling
+ * one-time chain is still freely delayed or cancelled by Android/OEM background limits.
  */
 class WorkScheduler(private val context: Context) {
     private val manager: WorkManager
@@ -32,7 +30,8 @@ class WorkScheduler(private val context: Context) {
 
     fun scheduleBackgroundSync(enabled: Boolean, intervalMinutes: Int) {
         val normalizedMinutes = intervalMinutes.coerceAtLeast(1)
-        val desiredMode = if (normalizedMinutes >= MIN_PERIODIC_MINUTES) MODE_PERIODIC else MODE_SHORT
+        val desiredMode =
+            if (usesContinuousService(normalizedMinutes)) MODE_CONTINUOUS else MODE_PERIODIC
         val currentMode = preferences.getString(KEY_SCHEDULE_MODE, null)
         val currentInterval = preferences.getInt(KEY_SCHEDULE_INTERVAL, -1)
 
@@ -75,18 +74,21 @@ class WorkScheduler(private val context: Context) {
             return
         }
 
+        // A visible foreground-service notification is the Android-supported contract for a local
+        // mail client that the user explicitly asks to poll more often than WorkManager's minimum.
+        // Cancel the legacy short-work chain to avoid duplicate network traffic after an upgrade.
         manager.cancelUniqueWork(PERIODIC_SYNC_WORK)
-        val token = UUID.randomUUID().toString()
         preferences.edit()
-            .putString(KEY_SCHEDULE_MODE, MODE_SHORT)
+            .putString(KEY_SCHEDULE_MODE, MODE_CONTINUOUS)
             .putInt(KEY_SCHEDULE_INTERVAL, normalizedMinutes)
-            .putString(KEY_SHORT_TOKEN, token)
+            .remove(KEY_SHORT_TOKEN)
             .apply()
-        enqueueShortSync(
-            intervalMinutes = normalizedMinutes,
-            token = token,
-            policy = ExistingWorkPolicy.REPLACE,
-        )
+    }
+
+    fun continuousIntervalMinutes(): Int? {
+        if (preferences.getString(KEY_SCHEDULE_MODE, null) != MODE_CONTINUOUS) return null
+        return preferences.getInt(KEY_SCHEDULE_INTERVAL, -1)
+            .takeIf(::usesContinuousService)
     }
 
     /** Appends the next short-poll request after a successful short-poll worker run. */
@@ -179,5 +181,9 @@ class WorkScheduler(private val context: Context) {
         private const val KEY_SCHEDULE_INTERVAL = "schedule_interval"
         private const val MODE_PERIODIC = "periodic"
         private const val MODE_SHORT = "short"
+        private const val MODE_CONTINUOUS = "continuous"
+
+        fun usesContinuousService(intervalMinutes: Int): Boolean =
+            intervalMinutes in 1 until MIN_PERIODIC_MINUTES
     }
 }

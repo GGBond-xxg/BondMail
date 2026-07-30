@@ -1,5 +1,11 @@
 # BondMail
 
+## v1.0.0 多账户收发信、后台同步、联系人头像与完整项目信息
+
+BondMail 1.0.0 完成 Gmail、Microsoft OAuth 与通用 IMAP/SMTP 登录流程，支持 163、126、Outlook、Gmail 等邮箱来源图标，自定义账户/联系人头像、邮箱显示大小写、联系人添加编辑与删除。短周期同步可在应用退到后台后继续检查新邮件，并把新邮件通知与常驻同步提示拆分为独立频道。
+
+首页搜索、邮件列表、联系人、设置与详情页统一了滚动导航、动态底部安全区、圆角点击反馈和品牌头像；长标题、Apple/Newsletter HTML、冷启动正文加载和邮件尾部留白也得到修正。设置页重新分组，并新增“关于 BondMail”、开源声明、MIT 应用许可、隐私条款和 GitHub 项目主页。完整说明见 `docs/CHANGELOG_v1.0.0.md`。
+
 ## v0.2.38.0 原始图标、前台静默刷新、通知恢复与全高邮件加载动画
 
 本版真正使用用户提供的 `BondMailDefIcon(2).png` 与 `BondMailmonaIcon(1).png`：Manifest、圆形/方形 Adaptive Icon、Android 13+ monochrome 主题图标、旧版密度图标和启动页全部切换到新的 `ic_launcher_bondmail` 资源名，不再使用上一版重绘信封。
