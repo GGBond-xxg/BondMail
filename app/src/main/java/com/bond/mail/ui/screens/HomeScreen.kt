@@ -92,6 +92,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -148,6 +149,7 @@ import com.bond.mail.ui.motion.bondFadeThrough
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.rememberBondPressInteraction
+import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
 import kotlinx.coroutines.delay
@@ -210,14 +212,23 @@ fun HomeScreen(
     var selectionDisplayCount by remember { mutableIntStateOf(1) }
     var searchTransformActive by remember { mutableStateOf(false) }
     val searchOverlayActive = showSearch || searchTransformActive
+    var previousChromeMode by remember {
+        mutableStateOf<Pair<Boolean, Boolean>?>(null)
+    }
     LaunchedEffect(inSelectionMode, searchOverlayActive) {
+        val previousMode = previousChromeMode
         when {
             inSelectionMode -> onChromeVisibilityChanged(true)
             // Search owns the full result viewport. Keep the floating dock below the screen for
             // the whole container transform so it cannot cover results or be restored by scroll.
             searchOverlayActive -> onChromeVisibilityChanged(false)
-            else -> onChromeVisibilityChanged(true)
+            // Restore normal chrome only when a real selection/search session has just ended.
+            // HomeScreen is recreated after closing a reader; writing true on that initial
+            // composition made a scrolled mailbox flash its top and bottom bars back on.
+            previousMode?.first == true || previousMode?.second == true ->
+                onChromeVisibilityChanged(true)
         }
+        previousChromeMode = inSelectionMode to searchOverlayActive
     }
     LaunchedEffect(selectedIds.size) {
         // AnimatedContent keeps the outgoing selection toolbar alive during fade-through. Preserve
@@ -1112,25 +1123,28 @@ private fun TopActionButton(
     containerColor: Color = MaterialTheme.bondSurfaces.popup,
     content: @Composable () -> Unit,
 ) {
-    val motionEnabled = bondMotionEnabled()
-    val interactionSource = rememberBondPressInteraction()
-    val pressScale by rememberBondPressScale(
-        interactionSource = interactionSource,
-        pressedScale = 0.90f,
-        enabled = motionEnabled,
-    )
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .size(44.dp)
-            .bondPressTransform(pressScale),
-        shape = CircleShape,
-        color = containerColor,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        tonalElevation = 0.dp,
-        interactionSource = interactionSource,
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
+    val pressResetter = rememberBondPressResetter()
+    key(pressResetter.epoch) {
+        val motionEnabled = bondMotionEnabled()
+        val interactionSource = rememberBondPressInteraction()
+        val pressScale by rememberBondPressScale(
+            interactionSource = interactionSource,
+            pressedScale = 0.90f,
+            enabled = motionEnabled,
+        )
+        Surface(
+            onClick = { pressResetter.resetThen(onClick) },
+            modifier = modifier
+                .size(44.dp)
+                .bondPressTransform(pressScale),
+            shape = CircleShape,
+            color = containerColor,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            tonalElevation = 0.dp,
+            interactionSource = interactionSource,
+        ) {
+            Box(contentAlignment = Alignment.Center) { content() }
+        }
     }
 }
 

@@ -92,6 +92,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -228,6 +229,20 @@ fun DetailScreen(
             stored = storedMessage,
             opened = immediateOpenResult,
         )
+    }
+    LaunchedEffect(
+        messageId,
+        item?.id,
+        item?.hasDisplayBody(),
+        bodyLoading,
+    ) {
+        if (item == null || (bodyLoading && !item.hasDisplayBody())) {
+            // The native loading document is already meaningful destination content. Let it draw
+            // once, then start the reader transition immediately instead of keeping the reader
+            // off-screen for the generic WebView timeout and exposing an empty background frame.
+            withFrameNanos { }
+            reportFirstContentReady()
+        }
     }
     if (item == null) {
         Scaffold(

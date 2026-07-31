@@ -103,16 +103,17 @@ class MainActivity : FragmentActivity() {
                     isAppearanceLightStatusBars = !darkTheme
                     isAppearanceLightNavigationBars = !darkTheme
                 }
-                // SideEffect signals that the root composition succeeded. The splash exit listener
-                // above owns the final one-frame handoff to the first presented app buffer.
-                firstComposeFrameReady = true
                 revealController.onThemeComposed(settings.themeMode)
             }
 
             BondMailTheme(settings) {
                 CompositionLocalProvider(LocalThemeRevealController provides revealController) {
                     JsonStringsProvider(settings.languageCode) {
-                        MailApp(container, initialMessageId)
+                        MailApp(
+                            container = container,
+                            initialMessageId = initialMessageId,
+                            onFirstContentReady = { firstComposeFrameReady = true },
+                        )
                     }
                 }
             }

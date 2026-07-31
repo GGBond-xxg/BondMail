@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -50,6 +51,7 @@ private const val TELEGRAM_OPEN_DURATION_MS = 260
 private const val TELEGRAM_BACK_DURATION_MS = 170
 private const val TELEGRAM_CANCEL_DURATION_MS = 150
 private const val TELEGRAM_BACK_SCALE_REDUCTION = 0.10f
+private const val PREDICTIVE_BACK_SETTLE_MS = 240L
 
 /*
  * Keep the quick Telegram settle, but distribute more of the travel through the middle of the
@@ -111,16 +113,70 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 /**
- * Telegram-style two-layer mail reader transition.
+ * Telegram-style two-layer mail reader transition with predictive-back progress.
  *
- * The list remains stationary underneath the reader. Predictive back follows the finger, turns
- * the reader into a rounded card, and reveals that list. While returning, one frozen reader bitmap
- * is transformed so Chromium does not have to re-rasterize the HTML on every gesture frame.
+ * The list remains stationary underneath the reader. Predictive back follows the finger and moves
+ * one frozen reader bitmap so Chromium does not have to re-rasterize HTML on every gesture frame.
  */
 @Composable
 fun TelegramMailTransition(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
+    backDispatchBlocked: Boolean,
+    onBackCommitted: () -> Unit,
+    content: @Composable (
+        requestBack: () -> Unit,
+        reportContentReady: () -> Unit,
+    ) -> Unit,
+) {
+    BondBackTransition(
+        backgroundSnapshot = backgroundSnapshot,
+        motionEnabled = motionEnabled,
+        backDispatchBlocked = backDispatchBlocked,
+        animateOpening = true,
+        contentReadyInitially = false,
+        freezeContentOnBack = true,
+        onBackCommitted = onBackCommitted,
+        content = content,
+    )
+}
+
+/**
+ * Predictive-back container for lightweight Compose destinations.
+ *
+ * It intentionally has no opening animation. The previous destination is only a frozen preview
+ * underneath the live current page while a back gesture is active, so revealing a back-stack entry
+ * cannot restart an entry animation and produce the old page-switching flash.
+ */
+@Composable
+fun BondBackScreen(
+    backgroundSnapshot: ImageBitmap?,
+    motionEnabled: Boolean,
+    backDispatchBlocked: Boolean,
+    onBackCommitted: () -> Unit,
+    content: @Composable (requestBack: () -> Unit) -> Unit,
+) {
+    BondBackTransition(
+        backgroundSnapshot = backgroundSnapshot,
+        motionEnabled = motionEnabled,
+        backDispatchBlocked = backDispatchBlocked,
+        animateOpening = false,
+        contentReadyInitially = true,
+        freezeContentOnBack = false,
+        onBackCommitted = onBackCommitted,
+    ) { requestBack, _ ->
+        content(requestBack)
+    }
+}
+
+@Composable
+private fun BondBackTransition(
+    backgroundSnapshot: ImageBitmap?,
+    motionEnabled: Boolean,
+    backDispatchBlocked: Boolean,
+    animateOpening: Boolean,
+    contentReadyInitially: Boolean,
+    freezeContentOnBack: Boolean,
     onBackCommitted: () -> Unit,
     content: @Composable (
         requestBack: () -> Unit,
@@ -131,18 +187,21 @@ fun TelegramMailTransition(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val latestOnBackCommitted by rememberUpdatedState(onBackCommitted)
+    val latestBackDispatchBlocked by rememberUpdatedState(backDispatchBlocked)
     val openingProgress = remember {
-        Animatable(if (motionEnabled && backgroundSnapshot != null) 0f else 1f)
+        Animatable(
+            if (animateOpening && motionEnabled && backgroundSnapshot != null) 0f else 1f,
+        )
     }
-    var contentReady by remember { mutableStateOf(false) }
+    var contentReady by remember { mutableStateOf(contentReadyInitially) }
     val backProgress = remember { Animatable(0f) }
     var backEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
     var frozenReader by remember { mutableStateOf<ImageBitmap?>(null) }
     var backIsFinishing by remember { mutableStateOf(false) }
     val maximumCornerPx = with(density) { 28.dp.toPx() }
 
-    LaunchedEffect(motionEnabled, backgroundSnapshot, contentReady) {
-        if (!motionEnabled || backgroundSnapshot == null) {
+    LaunchedEffect(animateOpening, motionEnabled, backgroundSnapshot, contentReady) {
+        if (!animateOpening || !motionEnabled || backgroundSnapshot == null) {
             openingProgress.snapTo(1f)
             return@LaunchedEffect
         }
@@ -162,12 +221,12 @@ fun TelegramMailTransition(
     }
 
     suspend fun freezeReader() {
-        if (frozenReader == null) {
+        if (freezeContentOnBack && frozenReader == null) {
             frozenReader = captureMailTransitionSnapshot(hostView)
         }
     }
 
-    suspend fun finishBack() {
+    suspend fun finishBack(predictiveGesture: Boolean = false) {
         if (backIsFinishing) return
         backIsFinishing = true
         val readerFullyOpened = openingProgress.value >= 0.999f
@@ -184,15 +243,16 @@ fun TelegramMailTransition(
                 ),
             )
         }
-        // Keep this callback at the top of the dispatcher until the platform has finished
-        // delivering the gesture commit. Disabling/removing it inside that dispatch lets some
-        // ColorOS builds forward the same gesture to NavHost and then to the root Activity.
+        // Once progress reaches 1 the destination is already visually gone. Keep its predictive
+        // callback alive briefly after a gesture commit because some ColorOS builds continue
+        // dispatching that same physical gesture to the newly revealed destination.
+        if (predictiveGesture) delay(PREDICTIVE_BACK_SETTLE_MS)
         withFrameNanos { }
         latestOnBackCommitted()
     }
 
     val requestBack: () -> Unit = {
-        if (!backIsFinishing) {
+        if (!backIsFinishing && !latestBackDispatchBlocked) {
             scope.launch {
                 // Capture after pressed-state/dialog pixels have returned to their resting frame.
                 withFrameNanos { }
@@ -204,14 +264,14 @@ fun TelegramMailTransition(
         if (!contentReady) contentReady = true
     }
 
-    PredictiveBackHandler(enabled = true) { events ->
+    PredictiveBackHandler(enabled = !backDispatchBlocked) { events ->
         if (backIsFinishing) {
             events.collect { }
             return@PredictiveBackHandler
         }
         if (!motionEnabled || backgroundSnapshot == null) {
             events.collect { }
-            finishBack()
+            finishBack(predictiveGesture = true)
             return@PredictiveBackHandler
         }
 
@@ -221,7 +281,7 @@ fun TelegramMailTransition(
                 backEdge = event.swipeEdge
                 backProgress.snapTo(event.progress.coerceIn(0f, 1f))
             }
-            finishBack()
+            finishBack(predictiveGesture = true)
         } catch (_: CancellationException) {
             backProgress.animateTo(
                 targetValue = 0f,
@@ -255,7 +315,6 @@ fun TelegramMailTransition(
                         (1f - interactiveProgress) *
                         (1f - interactiveProgress)
                     val direction = if (backEdge == BackEventCompat.EDGE_RIGHT) -1f else 1f
-
                     translationX = if (interactiveProgress > 0f || backIsFinishing) {
                         direction * size.width * interactiveProgress
                     } else {

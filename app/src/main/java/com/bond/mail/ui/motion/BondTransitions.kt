@@ -16,6 +16,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
 
 private const val THUNDERBIRD_SWITCH_DURATION_MS = 285
+private const val NAVIGATION_SOURCE_HOLD_DURATION_MS = 520
 private val ThunderbirdSwitcherEasing = CubicBezierEasing(0.20f, 0f, 0f, 1f)
 
 fun bondFadeThrough(enabled: Boolean): ContentTransform {
@@ -61,6 +62,25 @@ fun bondTopLevelFade(enabled: Boolean): ContentTransform {
         animationSpec = tween(
             durationMillis = 90,
             easing = BondMotionEasing.Standard,
+        ),
+    )
+}
+
+/**
+ * Retains the source destination, without visibly moving or fading it, after a forward navigation.
+ *
+ * Material ripples and press-release springs can outlive the 285 ms cover animation, especially
+ * after a long press. Keeping the now-covered source composed for a little longer lets those
+ * interactions reach their resting state instead of resuming the next time that back-stack entry
+ * becomes visible.
+ */
+fun bondNavigationSourceHold(enabled: Boolean): ExitTransition {
+    if (!enabled) return ExitTransition.None
+    return fadeOut(
+        targetAlpha = 0.999f,
+        animationSpec = tween(
+            durationMillis = NAVIGATION_SOURCE_HOLD_DURATION_MS,
+            easing = ThunderbirdSwitcherEasing,
         ),
     )
 }

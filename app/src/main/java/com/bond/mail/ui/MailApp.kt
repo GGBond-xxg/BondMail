@@ -96,8 +96,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -117,7 +121,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
@@ -138,16 +141,14 @@ import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.BondMotionSpring
+import com.bond.mail.ui.motion.BondBackScreen
 import com.bond.mail.ui.motion.animateChromeOffset
-import com.bond.mail.ui.motion.bondBackwardBackgroundEnter
-import com.bond.mail.ui.motion.bondBackwardExit
-import com.bond.mail.ui.motion.bondForwardBackgroundExit
-import com.bond.mail.ui.motion.bondForwardEnter
 import com.bond.mail.ui.motion.TelegramMailTransition
+import com.bond.mail.ui.motion.bondForwardEnter
 import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.bondNavigationSourceHold
 import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.bondTopLevelFade
-import com.bond.mail.ui.motion.captureMailTransitionSnapshot
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
@@ -162,9 +163,11 @@ import com.bond.mail.ui.screens.OpenSourceLicensesScreen
 import com.bond.mail.ui.screens.PrivacyPolicyScreen
 import com.bond.mail.ui.screens.ProviderPickerScreen
 import com.bond.mail.ui.screens.SettingsScreen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 private const val MAIN = "main"
@@ -177,6 +180,7 @@ private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
 private const val DETAIL_SNAPSHOT_LIMIT = 16
 private const val COLLAPSED_ACCOUNT_LIMIT = 3
+private const val BACK_DISPATCH_GUARD_MS = 450L
 
 private fun parseStringArray(raw: String): List<String> = runCatching {
     val array = JSONArray(raw)
@@ -202,16 +206,27 @@ private fun MessageEntity.withLatestListState(row: MessageListRow): MessageEntit
 )
 
 @Composable
-fun MailApp(container: AppContainer, initialMessageId: String?) {
+fun MailApp(
+    container: AppContainer,
+    initialMessageId: String?,
+    onFirstContentReady: () -> Unit = {},
+) {
     val loadedSettings by container.settings.settings.collectAsState(initial = null)
     val settings = loadedSettings ?: AppSettings()
     val nav = rememberNavController()
-    val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val context = LocalContext.current
     val hostView = LocalView.current
     val motionEnabled = bondMotionEnabled()
     val appScope = rememberCoroutineScope()
+    val mailboxSnapshotLayer = rememberGraphicsLayer()
+    val providersSnapshotLayer = rememberGraphicsLayer()
+    val aboutSnapshotLayer = rememberGraphicsLayer()
+    // SplashScreen's keep condition cancels the host view's pre-draw, so waiting for a completed
+    // draw would deadlock until the Activity safety timeout. Layout does run underneath the splash:
+    // release it only after MAIN has a real full-size layout, then the exit listener keeps the
+    // overlay for the following display frame while that already-laid-out content is painted.
+    val firstContentReadyPosted = remember { AtomicBoolean(false) }
 
     val homeVm: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = viewModelFactory { HomeViewModel(container) },
@@ -240,6 +255,28 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
     var mailTransitionBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
+    var providersBackBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    var credentialsBackBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    var aboutBackBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    var aboutChildBackBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    // MainTabs leaves composition while the reader is open. Keep the list chrome state one level
+    // above NavHost so returning to a scrolled mailbox never draws a visible toolbar/dock for one
+    // frame before its restored LazyList state hides them again.
+    var mainChromeVisible by remember { mutableStateOf(true) }
+    // Some ColorOS builds submit one completed edge gesture to OnBackPressedDispatcher again after
+    // the current destination has already left composition. Keep a host-level callback alive across
+    // that route change so the repeated dispatch cannot pop the newly revealed destination too.
+    var backDispatchGuardActive by remember { mutableStateOf(false) }
+    var backPopInFlight by remember { mutableStateOf(false) }
+    var snapshotNavigationInFlight by remember { mutableStateOf(false) }
     // Navigation can compose the destination in the same frame as the click callback. Keep a
     // synchronous, non-state snapshot so the first detail frame always has subject/sender data
     // instead of briefly rendering an empty page while Room emits the full entity.
@@ -258,6 +295,49 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
 
     fun navigateOnce(route: String) {
         nav.navigate(route) { launchSingleTop = true }
+    }
+
+    fun navigateAfterSnapshot(
+        route: String,
+        capture: suspend () -> androidx.compose.ui.graphics.ImageBitmap,
+        store: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit,
+    ) {
+        if (snapshotNavigationInFlight) return
+        snapshotNavigationInFlight = true
+        appScope.launch {
+            try {
+                val snapshot = try {
+                    capture()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Throwable) {
+                    null
+                }
+                store(snapshot)
+                // The forward transition now keeps this source destination alive while the new
+                // page covers it, so its release/ripple finishes normally after this copy.
+                navigateOnce(route)
+                withFrameNanos { }
+            } finally {
+                snapshotNavigationInFlight = false
+            }
+        }
+    }
+
+    fun popBackStackOnce() {
+        if (backPopInFlight) return
+        backPopInFlight = true
+        backDispatchGuardActive = true
+        appScope.launch {
+            // Install the host-level consuming callback before removing the destination-owned
+            // BackHandler. The outgoing handler consumes repeats during this first frame; the host
+            // guard consumes repeats after popBackStack changes the route.
+            withFrameNanos { }
+            nav.popBackStack()
+            delay(BACK_DISPATCH_GUARD_MS)
+            backDispatchGuardActive = false
+            backPopInFlight = false
+        }
     }
 
     fun prepareCompose(email: String = "") {
@@ -488,56 +568,95 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
             color = MaterialTheme.bondSurfaces.page,
         ) {
             Box(Modifier.fillMaxSize()) {
+                BackHandler(enabled = backDispatchGuardActive) {
+                    // Registered before NavHost so an active destination owns its gesture first.
+                    // After that destination pops, this stable host callback consumes any repeated
+                    // dispatch still arriving from the completed ColorOS edge gesture.
+                }
+
                 NavHost(
                     navController = nav,
                     startDestination = MAIN,
-                    enterTransition = { androidx.compose.animation.EnterTransition.None },
-                    exitTransition = { androidx.compose.animation.ExitTransition.None },
+                    enterTransition = {
+                        // Mail detail owns its content-ready opening transform. All other secondary
+                        // destinations use the same right-edge cover motion without moving the
+                        // source page underneath.
+                        if (targetState.destination.route == DETAIL) {
+                            androidx.compose.animation.EnterTransition.None
+                        } else {
+                            bondForwardEnter(enabled = motionEnabled)
+                        }
+                    },
+                    exitTransition = { bondNavigationSourceHold(enabled = motionEnabled) },
                     popEnterTransition = { androidx.compose.animation.EnterTransition.None },
                     popExitTransition = { androidx.compose.animation.ExitTransition.None },
                 ) {
                     composable(
                         route = MAIN,
-                        exitTransition = {
-                            if (targetState.destination.route == DETAIL) {
-                                androidx.compose.animation.ExitTransition.None
-                            } else {
-                                bondForwardBackgroundExit(motionEnabled)
-                            }
-                        },
-                        popEnterTransition = {
-                            if (initialState.destination.route == DETAIL) {
-                                androidx.compose.animation.EnterTransition.None
-                            } else {
-                                bondBackwardBackgroundEnter(motionEnabled)
-                            }
-                        },
                     ) {
-                        MainTabs(
-                            container = container,
-                            homeVm = homeVm,
-                            settingsVm = settingsVm,
-                            settings = settings,
-                            notificationPermissionGranted = notificationPermissionGranted,
-                            showPermissionGuide = showPermissionGuide,
-                            onRequestNotificationPermission = ::requestNotificationPermission,
-                            onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
-                            onOpenNotificationSettings = ::openNotificationSettings,
-                            onOpenBackgroundSettings = ::openBackgroundSettings,
-                            onOpenBackgroundNotificationSettings = ::openBackgroundNotificationSettings,
-                            onOpenAbout = { navigateOnce(ABOUT) },
-                            onAddAccount = { navigateOnce(PROVIDERS) },
-                            onOpenMessage = { message ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .onGloballyPositioned { coordinates ->
+                                    if (
+                                        coordinates.size.width > 0 &&
+                                        coordinates.size.height > 0 &&
+                                        firstContentReadyPosted.compareAndSet(false, true)
+                                    ) {
+                                        hostView.post { onFirstContentReady() }
+                                    }
+                                }
+                                .drawWithContent {
+                                    mailboxSnapshotLayer.record {
+                                        this@drawWithContent.drawContent()
+                                    }
+                                    drawLayer(mailboxSnapshotLayer)
+                                },
+                        ) {
+                            MainTabs(
+                                container = container,
+                                homeVm = homeVm,
+                                settingsVm = settingsVm,
+                                settings = settings,
+                                notificationPermissionGranted = notificationPermissionGranted,
+                                showPermissionGuide = showPermissionGuide,
+                                onRequestNotificationPermission = ::requestNotificationPermission,
+                                onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
+                                onOpenNotificationSettings = ::openNotificationSettings,
+                                onOpenBackgroundSettings = ::openBackgroundSettings,
+                                onOpenBackgroundNotificationSettings = ::openBackgroundNotificationSettings,
+                                onOpenAbout = {
+                                    providersBackBackground = null
+                                    credentialsBackBackground = null
+                                    aboutChildBackBackground = null
+                                    navigateAfterSnapshot(
+                                        route = ABOUT,
+                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                                        store = { aboutBackBackground = it },
+                                    )
+                                },
+                                onAddAccount = {
+                                    aboutBackBackground = null
+                                    aboutChildBackBackground = null
+                                    credentialsBackBackground = null
+                                    navigateAfterSnapshot(
+                                        route = PROVIDERS,
+                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                                        store = { providersBackBackground = it },
+                                    )
+                                },
+                                mainChromeVisible = mainChromeVisible,
+                                onMainChromeVisibilityChanged = { mainChromeVisible = it },
+                                onOpenMessage = { message ->
                                 if (message.folderType == "DRAFTS" || message.deliveryState == "DRAFT") {
                                     openDraft(message)
                                 } else {
                                     appScope.launch {
                                         // Opening is the read action. Update the live list first,
                                         // then let Compose draw that state before freezing the
-                                        // background used by open and predictive-back transitions.
-                                        // PixelCopy at the start of the first frame can still see
-                                        // the previous Surface buffer, so wait through one rendered
-                                        // frame and capture at the start of the following one.
+                                        // background used by the mail-reader open/close transition.
+                                        // Let the read-state update settle before freezing the
+                                        // Compose-only mailbox used by the reader transition.
                                         homeVm.openMessage(message)
                                         withFrameNanos { }
                                         withFrameNanos { }
@@ -547,8 +666,9 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                                         // capture the previous reader before NavHost removed it.
                                         // A failed copy must clear the value too; reusing an older
                                         // snapshot is always worse than opening without one.
-                                        mailTransitionBackground =
-                                            captureMailTransitionSnapshot(hostView)
+                                        mailTransitionBackground = runCatching {
+                                            mailboxSnapshotLayer.toImageBitmap()
+                                        }.getOrNull()
                                         val openedMessage = if (message.unread) {
                                             message.copy(unread = false)
                                         } else {
@@ -563,95 +683,158 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                                         navigateOnce("detail/${Uri.encode(message.id)}")
                                     }
                                 }
-                            },
-                            onCompose = ::prepareCompose,
-                        )
+                                },
+                                onCompose = ::prepareCompose,
+                            )
+                        }
                     }
 
                     composable(
                         route = PROVIDERS,
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) {
-                        ProviderPickerScreen(
-                            onBack = { nav.popBackStack() },
-                            onProviderSelected = { providerId ->
-                                navigateOnce("credentials/${Uri.encode(providerId)}")
-                            },
-                        )
+                        BondBackScreen(
+                            backgroundSnapshot = providersBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .drawWithContent {
+                                        providersSnapshotLayer.record {
+                                            this@drawWithContent.drawContent()
+                                        }
+                                        drawLayer(providersSnapshotLayer)
+                                    },
+                            ) {
+                                ProviderPickerScreen(
+                                    onBack = requestBack,
+                                    onProviderSelected = { providerId ->
+                                        navigateAfterSnapshot(
+                                            route = "credentials/${Uri.encode(providerId)}",
+                                            capture = { providersSnapshotLayer.toImageBitmap() },
+                                            store = { credentialsBackBackground = it },
+                                        )
+                                    },
+                                )
+                            }
+                        }
                     }
 
                     composable(
                         route = CREDENTIALS,
                         arguments = listOf(navArgument("providerId") { type = NavType.StringType }),
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) { entry ->
                         val providerId = Uri.decode(entry.arguments?.getString("providerId").orEmpty())
                         val vm: AddAccountViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                             key = "add-$providerId",
                             factory = viewModelFactory { AddAccountViewModel(container, providerId) },
                         )
-                        AccountCredentialsScreen(
-                            viewModel = vm,
-                            onBack = { nav.popBackStack() },
-                            onSaved = { accountId ->
-                                homeVm.selectMailbox(accountId, "INBOX")
-                                nav.popBackStack(MAIN, false)
-                                homeVm.refreshAccount(accountId, initialDelayMs = 800L)
-                                showPermissionGuide = !notificationPermissionGranted &&
-                                    !settings.notificationPermissionPromptDismissed
-                            },
-                        )
+                        BondBackScreen(
+                            backgroundSnapshot = credentialsBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            AccountCredentialsScreen(
+                                viewModel = vm,
+                                onBack = requestBack,
+                                onSaved = { accountId ->
+                                    homeVm.selectMailbox(accountId, "INBOX")
+                                    nav.popBackStack(MAIN, false)
+                                    homeVm.refreshAccount(accountId, initialDelayMs = 800L)
+                                    showPermissionGuide = !notificationPermissionGranted &&
+                                        !settings.notificationPermissionPromptDismissed
+                                },
+                            )
+                        }
                     }
 
                     composable(
                         route = ABOUT,
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) {
-                        AboutScreen(
-                            onBack = { nav.popBackStack() },
-                            onOpenSourceLicenses = { navigateOnce(OPEN_SOURCE_LICENSES) },
-                            onOpenAppLicense = { navigateOnce(APP_LICENSE) },
-                            onOpenPrivacyPolicy = { navigateOnce(PRIVACY_POLICY) },
-                        )
+                        BondBackScreen(
+                            backgroundSnapshot = aboutBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .drawWithContent {
+                                        aboutSnapshotLayer.record {
+                                            this@drawWithContent.drawContent()
+                                        }
+                                        drawLayer(aboutSnapshotLayer)
+                                    },
+                            ) {
+                                AboutScreen(
+                                    onBack = requestBack,
+                                    onOpenSourceLicenses = {
+                                        navigateAfterSnapshot(
+                                            route = OPEN_SOURCE_LICENSES,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
+                                    onOpenAppLicense = {
+                                        navigateAfterSnapshot(
+                                            route = APP_LICENSE,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
+                                    onOpenPrivacyPolicy = {
+                                        navigateAfterSnapshot(
+                                            route = PRIVACY_POLICY,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
+                                )
+                            }
+                        }
                     }
 
                     composable(
                         route = OPEN_SOURCE_LICENSES,
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) {
-                        OpenSourceLicensesScreen(onBack = { nav.popBackStack() })
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            OpenSourceLicensesScreen(onBack = requestBack)
+                        }
                     }
 
                     composable(
                         route = APP_LICENSE,
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) {
-                        AppLicenseScreen(onBack = { nav.popBackStack() })
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            AppLicenseScreen(onBack = requestBack)
+                        }
                     }
 
                     composable(
                         route = PRIVACY_POLICY,
-                        enterTransition = { bondForwardEnter(motionEnabled) },
-                        exitTransition = { androidx.compose.animation.ExitTransition.None },
-                        popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
                     ) {
-                        PrivacyPolicyScreen(onBack = { nav.popBackStack() })
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            backDispatchBlocked = backPopInFlight,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            PrivacyPolicyScreen(onBack = requestBack)
+                        }
                     }
 
                     composable(
@@ -670,7 +853,8 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                             TelegramMailTransition(
                                 backgroundSnapshot = mailTransitionBackground,
                                 motionEnabled = motionEnabled,
-                                onBackCommitted = { nav.popBackStack() },
+                                backDispatchBlocked = backPopInFlight,
+                                onBackCommitted = ::popBackStackOnce,
                             ) { requestBack, reportContentReady ->
                                 DetailScreen(
                                     container = container,
@@ -768,6 +952,8 @@ private fun MainTabs(
     onOpenBackgroundNotificationSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
+    mainChromeVisible: Boolean,
+    onMainChromeVisibilityChanged: (Boolean) -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
     onCompose: (String) -> Unit,
 ) {
@@ -779,13 +965,6 @@ private fun MainTabs(
     val stateHolder = rememberSaveableStateHolder()
     val motionEnabled = bondMotionEnabled()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    // Chrome visibility is transient interaction state. Do not restore a hidden dock after process
-    // recreation, and do not let the outgoing AnimatedContent tab keep controlling the new tab.
-    var mainChromeVisible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(selectedTab) {
-        mainChromeVisible = true
-    }
 
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -794,7 +973,7 @@ private fun MainTabs(
     fun selectTab(target: Int) {
         if (target != selectedTab) {
             selectedTab = target
-            mainChromeVisible = true
+            onMainChromeVisibilityChanged(true)
         }
     }
 
@@ -889,7 +1068,7 @@ private fun MainTabs(
                     bondTopLevelFade(enabled = motionEnabled)
                 },
                 contentKey = { it },
-                label = "main-tab-fade-through",
+                label = "main-tab-fade",
             ) { tab ->
                 stateHolder.SaveableStateProvider(tab) {
                     when (tab) {
@@ -906,7 +1085,7 @@ private fun MainTabs(
                             onCompose = { onCompose("") },
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->
-                                if (tab == selectedTab) mainChromeVisible = visible
+                                if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
                         )
@@ -917,7 +1096,7 @@ private fun MainTabs(
                             onCompose = onCompose,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->
-                                if (tab == selectedTab) mainChromeVisible = visible
+                                if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
                         )
@@ -931,7 +1110,7 @@ private fun MainTabs(
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->
-                                if (tab == selectedTab) mainChromeVisible = visible
+                                if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
                         )

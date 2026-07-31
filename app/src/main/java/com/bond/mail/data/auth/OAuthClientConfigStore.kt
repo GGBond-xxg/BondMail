@@ -11,11 +11,11 @@ data class OAuthClientConfigurationInfo(
 )
 
 /**
- * Stores user-supplied public OAuth client configuration in app-private storage.
+ * Resolves bundled and user-supplied public OAuth client configuration.
  *
  * OAuth client IDs and redirect metadata are application configuration, not mailbox passwords.
- * Keeping the downloaded JSON outside the APK lets every source build use its own Google Cloud
- * and Microsoft Entra registration without publishing the maintainer's client identifiers.
+ * Gmail and Outlook ship with the matching public-client registrations. A complete JSON imported
+ * by the user remains a separate override, which is useful for independently signed source builds.
  */
 class OAuthClientConfigStore(context: Context) {
     private val appContext = context.applicationContext
@@ -56,18 +56,7 @@ class OAuthClientConfigStore(context: Context) {
             else -> throw OAuthConfigurationException("Unsupported OAuth provider: $providerId")
         }
 
-        directory.mkdirs()
-        val destination = configurationFile(providerId)
-        val temporary = File(directory, "${destination.name}.tmp")
-        temporary.writeText(json.toString(2), Charsets.UTF_8)
-        if (destination.exists() && !destination.delete()) {
-            temporary.delete()
-            throw OAuthConfigurationException("Could not replace OAuth client configuration")
-        }
-        if (!temporary.renameTo(destination)) {
-            temporary.delete()
-            throw OAuthConfigurationException("Could not save OAuth client configuration")
-        }
+        writeAtomically(configurationFile(providerId), json.toString(2))
         return info(providerId)
     }
 
@@ -89,12 +78,20 @@ class OAuthClientConfigStore(context: Context) {
             ?.takeIf { it.endsWith(".apps.googleusercontent.com") }
 
     fun microsoftConfigurationFile(): File {
-        val file = configurationFile("outlook")
-        if (!file.isFile) {
-            throw OAuthConfigurationException("Microsoft OAuth client JSON has not been configured")
+        val customFile = configurationFile("outlook")
+        if (customFile.isFile) {
+            validateMicrosoft(read("outlook"))
+            return customFile
         }
-        validateMicrosoft(read("outlook"))
-        return file
+
+        val bundled = bundledJson(MICROSOFT_CONFIG_ASSET)
+        validateMicrosoft(bundled)
+        val bundledFile = File(directory, "microsoft.builtin.json")
+        val serialized = bundled.toString(2)
+        if (!bundledFile.isFile || bundledFile.readText(Charsets.UTF_8) != serialized) {
+            writeAtomically(bundledFile, serialized)
+        }
+        return bundledFile
     }
 
     private fun microsoftClientId(): String =
@@ -130,17 +127,50 @@ class OAuthClientConfigStore(context: Context) {
 
     private fun read(providerId: String): JSONObject {
         val file = configurationFile(providerId)
-        if (!file.isFile) {
-            throw OAuthConfigurationException("OAuth client JSON has not been configured")
+        if (file.isFile) {
+            return runCatching { JSONObject(file.readText(Charsets.UTF_8)) }
+                .getOrElse {
+                    throw OAuthConfigurationException("Stored OAuth client JSON is invalid", it)
+                }
         }
-        return runCatching { JSONObject(file.readText(Charsets.UTF_8)) }
-            .getOrElse { throw OAuthConfigurationException("Stored OAuth client JSON is invalid", it) }
+        return when (providerId) {
+            "gmail" -> bundledJson(GOOGLE_CONFIG_ASSET)
+            "outlook", "m365" -> bundledJson(MICROSOFT_CONFIG_ASSET)
+            else -> throw OAuthConfigurationException("OAuth client JSON has not been configured")
+        }
+    }
+
+    private fun bundledJson(assetName: String): JSONObject = runCatching {
+        appContext.assets.open(assetName).bufferedReader(Charsets.UTF_8).use { reader ->
+            JSONObject(reader.readText())
+        }
+    }.getOrElse {
+        throw OAuthConfigurationException("Bundled OAuth client JSON is invalid", it)
+    }
+
+    private fun writeAtomically(destination: File, content: String) {
+        directory.mkdirs()
+        val temporary = File(directory, "${destination.name}.tmp")
+        temporary.writeText(content, Charsets.UTF_8)
+        if (destination.exists() && !destination.delete()) {
+            temporary.delete()
+            throw OAuthConfigurationException("Could not replace OAuth client configuration")
+        }
+        if (!temporary.renameTo(destination)) {
+            temporary.delete()
+            throw OAuthConfigurationException("Could not save OAuth client configuration")
+        }
     }
 
     private fun configurationFile(providerId: String): File = when (providerId) {
         "gmail" -> File(directory, "google.json")
         "outlook", "m365" -> File(directory, "microsoft.json")
         else -> File(directory, "$providerId.json")
+    }
+
+    private companion object {
+        const val GOOGLE_CONFIG_ASSET = "oauth/gmail.json"
+        const val MICROSOFT_CONFIG_ASSET = "oauth/outlook.json"
     }
 }
 

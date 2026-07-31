@@ -1,0 +1,15 @@
+
+{
+  "client_id" : "bce11a3f-f9ad-425a-bc98-4e9e561e8ba9",
+  "authorization_user_agent" : "DEFAULT",
+  "redirect_uri" : "msauth://com.bond.mail/fui9oFKyiC%2BmAZ6NadLnYmoDFcY%3D",
+  "authorities" : [
+    {
+      "type": "AAD",
+      "audience": {
+        "type": "AzureADandPersonalMicrosoftAccount",
+        "tenant_id": "common"
+      }
+    }
+  ]
+}

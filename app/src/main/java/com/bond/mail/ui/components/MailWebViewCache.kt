@@ -209,7 +209,9 @@ internal object MailWebViewCache {
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
         val senderIdentity = "${header.senderName} ${header.senderAddress}".lowercase()
-        val forceTransactionalFluid = isKnownMobileTransactionalSender(senderDomain)
+        val zaBankSender = isZaBankSender(senderDomain)
+        val forceTransactionalFluid =
+            isKnownMobileTransactionalSender(senderDomain) || zaBankSender
         val binanceSender = isBinanceSender(senderDomain)
         val bybitSender = senderDomain.contains("bybit.com") ||
             senderIdentity.contains("bybit")
@@ -222,13 +224,17 @@ internal object MailWebViewCache {
             senderIdentity.contains("samsung")
         val instagramSender = senderDomain.contains("instagram.com") ||
             senderIdentity.contains("instagram")
+        val cloudflareSender = senderDomain == "cloudflare.com" ||
+            senderDomain.endsWith(".cloudflare.com")
         val grabSender = isGrabTransactionalSender(senderDomain, senderIdentity)
         val facebookSender = isFacebookSender(senderDomain, senderIdentity)
         val forceKnownSenderResponsive = binanceSender && responsiveMediaRules
-        // Grab's current transactional template advertises responsive rules but still keeps its hero
-        // and text on a 600px table. Rewriting that table as FLUID enlarges it past the phone and
-        // clips the right edge; preserve the original canvas and scale it as one unit instead.
-        val preferDesktopCanvas = (binanceSender && !forceKnownSenderResponsive) || grabSender
+        // Grab and Cloudflare's current templates advertise responsive rules but still paint their
+        // hero/text on a roughly 600px canvas. Before remote media styles settle, FLUID briefly
+        // enlarges that canvas past the phone and clips its right edge. Preserve the original
+        // geometry and scale the complete canvas from the very first committed frame.
+        val preferDesktopCanvas =
+            (binanceSender && !forceKnownSenderResponsive) || grabSender || cloudflareSender
 
         // Production mailers frequently keep the real icon/image URL in data-src/data-original
         // while leaving a transparent tracking pixel in src. WebView does not execute the sender's
@@ -352,7 +358,9 @@ internal object MailWebViewCache {
                 "desktopScore=${desktopCandidate?.score ?: 0} " +
                 "hardScore=${desktopCandidate?.hardWidthScore ?: 0} " +
                 "transactionalFluid=$forceTransactionalFluid desktopPreferred=$preferDesktopCanvas " +
-                "binance=$binanceSender grab=$grabSender facebook=$facebookSender " +
+                "binance=$binanceSender grab=$grabSender cloudflare=$cloudflareSender " +
+                "zaBank=$zaBankSender " +
+                "facebook=$facebookSender " +
                 "responsiveKnownSender=$forceKnownSenderResponsive mediaRules=$responsiveMediaRules " +
                 "textZoom=$textZoomPercent " +
                 "domain=${senderDomain.ifBlank { "unknown" }} " +
@@ -1465,6 +1473,14 @@ internal object MailWebViewCache {
             domain == "yeah.net" ||
             domain == "netease.com" ||
             domain.endsWith(".netease.com")
+
+    /**
+     * ZA Bank's messages include a fixed 600 px fallback table for desktop Outlook, but the same
+     * markup reflows correctly on mobile. Treating that fallback as the canonical canvas shrinks
+     * the entire message to roughly half size on a phone.
+     */
+    private fun isZaBankSender(domain: String): Boolean =
+        domain == "za.group" || domain.endsWith(".za.group")
 
     private fun isBinanceSender(domain: String): Boolean =
         domain == "binance.com" ||

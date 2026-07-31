@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,6 +65,8 @@ import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.LocalThemeRevealController
 import com.bond.mail.ui.motion.ObserveLazyListChromeVisibility
 import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.rememberBondPressInteraction
+import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.theme.bondSurfaces
 
 @Composable
@@ -404,17 +407,22 @@ private fun SettingsActionRow(
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-    ) {
-        SettingsRowShell(icon = icon, title = title, subtitle = subtitle) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    val pressResetter = rememberBondPressResetter()
+    key(pressResetter.epoch) {
+        val interactionSource = rememberBondPressInteraction()
+        Surface(
+            onClick = { pressResetter.resetThen(onClick) },
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+            interactionSource = interactionSource,
+        ) {
+            SettingsRowShell(icon = icon, title = title, subtitle = subtitle) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

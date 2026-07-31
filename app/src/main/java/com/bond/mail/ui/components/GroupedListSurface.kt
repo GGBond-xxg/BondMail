@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -23,6 +24,7 @@ import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.rememberBondPressInteraction
+import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
 
 /**
@@ -42,59 +44,62 @@ internal fun GroupedListSurface(
     border: BorderStroke? = null,
     content: @Composable () -> Unit,
 ) {
-    val motionEnabled = bondMotionEnabled()
-    val interactionSource = rememberBondPressInteraction()
-    val pressed by interactionSource.collectIsPressedAsState()
-    val pressedScale by rememberBondPressScale(
-        interactionSource = interactionSource,
-        pressedScale = 0.985f,
-        enabled = motionEnabled,
-    )
-    val elevation by animateDpAsState(
-        targetValue = when {
-            selected -> 2.dp
-            pressed -> 1.5.dp
-            else -> 0.dp
-        },
-        animationSpec = tween(
-            durationMillis = if (motionEnabled) 120 else 0,
-            easing = BondMotionEasing.Standard,
-        ),
-        label = "grouped-row-elevation",
-    )
+    val pressResetter = rememberBondPressResetter()
+    key(pressResetter.epoch) {
+        val motionEnabled = bondMotionEnabled()
+        val interactionSource = rememberBondPressInteraction()
+        val pressed by interactionSource.collectIsPressedAsState()
+        val pressedScale by rememberBondPressScale(
+            interactionSource = interactionSource,
+            pressedScale = 0.985f,
+            enabled = motionEnabled,
+        )
+        val elevation by animateDpAsState(
+            targetValue = when {
+                selected -> 2.dp
+                pressed -> 1.5.dp
+                else -> 0.dp
+            },
+            animationSpec = tween(
+                durationMillis = if (motionEnabled) 120 else 0,
+                easing = BondMotionEasing.Standard,
+            ),
+            label = "grouped-row-elevation",
+        )
 
-    Surface(
-        modifier = modifier.bondPressTransform(pressedScale),
-        shape = shape,
-        color = containerColor,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = border,
-        tonalElevation = 0.dp,
-        shadowElevation = elevation,
-    ) {
-        val clickableModifier = if (onLongClick != null) {
-            Modifier.combinedClickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                role = Role.Button,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-        } else {
-            Modifier.clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                role = Role.Button,
-                onClick = onClick,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .then(clickableModifier),
+        Surface(
+            modifier = modifier.bondPressTransform(pressedScale),
+            shape = shape,
+            color = containerColor,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = border,
+            tonalElevation = 0.dp,
+            shadowElevation = elevation,
         ) {
-            content()
+            val clickableModifier = if (onLongClick != null) {
+                Modifier.combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    role = Role.Button,
+                    onClick = { pressResetter.resetThen(onClick) },
+                    onLongClick = { pressResetter.resetThen(onLongClick) },
+                )
+            } else {
+                Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    role = Role.Button,
+                    onClick = { pressResetter.resetThen(onClick) },
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .then(clickableModifier),
+            ) {
+                content()
+            }
         }
     }
 }
