@@ -15,7 +15,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.view.MotionEvent
 import android.view.View
-import android.view.animation.PathInterpolator
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
@@ -156,6 +155,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+private const val MAIL_OPEN_READY_TIMEOUT_MS = 450L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,6 +168,7 @@ fun DetailScreen(
     onFirstContentReady: () -> Unit = {},
     onMessageSnapshot: (MessageEntity) -> Unit,
     onBack: () -> Unit,
+    onDelete: (MessageEntity) -> Unit,
     onReply: (String, String, String) -> Unit,
     onForward: (String, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -195,17 +196,25 @@ fun DetailScreen(
     var renderFailed by remember(messageId) { mutableStateOf(false) }
     var rendererRecoveryCount by remember(messageId) { mutableStateOf(0) }
     var firstContentReadyReported by remember(messageId) { mutableStateOf(false) }
+    var activeMailWebView by remember(messageId) { mutableStateOf<WebView?>(null) }
+    val mailContentScrollY = remember(messageId) { mutableIntStateOf(0) }
     val reportFirstContentReady = {
         if (!firstContentReadyReported) {
             firstContentReadyReported = true
             onFirstContentReady()
         }
     }
+    LaunchedEffect(messageId) {
+        // A cached local document normally commits well before this. If the body genuinely needs
+        // the network, open the stable native loading sheet rather than leaving the tapped list
+        // frozen indefinitely.
+        delay(MAIL_OPEN_READY_TIMEOUT_MS)
+        reportFirstContentReady()
+    }
     // Keep only the top app bar fixed. The bottom action dock still follows scroll direction so it
     // gets out of the way while reading and returns when the user scrolls back.
     var bottomChromeVisible by remember(messageId) { mutableStateOf(true) }
     var confirmDelete by remember(messageId) { mutableStateOf(false) }
-    val motionEnabled = bondMotionEnabled()
     // Use Chromium's native scrolling only. Returning zero keeps the existing WebView listener
     // compatible while disabling BondMail's custom rubber-band displacement.
     val updateTopPull: (Float) -> Float = { 0f }
@@ -468,7 +477,7 @@ fun DetailScreen(
                     headerLayout = headerLayout,
                     previewText = "",
                     topContentInset = messageContentTopInset,
-                    headerContentVisible = false,
+                    headerContentVisible = true,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -484,7 +493,7 @@ fun DetailScreen(
                         headerLayout = headerLayout,
                         previewText = previewText,
                         topContentInset = messageContentTopInset,
-                        headerContentVisible = false,
+                        headerContentVisible = true,
                         modifier = Modifier.fillMaxSize(),
                     )
                     Surface(
@@ -526,21 +535,28 @@ fun DetailScreen(
                     html = html,
                     header = mailHeader,
                     headerLayout = headerLayout,
-                    motionEnabled = motionEnabled,
                     loadImages = loadImages,
                     // The fixed app bar owns its own viewport area. Keeping Chromium below it
                     // prevents a naturally scrolling sender row from being clipped behind chrome.
                     topContentInset = 0.dp,
                     onTopPullDelta = updateTopPull,
                     onTopPullRelease = releaseTopPull,
-                    onWebViewChanged = {},
+                    onWebViewChanged = { webView ->
+                        activeMailWebView = webView
+                        if (webView == null) mailContentScrollY.intValue = 0
+                    },
                     onRemoteImagesChanged = { hasRemoteImages = it },
                     onExternalLink = { externalUrl = it },
                     onChromeVisibilityChanged = { visible -> bottomChromeVisible = visible },
-                    onContentScrollChanged = {},
+                    onContentScrollChanged = { scrollY ->
+                        mailContentScrollY.intValue = scrollY.coerceAtLeast(0)
+                    },
                     onRenderStarted = { renderFailed = false },
                     onDocumentReady = reportFirstContentReady,
-                    onRenderFailure = { renderFailed = true },
+                    onRenderFailure = {
+                        renderFailed = true
+                        reportFirstContentReady()
+                    },
                     onRendererGone = {
                         if (rendererRecoveryCount < 1) {
                             rendererRecoveryCount += 1
@@ -550,6 +566,27 @@ fun DetailScreen(
                             renderFailed = true
                         }
                     },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = 12.dp,
+                            top = messageContentTopInset,
+                            end = 12.dp,
+                        ),
+                )
+                // Keep one native header renderer alive before, during, and after Chromium's
+                // first commit. ColorOS maps Compose SemiBold and CSS weight 600 to visibly
+                // different font faces; covering the HTML header with this stable layer prevents
+                // sender text from changing weight at the placeholder/WebView handoff.
+                MailStableHeaderOverlay(
+                    header = mailHeader,
+                    headerLayout = headerLayout,
+                    topContentInset = 0.dp,
+                    contentScrollYpx = mailContentScrollY,
+                    topPullOffsetPx = 0f,
+                    onTopPullDelta = updateTopPull,
+                    onTopPullRelease = releaseTopPull,
+                    webView = activeMailWebView,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
@@ -677,10 +714,7 @@ fun DetailScreen(
                 TextButton(
                     onClick = {
                         confirmDelete = false
-                        scope.launch {
-                            container.repository.deleteMessage(item)
-                            onBack()
-                        }
+                        onDelete(item)
                     },
                 ) { Text(tr("delete"), color = MaterialTheme.colorScheme.error) }
             },
@@ -826,7 +860,6 @@ private fun MailHtmlView(
     html: String,
     header: MailWebHeader,
     headerLayout: MailHeaderLayout,
-    motionEnabled: Boolean,
     loadImages: Boolean,
     topContentInset: Dp,
     onTopPullDelta: (Float) -> Float,
@@ -992,9 +1025,6 @@ private fun MailHtmlView(
     val retainedContentAvailable = remember(requestedContentKey) {
         MailWebViewPool.canReuseRetainedContent(requestedContentKey)
     }
-    val previouslyPresented = remember(requestedContentKey) {
-        MailWebViewPool.hasPresentedContent(requestedContentKey)
-    }
     // The exact detached WebView already contains a visually committed page. Keep it visible while
     // AndroidView reattaches the same instance; otherwise every revisit shows the preview for one frame.
     var pageVisible by remember(requestedContentKey) {
@@ -1086,14 +1116,9 @@ private fun MailHtmlView(
         val document = prepared
         val placeholderAlpha by animateFloatAsState(
             targetValue = if (placeholderVisible) 1f else 0f,
-            animationSpec = if (retainedContentAvailable || previouslyPresented || !motionEnabled) {
-                snap()
-            } else {
-                tween(
-                    durationMillis = 110,
-                    easing = BondMotionEasing.EmphasizedDecelerate,
-                )
-            },
+            // The outer reader transition starts only after Chromium's visual commit. A second
+            // placeholder cross-fade would become a visible content swap during that transition.
+            animationSpec = snap(),
             label = "mail-framework-fade",
         )
         if (document != null) {
@@ -1375,12 +1400,13 @@ private fun MailHtmlView(
                                     if (view != null) {
                                         MailWebViewPool.markContentCommitted(view, committedContentKey)
                                     }
-                                    MailWebViewPool.markContentPresented(committedContentKey)
-                                    view?.revealMailDocument(
-                                        motionEnabled = motionEnabled,
-                                        previouslyPresented = previouslyPresented,
-                                    )
+                                    // This page is still one full screen to the right. Commit the
+                                    // exact WebView pixels synchronously; the outer reader motion is
+                                    // the only visual reveal and therefore cannot expose a preview
+                                    // document between frames.
+                                    view?.showMailDocumentImmediately()
                                     pageVisible = true
+                                    placeholderVisible = false
                                     latestOnDocumentReady()
                                 }
                                 val scheduleReveal: () -> Unit = schedule@{
@@ -1574,7 +1600,11 @@ private fun MailHtmlView(
                 headerLayout = headerLayout,
                 previewText = "",
                 topContentInset = topContentInset,
-                headerContentVisible = false,
+                // MailHtmlView's own modifier already applies the 12 dp document gutters.
+                // Applying them again here made the cold-start placeholder narrower than the
+                // committed WebView, so the subject and sender row visibly expanded on reveal.
+                horizontalContentInset = 0.dp,
+                headerContentVisible = true,
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = placeholderAlpha },
@@ -1603,8 +1633,6 @@ private fun MailHtmlView(
     }
 }
 
-private val MAIL_DOCUMENT_REVEAL_INTERPOLATOR = PathInterpolator(0.15f, 0.75f, 0.20f, 1.00f)
-
 private fun WebView.hideMailDocument() {
     animate().cancel()
     alpha = 0f
@@ -1615,25 +1643,6 @@ private fun WebView.showMailDocumentImmediately() {
     animate().cancel()
     alpha = 1f
     translationY = 0f
-}
-
-private fun WebView.revealMailDocument(
-    motionEnabled: Boolean,
-    previouslyPresented: Boolean,
-) {
-    animate().cancel()
-    if (!motionEnabled || previouslyPresented) {
-        showMailDocumentImmediately()
-        return
-    }
-    val duration = BondMotionDuration.MailContentReveal
-    animate()
-        .alpha(1f)
-        .translationY(0f)
-        .setDuration(duration.toLong())
-        .setInterpolator(MAIL_DOCUMENT_REVEAL_INTERPOLATOR)
-        .withLayer()
-        .start()
 }
 
 @Composable
@@ -1800,7 +1809,7 @@ private fun MailStableHeaderOverlay(
                 // Paint the native subject/sender surface edge-to-edge. The child rows already
                 // own their readable horizontal insets; applying padding before background made
                 // fixed-width newsletters look as if the sender header were shifted to one side.
-                .background(MaterialTheme.bondSurfaces.page)
+                .background(MaterialTheme.bondSurfaces.content)
                 .padding(top = topContentInset)
                 // WebView reports physical pixels and the offset above consumes physical pixels,
                 // so there is deliberately no density conversion. Its outer position also moves
@@ -1852,6 +1861,7 @@ private fun MailDocumentPlaceholder(
     headerLayout: MailHeaderLayout,
     previewText: String,
     topContentInset: Dp,
+    horizontalContentInset: Dp = 12.dp,
     headerContentVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -1900,7 +1910,11 @@ private fun MailDocumentPlaceholder(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = topContentInset, start = 12.dp, end = 12.dp),
+                    .padding(
+                        start = horizontalContentInset,
+                        top = topContentInset,
+                        end = horizontalContentInset,
+                    ),
             ) {
                 MailSubjectHeader(
                     header = header,
@@ -2132,7 +2146,9 @@ private fun MailSenderHeaderContent(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                     lineHeight = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    // Compose resolves SemiBold to a synthesized bold face on some ColorOS
+                    // builds. Medium most closely matches Chromium's CSS weight 600.
+                    fontWeight = FontWeight.Medium,
                     letterSpacing = 0.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

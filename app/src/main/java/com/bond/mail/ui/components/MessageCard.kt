@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,8 +122,11 @@ fun MessageCard(
         message.senderName.ifBlank { message.senderAddress }
     }
     val starScale = remember { Animatable(1f) }
+    val previousStarred = remember(message.id) { mutableStateOf(message.starred) }
     LaunchedEffect(message.starred, motionEnabled) {
-        if (!motionEnabled) {
+        val stateChanged = previousStarred.value != message.starred
+        previousStarred.value = message.starred
+        if (!motionEnabled || !stateChanged) {
             starScale.snapTo(1f)
         } else {
             starScale.snapTo(if (message.starred) 0.78f else 0.90f)

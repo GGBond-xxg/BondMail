@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -19,6 +20,8 @@ import com.bond.mail.data.settings.ThemeMode
 import com.bond.mail.ui.MailApp
 import com.bond.mail.ui.collectAsStateWithLifecycleCompat
 import com.bond.mail.ui.i18n.JsonStringsProvider
+import com.bond.mail.ui.motion.LocalThemeRevealController
+import com.bond.mail.ui.motion.ThemeRevealController
 import com.bond.mail.ui.theme.BondMailTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -26,6 +29,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class MainActivity : FragmentActivity() {
     private var initialMessageId by mutableStateOf<String?>(null)
     private var contentInstalled = false
+    private var themeRevealController: ThemeRevealController? = null
 
     @Volatile
     private var firstComposeFrameReady = false
@@ -33,6 +37,15 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !firstComposeFrameReady }
+        splash.setOnExitAnimationListener { splashView ->
+            // A successful Compose SideEffect means the hierarchy exists, but its buffer may not
+            // have reached SurfaceFlinger yet. This is observable during a recorded cold start as
+            // one frame containing only windowBackground. Keep the splash overlay for one more
+            // display frame so the first app buffer is already underneath before removing it.
+            window.decorView.postOnAnimation {
+                splashView.remove()
+            }
+        }
 
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -71,6 +84,12 @@ class MainActivity : FragmentActivity() {
     private fun installContent(container: AppContainer) {
         if (contentInstalled || isFinishing || isDestroyed) return
         contentInstalled = true
+        val revealController = ThemeRevealController(
+            window = window,
+            scope = lifecycleScope,
+            applyTheme = container.settings::setTheme,
+        )
+        themeRevealController = revealController
         setContent {
             val settings by container.settings.settings.collectAsStateWithLifecycleCompat()
             val darkTheme = when (settings.themeMode) {
@@ -84,17 +103,26 @@ class MainActivity : FragmentActivity() {
                     isAppearanceLightStatusBars = !darkTheme
                     isAppearanceLightNavigationBars = !darkTheme
                 }
-                // SideEffect runs after a successful root composition and before its frame is
-                // presented, so removing the splash here cannot reveal an empty DecorView.
+                // SideEffect signals that the root composition succeeded. The splash exit listener
+                // above owns the final one-frame handoff to the first presented app buffer.
                 firstComposeFrameReady = true
+                revealController.onThemeComposed(settings.themeMode)
             }
 
             BondMailTheme(settings) {
-                JsonStringsProvider(settings.languageCode) {
-                    MailApp(container, initialMessageId)
+                CompositionLocalProvider(LocalThemeRevealController provides revealController) {
+                    JsonStringsProvider(settings.languageCode) {
+                        MailApp(container, initialMessageId)
+                    }
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        themeRevealController?.dispose()
+        themeRevealController = null
+        super.onDestroy()
     }
 
     /**

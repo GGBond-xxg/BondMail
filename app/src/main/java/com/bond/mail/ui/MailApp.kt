@@ -93,6 +93,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -101,6 +102,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -141,9 +143,11 @@ import com.bond.mail.ui.motion.bondBackwardBackgroundEnter
 import com.bond.mail.ui.motion.bondBackwardExit
 import com.bond.mail.ui.motion.bondForwardBackgroundExit
 import com.bond.mail.ui.motion.bondForwardEnter
+import com.bond.mail.ui.motion.TelegramMailTransition
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.bondTopLevelFade
+import com.bond.mail.ui.motion.captureMailTransitionSnapshot
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
@@ -205,6 +209,7 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
     val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val context = LocalContext.current
+    val hostView = LocalView.current
     val motionEnabled = bondMotionEnabled()
     val appScope = rememberCoroutineScope()
 
@@ -232,6 +237,9 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
     var composeSourceMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var composeVisible by rememberSaveable { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<MessageListRow?>(null) }
+    var mailTransitionBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
     // Navigation can compose the destination in the same frame as the click callback. Keep a
     // synchronous, non-state snapshot so the first detail frame always has subject/sender data
     // instead of briefly rendering an empty page while Room emits the full entity.
@@ -438,6 +446,9 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
 
     LaunchedEffect(initialMessageId) {
         if (!initialMessageId.isNullOrBlank()) {
+            // A notification can replace a reader that was opened from the list. Never let that
+            // deep link inherit the previous reader's list snapshot.
+            mailTransitionBackground = null
             selectedMessage = null
             navigateOnce("detail/${Uri.encode(initialMessageId)}")
         }
@@ -487,8 +498,20 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                 ) {
                     composable(
                         route = MAIN,
-                        exitTransition = { bondForwardBackgroundExit(motionEnabled) },
-                        popEnterTransition = { bondBackwardBackgroundEnter(motionEnabled) },
+                        exitTransition = {
+                            if (targetState.destination.route == DETAIL) {
+                                androidx.compose.animation.ExitTransition.None
+                            } else {
+                                bondForwardBackgroundExit(motionEnabled)
+                            }
+                        },
+                        popEnterTransition = {
+                            if (initialState.destination.route == DETAIL) {
+                                androidx.compose.animation.EnterTransition.None
+                            } else {
+                                bondBackwardBackgroundEnter(motionEnabled)
+                            }
+                        },
                     ) {
                         MainTabs(
                             container = container,
@@ -508,18 +531,37 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                                 if (message.folderType == "DRAFTS" || message.deliveryState == "DRAFT") {
                                     openDraft(message)
                                 } else {
-                                    homeVm.openMessage(message)
-                                    val openedMessage = if (message.unread) message.copy(unread = false) else message
-                                    val initialSnapshot = detailInitialSnapshots[message.id]
-                                        ?.withLatestListState(openedMessage)
-                                        ?: openedMessage.toInitialMessage()
-                                    rememberDetailSnapshot(initialSnapshot)
-                                    detailOpenSeenRequests[message.id] = message.unread
-                                    selectedMessage = openedMessage
-                                    // Use one destination instance, like Thunderbird's reader
-                                    // container. A retained WebView binds synchronously on reopen;
-                                    // uncached content paints while this same screen slides in.
-                                    navigateOnce("detail/${Uri.encode(message.id)}")
+                                    appScope.launch {
+                                        // Opening is the read action. Update the live list first,
+                                        // then let Compose draw that state before freezing the
+                                        // background used by open and predictive-back transitions.
+                                        // PixelCopy at the start of the first frame can still see
+                                        // the previous Surface buffer, so wait through one rendered
+                                        // frame and capture at the start of the following one.
+                                        homeVm.openMessage(message)
+                                        withFrameNanos { }
+                                        withFrameNanos { }
+                                        // The list can move at any time after returning from a
+                                        // reader. Capturing only on MAIN entry left an old top-of-
+                                        // list image under the next transition and could even
+                                        // capture the previous reader before NavHost removed it.
+                                        // A failed copy must clear the value too; reusing an older
+                                        // snapshot is always worse than opening without one.
+                                        mailTransitionBackground =
+                                            captureMailTransitionSnapshot(hostView)
+                                        val openedMessage = if (message.unread) {
+                                            message.copy(unread = false)
+                                        } else {
+                                            message
+                                        }
+                                        val initialSnapshot = detailInitialSnapshots[message.id]
+                                            ?.withLatestListState(openedMessage)
+                                            ?: openedMessage.toInitialMessage()
+                                        rememberDetailSnapshot(initialSnapshot)
+                                        detailOpenSeenRequests[message.id] = message.unread
+                                        selectedMessage = openedMessage
+                                        navigateOnce("detail/${Uri.encode(message.id)}")
+                                    }
                                 }
                             },
                             onCompose = ::prepareCompose,
@@ -615,52 +657,77 @@ fun MailApp(container: AppContainer, initialMessageId: String?) {
                     composable(
                         route = DETAIL,
                         arguments = listOf(navArgument("messageId") { type = NavType.StringType }),
-                        enterTransition = { bondForwardEnter(motionEnabled) },
+                        enterTransition = { androidx.compose.animation.EnterTransition.None },
                         exitTransition = { androidx.compose.animation.ExitTransition.None },
                         popEnterTransition = { androidx.compose.animation.EnterTransition.None },
-                        popExitTransition = { bondBackwardExit(motionEnabled) },
+                        popExitTransition = { androidx.compose.animation.ExitTransition.None },
                     ) { entry ->
                         val messageId = Uri.decode(entry.arguments?.getString("messageId").orEmpty())
-                        DetailScreen(
-                            container = container,
-                            messageId = messageId,
-                            initialMessage = detailInitialSnapshots[messageId]
-                                ?: selectedMessage
-                                    ?.takeIf { it.id == messageId }
-                                    ?.toInitialMessage(),
-                            markSeenOnOpen = detailOpenSeenRequests[messageId]
-                                ?: selectedMessage?.takeIf { it.id == messageId }?.unread
-                                ?: false,
-                            settings = settings,
-                            onMessageSnapshot = ::rememberDetailSnapshot,
-                            onBack = { nav.popBackStack() },
-                            onReply = { to, subject, body ->
-                                composeAccountId = detailInitialSnapshots[messageId]?.accountId
-                                    ?: selectedMessage?.takeIf { it.id == messageId }?.accountId.orEmpty()
-                                composeTo = to
-                                composeCc = ""
-                                composeBcc = ""
-                                composeSubject = subject
-                                composeBody = body
-                                composeAttachmentUris = emptyList()
-                                composeDraftTaskId = null
-                                composeSourceMessageId = null
-                                composeVisible = true
-                            },
-                            onForward = { subject, body ->
-                                composeAccountId = detailInitialSnapshots[messageId]?.accountId
-                                    ?: selectedMessage?.takeIf { it.id == messageId }?.accountId.orEmpty()
-                                composeTo = ""
-                                composeCc = ""
-                                composeBcc = ""
-                                composeSubject = subject
-                                composeBody = body
-                                composeAttachmentUris = emptyList()
-                                composeDraftTaskId = null
-                                composeSourceMessageId = null
-                                composeVisible = true
-                            },
-                        )
+                        // NavHost may retain destination state briefly after a pop. Key the whole
+                        // reader transition by ID so no Animatable or frozen WebView frame can be
+                        // restored for a different message.
+                        key(messageId) {
+                            TelegramMailTransition(
+                                backgroundSnapshot = mailTransitionBackground,
+                                motionEnabled = motionEnabled,
+                                onBackCommitted = { nav.popBackStack() },
+                            ) { requestBack, reportContentReady ->
+                                DetailScreen(
+                                    container = container,
+                                    messageId = messageId,
+                                    initialMessage = detailInitialSnapshots[messageId]
+                                        ?: selectedMessage
+                                            ?.takeIf { it.id == messageId }
+                                            ?.toInitialMessage(),
+                                    markSeenOnOpen = detailOpenSeenRequests[messageId]
+                                        ?: selectedMessage?.takeIf { it.id == messageId }?.unread
+                                        ?: false,
+                                    settings = settings,
+                                    onFirstContentReady = reportContentReady,
+                                    onMessageSnapshot = ::rememberDetailSnapshot,
+                                    onBack = requestBack,
+                                    onDelete = { message ->
+                                        detailInitialSnapshots.remove(message.id)
+                                        detailOpenSeenRequests.remove(message.id)
+                                        if (selectedMessage?.id == message.id) selectedMessage = null
+                                        homeVm.deleteFromDetail(message)
+                                        requestBack()
+                                    },
+                                    onReply = { to, subject, body ->
+                                        composeAccountId = detailInitialSnapshots[messageId]?.accountId
+                                            ?: selectedMessage
+                                                ?.takeIf { it.id == messageId }
+                                                ?.accountId
+                                                .orEmpty()
+                                        composeTo = to
+                                        composeCc = ""
+                                        composeBcc = ""
+                                        composeSubject = subject
+                                        composeBody = body
+                                        composeAttachmentUris = emptyList()
+                                        composeDraftTaskId = null
+                                        composeSourceMessageId = null
+                                        composeVisible = true
+                                    },
+                                    onForward = { subject, body ->
+                                        composeAccountId = detailInitialSnapshots[messageId]?.accountId
+                                            ?: selectedMessage
+                                                ?.takeIf { it.id == messageId }
+                                                ?.accountId
+                                                .orEmpty()
+                                        composeTo = ""
+                                        composeCc = ""
+                                        composeBcc = ""
+                                        composeSubject = subject
+                                        composeBody = body
+                                        composeAttachmentUris = emptyList()
+                                        composeDraftTaskId = null
+                                        composeSourceMessageId = null
+                                        composeVisible = true
+                                    },
+                                )
+                            }
+                        }
                     }
                 }
 

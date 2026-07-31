@@ -39,9 +39,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,7 +61,9 @@ import com.bond.mail.ui.i18n.SupportedLanguages
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
+import com.bond.mail.ui.motion.LocalThemeRevealController
 import com.bond.mail.ui.motion.ObserveLazyListChromeVisibility
+import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.theme.bondSurfaces
 
 @Composable
@@ -71,6 +79,8 @@ fun SettingsScreen(
     chromeControllerEnabled: Boolean = true,
 ) {
     val settings by viewModel.settings.collectAsState()
+    val themeRevealController = LocalThemeRevealController.current
+    val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 108.dp else 18.dp,
@@ -144,6 +154,12 @@ fun SettingsScreen(
                     },
                     selected = settings.themeMode,
                     onSelect = viewModel::theme,
+                    onSelectAt = { mode, origin ->
+                        if (mode != settings.themeMode) {
+                            themeRevealController?.switchTo(mode, origin, motionEnabled)
+                                ?: viewModel.theme(mode)
+                        }
+                    },
                 )
                 SettingsDivider()
                 SwitchSettingRow(
@@ -305,6 +321,7 @@ private fun <T> ChoiceChips(
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
+    onSelectAt: ((T, Offset) -> Unit)? = null,
 ) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
@@ -312,9 +329,15 @@ private fun <T> ChoiceChips(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         options.forEach { (value, label) ->
+            var centerInWindow by remember(value) { mutableStateOf(Offset.Unspecified) }
             FilterChip(
+                modifier = Modifier.onGloballyPositioned { coordinates ->
+                    centerInWindow = coordinates.boundsInWindow().center
+                },
                 selected = value == selected,
-                onClick = { onSelect(value) },
+                onClick = {
+                    onSelectAt?.invoke(value, centerInWindow) ?: onSelect(value)
+                },
                 label = { Text(label, maxLines = 1) },
             )
         }

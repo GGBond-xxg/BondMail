@@ -23,12 +23,10 @@ internal object MailWebViewPool {
     private val cached = mutableListOf<WebView>()
     private var activeCount: Int = 0
     private val retainedContentKeys = WeakHashMap<WebView, String>()
-    private val presentedContentKeys = LinkedHashSet<String>()
 
     // Two retained pages cover the common A -> B -> A path without letting several image-heavy
     // newsletters compete for Chromium tile memory in the same renderer.
     private const val MAX_CACHED_WEB_VIEWS = 2
-    private const val MAX_PRESENTED_CONTENT_KEYS = 96
 
     fun acquire(context: Context, preferredContentKey: String? = null): WebView {
         check(Looper.myLooper() == Looper.getMainLooper()) {
@@ -56,8 +54,6 @@ internal object MailWebViewPool {
         activeCount += 1
         (view.parent as? ViewGroup)?.removeView(view)
         (view.context as? MutableContextWrapper)?.baseContext = context
-        runCatching { view.stopLoading() }
-        runCatching { view.resumeTimers() }
         return view
     }
 
@@ -115,22 +111,6 @@ internal object MailWebViewPool {
         retainedContentKeys[view] = contentKey
     }
 
-    /** Whether this exact prepared document has already been shown during the current process. */
-    fun hasPresentedContent(contentKey: String): Boolean = contentKey in presentedContentKeys
-
-    /**
-     * Remember that the user has already seen this document. Reopening it should attach directly
-     * instead of replaying the first-open reveal animation every time.
-     */
-    fun markContentPresented(contentKey: String) {
-        presentedContentKeys.remove(contentKey)
-        presentedContentKeys.add(contentKey)
-        while (presentedContentKeys.size > MAX_PRESENTED_CONTENT_KEYS) {
-            val oldest = presentedContentKeys.firstOrNull() ?: break
-            presentedContentKeys.remove(oldest)
-        }
-    }
-
     /** A new load invalidates the previously retained page until visual commit succeeds. */
     fun clearRetainedContent(view: WebView) {
         retainedContentKeys.remove(view)
@@ -141,7 +121,6 @@ internal object MailWebViewPool {
             "MailWebViewPool.release must run on the main thread"
         }
         activeCount = (activeCount - 1).coerceAtLeast(0)
-        runCatching { view.stopLoading() }
         runCatching {
             view.animate().cancel()
             view.alpha = 1f
@@ -151,14 +130,6 @@ internal object MailWebViewPool {
         runCatching { view.setOnTouchListener(null) }
         runCatching { view.setOnScrollChangeListener(null) }
         runCatching { view.isNestedScrollingEnabled = false }
-        runCatching { view.webViewClient = WebViewClient() }
-        runCatching { view.webChromeClient = null }
-        runCatching {
-            view.settings.blockNetworkLoads = true
-            view.settings.blockNetworkImage = true
-            view.settings.loadsImagesAutomatically = false
-            view.settings.cacheMode = WebSettings.LOAD_NO_CACHE
-        }
         (view.parent as? ViewGroup)?.removeView(view)
         val appContext = view.context.applicationContext
         (view.context as? MutableContextWrapper)?.baseContext = appContext
@@ -195,7 +166,6 @@ internal object MailWebViewPool {
         }
         cached.toList().forEach(::destroyDetachedView)
         cached.clear()
-        presentedContentKeys.clear()
     }
 
     private fun destroyDetachedView(view: WebView) {

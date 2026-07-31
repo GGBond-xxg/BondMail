@@ -77,7 +77,7 @@ class MailNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(context, BACKGROUND_SYNC_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.bondmail_notification_monet)
             .setContentTitle(context.getString(R.string.background_sync_active))
             .setContentText(
                 context.getString(R.string.background_sync_active_detail, intervalMinutes),
@@ -91,7 +91,7 @@ class MailNotificationManager(private val context: Context) {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+            .buildPreferringSmallIcon()
     }
 
     fun canPostNotifications(): Boolean {
@@ -123,7 +123,7 @@ class MailNotificationManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.drawable.bondmail_notification_monet)
             .setContentTitle(message.senderName.ifBlank { message.senderAddress })
             .setContentText(message.subject)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message.subject))
@@ -144,12 +144,23 @@ class MailNotificationManager(private val context: Context) {
             .setOnlyAlertOnce(false)
             .setWhen(message.receivedAt)
             .setShowWhen(true)
-            .build()
+            .buildPreferringSmallIcon()
         notificationManager.notify(message.id.hashCode(), notification)
+    }
+
+    /**
+     * Ask platforms that support this public notification hint to render the dedicated
+     * transparent small icon instead of substituting the launcher icon.
+     */
+    private fun NotificationCompat.Builder.buildPreferringSmallIcon(): Notification {
+        val notification = build()
+        notification.extras.putBoolean(EXTRA_PREFER_SMALL_ICON, true)
+        return notification
     }
 
     companion object {
         const val BACKGROUND_SYNC_CHANNEL_ID = "background_mail_sync_v1"
+        private const val EXTRA_PREFER_SMALL_ICON = "android.app.preferSmallIcon"
         private const val NOTIFICATION_LIGHT_COLOR = 0xFF0375FD.toInt()
         private val VIBRATION_PATTERN = longArrayOf(0L, 180L, 90L, 180L)
     }

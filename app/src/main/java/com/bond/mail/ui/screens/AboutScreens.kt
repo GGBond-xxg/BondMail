@@ -208,6 +208,7 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             "Microsoft Authentication Library (MSAL)" to "MIT License",
             "jsoup" to "MIT License",
             "Jakarta Mail for Android" to "CDDL 1.1 / GPL 2.0 with Classpath Exception",
+            "CircularRevealSwitch (Compose adaptation)" to "MIT License",
             "Simple Icons" to "CC0 1.0",
             "Bootstrap Icons" to "MIT License",
         ).forEachIndexed { index, (library, license) ->
@@ -224,7 +225,7 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(top = 3.dp),
                 )
             }
-            if (index < 6) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            if (index < 7) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
         Text(
             text = tr("open_source_notice"),

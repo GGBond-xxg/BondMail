@@ -13,6 +13,7 @@ import com.bond.mail.data.auth.OAuthAuthorizationCancelledException
 import com.bond.mail.data.auth.OAuthGrant
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
+import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.model.AuthType
 import com.bond.mail.data.model.CustomMailConfig
@@ -394,6 +395,17 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 container.repository.deleteMessage(message.id)
             }
         }
+            .onFailure { error.value = container.repository.failure(it) }
+    }
+
+    /**
+     * Detail deletion must outlive the detail composition. The previous reader-owned coroutine
+     * waited for IMAP before navigating back and could be cancelled with the destination, making a
+     * successful button press look inert on a slow connection.
+     */
+    fun deleteFromDetail(message: MessageEntity) = viewModelScope.launch {
+        optimisticReadIds -= message.id
+        runCatching { container.repository.deleteMessage(message) }
             .onFailure { error.value = container.repository.failure(it) }
     }
 

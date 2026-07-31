@@ -24,7 +24,6 @@ object BondMotionDuration {
     const val EffectShort = 120
     const val ElementEnter = 180
     const val MailContentRevisit = 150
-    const val MailContentReveal = 120
     const val ChromeReveal = 240
     const val FadeThrough = 240
     const val SharedAxis = 280
