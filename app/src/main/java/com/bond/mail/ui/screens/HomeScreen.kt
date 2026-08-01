@@ -50,10 +50,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Drafts
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MarkEmailRead
@@ -61,6 +64,7 @@ import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -170,6 +174,7 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
+    onReplyMessage: (MessageListRow) -> Unit,
     onCompose: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -257,6 +262,7 @@ fun HomeScreen(
         FolderUi("SENT", tr("sent"), Icons.AutoMirrored.Filled.Send),
         FolderUi("DRAFTS", tr("drafts"), Icons.Filled.Drafts),
         FolderUi("SPAM", tr("spam"), Icons.Filled.Report),
+        FolderUi("TRASH", tr("trash"), Icons.Filled.Delete),
     )
 
     fun toggleSelection(message: MessageListRow) {
@@ -366,7 +372,11 @@ fun HomeScreen(
                         listState.firstVisibleItemScrollOffset > 420
                 val scrolledAwayFromTop =
                     listState.firstVisibleItemIndex >= 4 || partiallyScrolled
-                listState.canScrollForward && scrolledAwayFromTop
+                // The saved index is restored before LazyColumn completes its first measure, while
+                // canScrollForward temporarily falls back to false. Depending on that layout-only
+                // flag made the button disappear for one frame after closing a reader and replay
+                // its enter animation. A non-zero restored viewport is sufficient here.
+                scrolledAwayFromTop
             }
         }
         val messageIds = remember(messages) { messages.map { message -> message.id } }
@@ -533,11 +543,26 @@ fun HomeScreen(
                             positionalThreshold = { totalDistance -> totalDistance * 0.50f },
                             confirmValueChange = { value ->
                                 if (inSelectionMode) return@rememberSwipeToDismissBoxState false
-                                when (value) {
-                                    // Right swipe toggles read/unread; left swipe toggles star.
-                                    SwipeToDismissBoxValue.StartToEnd -> viewModel.toggleUnread(message)
-                                    SwipeToDismissBoxValue.EndToStart -> viewModel.toggleStarred(message)
-                                    else -> Unit
+                                when (currentFolder) {
+                                    "DRAFTS" -> when (value) {
+                                        SwipeToDismissBoxValue.StartToEnd -> onOpenMessage(message)
+                                        SwipeToDismissBoxValue.EndToStart -> viewModel.delete(message)
+                                        else -> Unit
+                                    }
+                                    "TRASH" -> when (value) {
+                                        SwipeToDismissBoxValue.StartToEnd -> onReplyMessage(message)
+                                        SwipeToDismissBoxValue.EndToStart ->
+                                            viewModel.permanentlyDelete(message)
+                                        else -> Unit
+                                    }
+                                    else -> when (value) {
+                                        // Inbox and Spam share read/star gestures.
+                                        SwipeToDismissBoxValue.StartToEnd ->
+                                            viewModel.toggleUnread(message)
+                                        SwipeToDismissBoxValue.EndToStart ->
+                                            viewModel.toggleStarred(message)
+                                        else -> Unit
+                                    }
                                 }
                                 false
                             },
@@ -557,10 +582,14 @@ fun HomeScreen(
                                 gesturesEnabled = swipeGesturesReady &&
                                     !verticalPointerGesture &&
                                     !inSelectionMode &&
-                                    message.deliveryState == "REMOTE",
+                                    (
+                                        message.deliveryState == "REMOTE" ||
+                                            currentFolder == "DRAFTS"
+                                        ),
                                 backgroundContent = {
                                     SwipeActionBackground(
                                         message = message,
+                                        folderType = currentFolder,
                                         direction = dismissState.dismissDirection,
                                         progress = dismissState.progress,
                                         shape = itemShape,
@@ -679,30 +708,81 @@ fun HomeScreen(
                                         ),
                                     )
                                 }
-                                IconButton(onClick = { confirmDeleteSelection = true }) {
-                                    Icon(Icons.Default.Delete, contentDescription = tr("delete"))
-                                }
-                                IconButton(
-                                    onClick = {
-                                        val target = selectedMessages.toList()
-                                        if (selectionWillMarkRead) {
-                                            viewModel.markAllRead(target)
-                                        } else {
-                                            viewModel.markAllUnread(target)
+                                when (currentFolder) {
+                                    "TRASH" -> {
+                                        IconButton(
+                                            onClick = {
+                                                viewModel.moveToInbox(selectedMessages.toList())
+                                                clearSelection()
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.Default.RestoreFromTrash,
+                                                contentDescription = tr("restore_mail"),
+                                            )
                                         }
-                                        clearSelection()
-                                    },
-                                ) {
-                                    Icon(
-                                        if (selectionWillMarkRead) {
-                                            Icons.Default.MarkEmailRead
-                                        } else {
-                                            Icons.Default.MarkEmailUnread
-                                        },
-                                        contentDescription = tr(
-                                            if (selectionWillMarkRead) "mark_read" else "mark_unread",
-                                        ),
-                                    )
+                                        IconButton(onClick = { confirmDeleteSelection = true }) {
+                                            Icon(
+                                                Icons.Default.DeleteForever,
+                                                contentDescription = tr("delete_permanently"),
+                                            )
+                                        }
+                                    }
+                                    else -> {
+                                        if (currentFolder == "SPAM") {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.moveToInbox(selectedMessages.toList())
+                                                    clearSelection()
+                                                },
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Inbox,
+                                                    contentDescription = tr("move_to_inbox"),
+                                                )
+                                            }
+                                        }
+                                        IconButton(onClick = { confirmDeleteSelection = true }) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = tr(
+                                                    if (currentFolder == "DRAFTS") {
+                                                        "discard_draft"
+                                                    } else {
+                                                        "delete"
+                                                    },
+                                                ),
+                                            )
+                                        }
+                                        if (currentFolder != "DRAFTS") {
+                                            IconButton(
+                                                onClick = {
+                                                    val target = selectedMessages.toList()
+                                                    if (selectionWillMarkRead) {
+                                                        viewModel.markAllRead(target)
+                                                    } else {
+                                                        viewModel.markAllUnread(target)
+                                                    }
+                                                    clearSelection()
+                                                },
+                                            ) {
+                                                Icon(
+                                                    if (selectionWillMarkRead) {
+                                                        Icons.Default.MarkEmailRead
+                                                    } else {
+                                                        Icons.Default.MarkEmailUnread
+                                                    },
+                                                    contentDescription = tr(
+                                                        if (selectionWillMarkRead) {
+                                                            "mark_read"
+                                                        } else {
+                                                            "mark_unread"
+                                                        },
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -877,22 +957,59 @@ fun HomeScreen(
         if (confirmDeleteSelection) {
             AlertDialog(
                 onDismissRequest = { confirmDeleteSelection = false },
-                title = { Text(tr("confirm_delete_message_title")) },
+                title = {
+                    Text(
+                        tr(
+                            if (currentFolder == "TRASH") {
+                                "confirm_permanent_delete_title"
+                            } else {
+                                "confirm_delete_message_title"
+                            },
+                        ),
+                    )
+                },
                 text = {
                     Text(
-                        if (selectedIds.size <= 1) tr("confirm_delete_message_body")
-                        else tr("confirm_delete_messages_body", selectedIds.size.toString()),
+                        when {
+                            currentFolder == "TRASH" && selectedIds.size <= 1 ->
+                                tr("confirm_permanent_delete_body")
+                            currentFolder == "TRASH" ->
+                                tr(
+                                    "confirm_permanent_delete_messages_body",
+                                    selectedIds.size.toString(),
+                                )
+                            selectedIds.size <= 1 -> tr("confirm_delete_message_body")
+                            else -> tr(
+                                "confirm_delete_messages_body",
+                                selectedIds.size.toString(),
+                            )
+                        },
                     )
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             val target = messages.filter { it.id in selectedIds }
-                            viewModel.deleteMany(target)
+                            if (currentFolder == "TRASH") {
+                                viewModel.permanentlyDeleteMany(target)
+                            } else {
+                                viewModel.deleteMany(target)
+                            }
                             clearSelection()
                             confirmDeleteSelection = false
                         },
-                    ) { Text(tr("delete"), color = MaterialTheme.colorScheme.error) }
+                    ) {
+                        Text(
+                            tr(
+                                if (currentFolder == "TRASH") {
+                                    "delete_permanently"
+                                } else {
+                                    "delete"
+                                },
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 },
                 dismissButton = {
                     TextButton(onClick = { confirmDeleteSelection = false }) { Text(tr("cancel")) }
@@ -1065,20 +1182,24 @@ private fun ElasticRefreshContainer(
 @Composable
 private fun SwipeActionBackground(
     message: MessageListRow,
+    folderType: String,
     direction: SwipeToDismissBoxValue,
     progress: Float,
     shape: Shape,
 ) {
-    val togglingRead = direction == SwipeToDismissBoxValue.StartToEnd
-    val togglingStar = direction == SwipeToDismissBoxValue.EndToStart
+    val startAction = direction == SwipeToDismissBoxValue.StartToEnd
+    val endAction = direction == SwipeToDismissBoxValue.EndToStart
+    val destructiveAction = endAction && folderType in setOf("DRAFTS", "TRASH")
     val background = when {
-        togglingRead -> MaterialTheme.colorScheme.secondaryContainer
-        togglingStar -> MaterialTheme.colorScheme.tertiaryContainer
+        startAction -> MaterialTheme.colorScheme.secondaryContainer
+        destructiveAction -> MaterialTheme.colorScheme.errorContainer
+        endAction -> MaterialTheme.colorScheme.tertiaryContainer
         else -> Color.Transparent
     }
     val contentColor = when {
-        togglingRead -> MaterialTheme.colorScheme.onSecondaryContainer
-        togglingStar -> MaterialTheme.colorScheme.onTertiaryContainer
+        startAction -> MaterialTheme.colorScheme.onSecondaryContainer
+        destructiveAction -> MaterialTheme.colorScheme.onErrorContainer
+        endAction -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> Color.Transparent
     }
     val iconScale = 0.72f + progress.coerceIn(0f, 1f) * 0.28f
@@ -1089,19 +1210,27 @@ private fun SwipeActionBackground(
             .clip(shape)
             .background(background)
             .padding(horizontal = 24.dp),
-        contentAlignment = if (togglingRead) Alignment.CenterStart else Alignment.CenterEnd,
+        contentAlignment = if (startAction) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
-        if (togglingRead || togglingStar) {
+        if (startAction || endAction) {
             Icon(
                 imageVector = when {
-                    togglingRead && message.unread -> Icons.Default.MarkEmailRead
-                    togglingRead -> Icons.Default.MarkEmailUnread
+                    folderType == "DRAFTS" && startAction -> Icons.Default.Edit
+                    folderType == "DRAFTS" -> Icons.Default.Delete
+                    folderType == "TRASH" && startAction -> Icons.AutoMirrored.Filled.Reply
+                    folderType == "TRASH" -> Icons.Default.DeleteForever
+                    startAction && message.unread -> Icons.Default.MarkEmailRead
+                    startAction -> Icons.Default.MarkEmailUnread
                     message.starred -> Icons.Outlined.StarBorder
                     else -> Icons.Default.Star
                 },
                 contentDescription = when {
-                    togglingRead && message.unread -> tr("mark_read")
-                    togglingRead -> tr("mark_unread")
+                    folderType == "DRAFTS" && startAction -> tr("continue_draft")
+                    folderType == "DRAFTS" -> tr("discard_draft")
+                    folderType == "TRASH" && startAction -> tr("reply")
+                    folderType == "TRASH" -> tr("delete_permanently")
+                    startAction && message.unread -> tr("mark_read")
+                    startAction -> tr("mark_unread")
                     message.starred -> tr("unstar")
                     else -> tr("star")
                 },

@@ -190,7 +190,7 @@ class AppContainer(context: Context) {
         folderType: String,
         notificationMode: NewMailNotificationMode = NewMailNotificationMode.ALERT,
     ): List<MessageEntity> =
-        if (folderType in setOf("SENT", "DRAFTS")) {
+        if (folderType in setOf("SENT", "DRAFTS", "SPAM", "TRASH")) {
             repository.syncFolder(accountId, folderType)
         } else {
             processNewMessages(repository.syncFolder(accountId, folderType), notificationMode)
@@ -200,7 +200,7 @@ class AppContainer(context: Context) {
         folderType: String,
         notificationMode: NewMailNotificationMode = NewMailNotificationMode.ALERT,
     ): List<MessageEntity> =
-        if (folderType in setOf("SENT", "DRAFTS")) {
+        if (folderType in setOf("SENT", "DRAFTS", "SPAM", "TRASH")) {
             repository.syncFolderAll(folderType)
         } else {
             processNewMessages(repository.syncFolderAll(folderType), notificationMode)

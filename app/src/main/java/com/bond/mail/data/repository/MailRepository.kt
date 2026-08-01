@@ -666,7 +666,7 @@ class MailRepository(
     /** Synchronize the remote folder represented by a home chip. */
     suspend fun syncFolder(accountId: String, folderType: String): List<MessageEntity> {
         return when (folderType) {
-            "SENT", "DRAFTS" -> accountSyncMutex(accountId).withLock {
+            "SENT", "DRAFTS", "SPAM", "TRASH" -> accountSyncMutex(accountId).withLock {
                 val account = database.accountDao().byId(accountId) ?: return@withLock emptyList()
                 syncSpecialFolderInternal(account, folderType)
             }
@@ -737,14 +737,16 @@ class MailRepository(
             result.newHeaders.forEach { remote ->
                 val internetMessageId = remote.internetMessageId.orEmpty()
                 if (internetMessageId.isBlank()) return@forEach
-                if (folderType == "SENT") {
-                    database.messageDao().deleteLocalPlaceholderByInternetMessageId(
+                when (folderType) {
+                    "SENT" -> database.messageDao().deleteLocalPlaceholderByInternetMessageId(
                         accountId = account.id,
                         folderType = "SENT",
                         normalizedInternetMessageId = normalizeInternetMessageId(internetMessageId),
                     )
-                } else {
-                    database.outboxDao().deleteDraftByInternetMessageId(account.id, internetMessageId)
+                    "DRAFTS" -> database.outboxDao().deleteDraftByInternetMessageId(
+                        account.id,
+                        internetMessageId,
+                    )
                 }
             }
             database.folderDao().upsert(result.folder)
@@ -1431,6 +1433,10 @@ class MailRepository(
         database.messageDao().byId(messageId)?.let { deleteMessage(it) }
     }
 
+    suspend fun permanentlyDeleteMessage(messageId: String) {
+        database.messageDao().byId(messageId)?.let { permanentlyDeleteMessage(it) }
+    }
+
     suspend fun toggleUnread(message: MessageEntity) {
         val current = database.messageDao().byId(message.id) ?: return
         // A manual flag action is newer than the automatic read intent from opening the detail.
@@ -1514,6 +1520,48 @@ class MailRepository(
     }
 
     suspend fun deleteMessage(message: MessageEntity) {
+        if (
+            message.deliveryState == "REMOTE" &&
+            message.remoteUid > 0L &&
+            message.folderType != "TRASH"
+        ) {
+            moveMessage(message, "TRASH")
+        } else {
+            permanentlyDeleteMessage(message)
+        }
+    }
+
+    suspend fun moveMessage(messageId: String, targetFolderType: String) {
+        database.messageDao().byId(messageId)?.let { moveMessage(it, targetFolderType) }
+    }
+
+    suspend fun moveMessage(message: MessageEntity, targetFolderType: String) {
+        require(targetFolderType in setOf("INBOX", "SPAM", "TRASH"))
+        if (message.deliveryState != "REMOTE" || message.remoteUid <= 0L) return
+        clearPendingOpenSeen(message.id)
+        database.messageDao().deleteById(message.id)
+        runCatching {
+            bodyAccountMutex(message.accountId, interactive = true).withLock {
+                accountSyncMutex(message.accountId).withLock {
+                    val account = requireAccount(message.accountId)
+                    withMailboxCredential(account) { credential ->
+                        imap.move(
+                            account = account,
+                            provider = ProviderRegistry.forAccount(account),
+                            secret = credential,
+                            message = message,
+                            targetCanonicalType = targetFolderType,
+                        )
+                    }
+                }
+            }
+        }.onFailure {
+            database.messageDao().upsert(message)
+            throw it
+        }
+    }
+
+    suspend fun permanentlyDeleteMessage(message: MessageEntity) {
         clearPendingOpenSeen(message.id)
         if (message.deliveryState != "REMOTE" || message.remoteUid <= 0L) {
             // A local Sent placeholder can briefly outlive the provider's real Sent row while the
@@ -2047,7 +2095,7 @@ class MailRepository(
                 }
             }
         } else {
-            deleteMessage(message.id)
+            permanentlyDeleteMessage(message.id)
         }
     }
 
@@ -2072,7 +2120,7 @@ class MailRepository(
                 ),
             )
         } else if (!sourceMessageId.isNullOrBlank()) {
-            database.messageDao().byId(sourceMessageId)?.let { deleteMessage(it) }
+            database.messageDao().byId(sourceMessageId)?.let { permanentlyDeleteMessage(it) }
         }
     }
 

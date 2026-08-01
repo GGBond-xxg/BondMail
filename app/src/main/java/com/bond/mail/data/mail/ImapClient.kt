@@ -298,7 +298,7 @@ class ImapClient(context: Context) {
         }
     }
 
-    /** Synchronize server-backed Sent or Drafts folders on demand. */
+    /** Synchronize a server-backed mailbox other than Inbox on demand. */
     internal suspend fun syncSpecialFolder(
         account: AccountEntity,
         provider: MailProvider,
@@ -309,9 +309,9 @@ class ImapClient(context: Context) {
         localMaxUid: Long?,
         initialWindow: Int = 50,
     ): ImapSyncResult = withContext(Dispatchers.IO) {
-        require(canonicalType == "SENT" || canonicalType == "DRAFTS")
+        require(canonicalType in setOf("SENT", "DRAFTS", "SPAM", "TRASH"))
         withStore(provider, account.mailLoginName, secret, operation = "folder-${canonicalType.lowercase()}", poolLane = "sync") { store ->
-            val folder = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = false)
+            val folder = resolveCanonicalFolder(store, provider, canonicalType, createIfMissing = false)
                 ?: return@withStore ImapSyncResult(
                     folder = FolderEntity(
                         id = "${account.id}:$canonicalType",
@@ -332,7 +332,7 @@ class ImapClient(context: Context) {
                 val reportedUidNext = runCatching { folder.uidNext }.getOrDefault(-1L)
                 val validityChanged = knownFolder != null && knownFolder.uidValidity > 0L &&
                     uidValidity > 0L && knownFolder.uidValidity != uidValidity
-                // Sent and Drafts are user-visible server folders, not append-only inbox cursors.
+                // These are user-visible server folders, not append-only inbox cursors.
                 // Fetch the latest bounded window every time so a draft deleted/sent in webmail is
                 // removed locally and a server-created Sent copy is reconciled immediately.
                 val remoteMessages = if (messageCount == 0) {
@@ -374,7 +374,8 @@ class ImapClient(context: Context) {
                         bodyLoaded = false,
                         bodyParserVersion = 0,
                         receivedAt = parsed.receivedAt,
-                        unread = false,
+                        unread = canonicalType !in setOf("SENT", "DRAFTS") &&
+                            !message.isSet(Flags.Flag.SEEN),
                         starred = message.isSet(Flags.Flag.FLAGGED),
                         hasAttachments = false,
                         deliveryState = "REMOTE",
@@ -422,7 +423,7 @@ class ImapClient(context: Context) {
     ): RemoteAppendResult = withContext(Dispatchers.IO) {
         require(canonicalType == "SENT" || canonicalType == "DRAFTS")
         withStore(provider, account.mailLoginName, secret, operation = "append-${canonicalType.lowercase()}", poolLane = "interactive") { store ->
-            val target = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = true)
+            val target = resolveCanonicalFolder(store, provider, canonicalType, createIfMissing = true)
                 ?: error("Unable to resolve $canonicalType folder")
 
             // Gmail and Microsoft mailboxes can create their own Sent copy after SMTP acceptance.
@@ -542,23 +543,51 @@ class ImapClient(context: Context) {
         .replace(Regex("\\s+"), "")
         .lowercase()
 
-    private fun resolveSpecialFolder(
+    private fun resolveCanonicalFolder(
         store: Store,
         provider: MailProvider,
         canonicalType: String,
         createIfMissing: Boolean,
     ): IMAPFolder? {
-        val desiredAttribute = if (canonicalType == "SENT") "\\Sent" else "\\Drafts"
+        if (canonicalType == "INBOX") {
+            return store.getFolder("INBOX").takeIf(Folder::exists) as? IMAPFolder
+        }
+        val desiredAttributes = when (canonicalType) {
+            "SENT" -> setOf("\\Sent")
+            "DRAFTS" -> setOf("\\Drafts")
+            "SPAM" -> setOf("\\Junk", "\\Spam")
+            "TRASH" -> setOf("\\Trash")
+            else -> emptySet()
+        }
         val candidates = runCatching { store.defaultFolder.list("*").toList() }.getOrDefault(emptyList())
         candidates.filterIsInstance<IMAPFolder>().firstOrNull { folder ->
-            runCatching { folder.attributes.any { it.equals(desiredAttribute, ignoreCase = true) } }
+            runCatching {
+                folder.attributes.any { attribute ->
+                    desiredAttributes.any { desired ->
+                        attribute.equals(desired, ignoreCase = true)
+                    }
+                }
+            }
                 .getOrDefault(false)
         }?.let { return it }
 
-        val aliases = if (canonicalType == "SENT") {
-            listOf("sent", "sentitems", "sentmessages", "已发送", "已发送邮件", "寄件备份", "寄件備份")
-        } else {
-            listOf("draft", "drafts", "草稿", "草稿箱")
+        val aliases = when (canonicalType) {
+            "SENT" -> listOf("sent", "sentitems", "sentmessages", "已发送", "已发送邮件", "寄件备份", "寄件備份")
+            "DRAFTS" -> listOf("draft", "drafts", "草稿", "草稿箱")
+            "SPAM" -> listOf("spam", "junk", "junkemail", "垃圾邮件", "垃圾郵件")
+            "TRASH" -> listOf(
+                "trash",
+                "deleted",
+                "deleteditems",
+                "bin",
+                "垃圾箱",
+                "垃圾桶",
+                "已删除",
+                "已刪除",
+                "已删除邮件",
+                "已刪除郵件",
+            )
+            else -> emptyList()
         }
         candidates.filterIsInstance<IMAPFolder>().firstOrNull { folder ->
             val normalized = normalizeFolderName(folder.fullName)
@@ -567,13 +596,22 @@ class ImapClient(context: Context) {
 
         val preferredNames = when {
             provider.id == "gmail" && canonicalType == "SENT" -> listOf("[Gmail]/Sent Mail", "Sent")
-            provider.id == "gmail" -> listOf("[Gmail]/Drafts", "Drafts")
+            provider.id == "gmail" && canonicalType == "DRAFTS" -> listOf("[Gmail]/Drafts", "Drafts")
+            provider.id == "gmail" && canonicalType == "SPAM" -> listOf("[Gmail]/Spam", "Spam")
+            provider.id == "gmail" && canonicalType == "TRASH" -> listOf("[Gmail]/Trash", "Trash")
             provider.id in setOf("outlook", "m365") && canonicalType == "SENT" -> listOf("Sent Items", "Sent")
-            provider.id in setOf("outlook", "m365") -> listOf("Drafts")
+            provider.id in setOf("outlook", "m365") && canonicalType == "DRAFTS" -> listOf("Drafts")
+            provider.id in setOf("outlook", "m365") && canonicalType == "SPAM" -> listOf("Junk Email", "Junk")
+            provider.id in setOf("outlook", "m365") && canonicalType == "TRASH" -> listOf("Deleted Items", "Trash")
             provider.netEaseClientId && canonicalType == "SENT" -> listOf("已发送", "Sent")
-            provider.netEaseClientId -> listOf("草稿箱", "Drafts")
+            provider.netEaseClientId && canonicalType == "DRAFTS" -> listOf("草稿箱", "Drafts")
+            provider.netEaseClientId && canonicalType == "SPAM" -> listOf("垃圾邮件", "Spam")
+            provider.netEaseClientId && canonicalType == "TRASH" -> listOf("已删除", "垃圾箱", "Trash")
             canonicalType == "SENT" -> listOf("Sent", "Sent Items")
-            else -> listOf("Drafts")
+            canonicalType == "DRAFTS" -> listOf("Drafts")
+            canonicalType == "SPAM" -> listOf("Junk", "Spam", "Junk Email")
+            canonicalType == "TRASH" -> listOf("Trash", "Deleted Items", "Deleted")
+            else -> emptyList()
         }
         preferredNames.forEach { name ->
             val folder = store.getFolder(name)
@@ -862,6 +900,56 @@ class ImapClient(context: Context) {
         }
     }
 
+    suspend fun move(
+        account: AccountEntity,
+        provider: MailProvider,
+        secret: String,
+        message: MessageEntity,
+        targetCanonicalType: String,
+    ) = withContext(Dispatchers.IO) {
+        require(targetCanonicalType in setOf("INBOX", "SPAM", "TRASH"))
+        withStore(provider, account.mailLoginName, secret, operation = "move", poolLane = "interactive") { store ->
+            val source = store.getFolder(message.remoteFolder) as IMAPFolder
+            val target = resolveCanonicalFolder(
+                store = store,
+                provider = provider,
+                canonicalType = targetCanonicalType,
+                createIfMissing = targetCanonicalType == "TRASH",
+            ) ?: error("Unable to resolve $targetCanonicalType folder")
+            if (source.fullName.equals(target.fullName, ignoreCase = true)) return@withStore
+
+            source.open(Folder.READ_WRITE)
+            var expungeSource = false
+            try {
+                val remote = source.getMessageByUID(message.remoteUid)
+                    ?: findRecentMessagesByInternetMessageId(
+                        folder = source,
+                        internetMessageId = message.internetMessageId.orEmpty(),
+                        limit = 96,
+                    ).lastOrNull()
+                if (remote == null) {
+                    MailLog.d(
+                        MailLog.IMAP,
+                        "move already absent provider=${provider.id} folder=${message.remoteFolder} uid=${message.remoteUid}",
+                    )
+                } else {
+                    // COPY + \Deleted works on every IMAP server supported by JavaMail, including
+                    // providers that do not advertise RFC 6851 MOVE.
+                    source.copyMessages(arrayOf(remote), target)
+                    remote.setFlag(Flags.Flag.DELETED, true)
+                    expungeSource = true
+                    MailLog.d(
+                        MailLog.IMAP,
+                        "move success provider=${provider.id} from=${source.fullName} " +
+                            "to=${target.fullName} uid=${source.getUID(remote).coerceAtLeast(0L)}",
+                    )
+                }
+            } finally {
+                source.close(expungeSource)
+            }
+        }
+    }
+
     suspend fun delete(
         account: AccountEntity,
         provider: MailProvider,
@@ -907,7 +995,7 @@ class ImapClient(context: Context) {
         internetMessageId: String,
     ): Int = withContext(Dispatchers.IO) {
         withStore(provider, account.mailLoginName, secret, operation = "delete-by-id", poolLane = "interactive") { store ->
-            val folder = resolveSpecialFolder(store, provider, canonicalType, createIfMissing = false)
+            val folder = resolveCanonicalFolder(store, provider, canonicalType, createIfMissing = false)
                 ?: return@withStore 0
             folder.open(Folder.READ_WRITE)
             try {

@@ -39,7 +39,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -51,7 +50,6 @@ private const val TELEGRAM_OPEN_DURATION_MS = 260
 private const val TELEGRAM_BACK_DURATION_MS = 170
 private const val TELEGRAM_CANCEL_DURATION_MS = 150
 private const val TELEGRAM_BACK_SCALE_REDUCTION = 0.10f
-private const val PREDICTIVE_BACK_SETTLE_MS = 240L
 
 /*
  * Keep the quick Telegram settle, but distribute more of the travel through the middle of the
@@ -122,7 +120,6 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 fun TelegramMailTransition(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
-    backDispatchBlocked: Boolean,
     onBackCommitted: () -> Unit,
     content: @Composable (
         requestBack: () -> Unit,
@@ -132,7 +129,6 @@ fun TelegramMailTransition(
     BondBackTransition(
         backgroundSnapshot = backgroundSnapshot,
         motionEnabled = motionEnabled,
-        backDispatchBlocked = backDispatchBlocked,
         animateOpening = true,
         contentReadyInitially = false,
         freezeContentOnBack = true,
@@ -152,14 +148,12 @@ fun TelegramMailTransition(
 fun BondBackScreen(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
-    backDispatchBlocked: Boolean,
     onBackCommitted: () -> Unit,
     content: @Composable (requestBack: () -> Unit) -> Unit,
 ) {
     BondBackTransition(
         backgroundSnapshot = backgroundSnapshot,
         motionEnabled = motionEnabled,
-        backDispatchBlocked = backDispatchBlocked,
         animateOpening = false,
         contentReadyInitially = true,
         freezeContentOnBack = false,
@@ -173,7 +167,6 @@ fun BondBackScreen(
 private fun BondBackTransition(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
-    backDispatchBlocked: Boolean,
     animateOpening: Boolean,
     contentReadyInitially: Boolean,
     freezeContentOnBack: Boolean,
@@ -187,7 +180,6 @@ private fun BondBackTransition(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val latestOnBackCommitted by rememberUpdatedState(onBackCommitted)
-    val latestBackDispatchBlocked by rememberUpdatedState(backDispatchBlocked)
     val openingProgress = remember {
         Animatable(
             if (animateOpening && motionEnabled && backgroundSnapshot != null) 0f else 1f,
@@ -226,7 +218,7 @@ private fun BondBackTransition(
         }
     }
 
-    suspend fun finishBack(predictiveGesture: Boolean = false) {
+    suspend fun finishBack() {
         if (backIsFinishing) return
         backIsFinishing = true
         val readerFullyOpened = openingProgress.value >= 0.999f
@@ -243,16 +235,13 @@ private fun BondBackTransition(
                 ),
             )
         }
-        // Once progress reaches 1 the destination is already visually gone. Keep its predictive
-        // callback alive briefly after a gesture commit because some ColorOS builds continue
-        // dispatching that same physical gesture to the newly revealed destination.
-        if (predictiveGesture) delay(PREDICTIVE_BACK_SETTLE_MS)
-        withFrameNanos { }
+        // The visual endpoint is already on screen. Commit now instead of retaining the outgoing
+        // gesture layer for another frame, which made the first scroll on the revealed page miss.
         latestOnBackCommitted()
     }
 
     val requestBack: () -> Unit = {
-        if (!backIsFinishing && !latestBackDispatchBlocked) {
+        if (!backIsFinishing) {
             scope.launch {
                 // Capture after pressed-state/dialog pixels have returned to their resting frame.
                 withFrameNanos { }
@@ -264,14 +253,14 @@ private fun BondBackTransition(
         if (!contentReady) contentReady = true
     }
 
-    PredictiveBackHandler(enabled = !backDispatchBlocked) { events ->
+    PredictiveBackHandler(enabled = true) { events ->
         if (backIsFinishing) {
             events.collect { }
             return@PredictiveBackHandler
         }
         if (!motionEnabled || backgroundSnapshot == null) {
             events.collect { }
-            finishBack(predictiveGesture = true)
+            finishBack()
             return@PredictiveBackHandler
         }
 
@@ -281,7 +270,7 @@ private fun BondBackTransition(
                 backEdge = event.swipeEdge
                 backProgress.snapTo(event.progress.coerceIn(0f, 1f))
             }
-            finishBack(predictiveGesture = true)
+            finishBack()
         } catch (_: CancellationException) {
             backProgress.animateTo(
                 targetValue = 0f,

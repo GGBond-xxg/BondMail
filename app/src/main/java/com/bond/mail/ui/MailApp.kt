@@ -180,7 +180,6 @@ private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
 private const val DETAIL_SNAPSHOT_LIMIT = 16
 private const val COLLAPSED_ACCOUNT_LIMIT = 3
-private const val BACK_DISPATCH_GUARD_MS = 450L
 
 private fun parseStringArray(raw: String): List<String> = runCatching {
     val array = JSONArray(raw)
@@ -271,11 +270,6 @@ fun MailApp(
     // above NavHost so returning to a scrolled mailbox never draws a visible toolbar/dock for one
     // frame before its restored LazyList state hides them again.
     var mainChromeVisible by remember { mutableStateOf(true) }
-    // Some ColorOS builds submit one completed edge gesture to OnBackPressedDispatcher again after
-    // the current destination has already left composition. Keep a host-level callback alive across
-    // that route change so the repeated dispatch cannot pop the newly revealed destination too.
-    var backDispatchGuardActive by remember { mutableStateOf(false) }
-    var backPopInFlight by remember { mutableStateOf(false) }
     var snapshotNavigationInFlight by remember { mutableStateOf(false) }
     // Navigation can compose the destination in the same frame as the click callback. Keep a
     // synchronous, non-state snapshot so the first detail frame always has subject/sender data
@@ -325,19 +319,7 @@ fun MailApp(
     }
 
     fun popBackStackOnce() {
-        if (backPopInFlight) return
-        backPopInFlight = true
-        backDispatchGuardActive = true
-        appScope.launch {
-            // Install the host-level consuming callback before removing the destination-owned
-            // BackHandler. The outgoing handler consumes repeats during this first frame; the host
-            // guard consumes repeats after popBackStack changes the route.
-            withFrameNanos { }
-            nav.popBackStack()
-            delay(BACK_DISPATCH_GUARD_MS)
-            backDispatchGuardActive = false
-            backPopInFlight = false
-        }
+        nav.popBackStack()
     }
 
     fun prepareCompose(email: String = "") {
@@ -395,6 +377,42 @@ fun MailApp(
                 composeAttachmentUris = emptyList()
                 composeDraftTaskId = null
                 composeSourceMessageId = remote.id
+            }
+        }
+    }
+
+    fun replyFromList(message: MessageListRow) {
+        val replySubject = if (message.subject.startsWith("Re:", true)) {
+            message.subject
+        } else {
+            "Re: ${message.subject}"
+        }
+        val initialBody = "\n\n---\n${message.preview}"
+        composeAccountId = message.accountId
+        composeTo = message.senderAddress
+        composeCc = ""
+        composeBcc = ""
+        composeSubject = replySubject
+        composeBody = initialBody
+        composeAttachmentUris = emptyList()
+        composeDraftTaskId = null
+        composeSourceMessageId = null
+        composeVisible = true
+        appScope.launch {
+            val loaded = container.repository.ensureBodyLoaded(
+                messageId = message.id,
+                markSeen = false,
+                priority = true,
+            ) ?: return@launch
+            // Do not overwrite text the user has already started typing while the body loads.
+            if (
+                composeVisible &&
+                composeAccountId == message.accountId &&
+                composeTo == message.senderAddress &&
+                composeSubject == replySubject &&
+                composeBody == initialBody
+            ) {
+                composeBody = "\n\n---\n${loaded.bodyText}"
             }
         }
     }
@@ -568,12 +586,6 @@ fun MailApp(
             color = MaterialTheme.bondSurfaces.page,
         ) {
             Box(Modifier.fillMaxSize()) {
-                BackHandler(enabled = backDispatchGuardActive) {
-                    // Registered before NavHost so an active destination owns its gesture first.
-                    // After that destination pops, this stable host callback consumes any repeated
-                    // dispatch still arriving from the completed ColorOS edge gesture.
-                }
-
                 NavHost(
                     navController = nav,
                     startDestination = MAIN,
@@ -684,6 +696,7 @@ fun MailApp(
                                     }
                                 }
                                 },
+                                onReplyMessage = ::replyFromList,
                                 onCompose = ::prepareCompose,
                             )
                         }
@@ -695,7 +708,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = providersBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             Box(
@@ -734,7 +746,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = credentialsBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             AccountCredentialsScreen(
@@ -757,7 +768,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = aboutBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             Box(
@@ -804,7 +814,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = aboutChildBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             OpenSourceLicensesScreen(onBack = requestBack)
@@ -817,7 +826,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = aboutChildBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             AppLicenseScreen(onBack = requestBack)
@@ -830,7 +838,6 @@ fun MailApp(
                         BondBackScreen(
                             backgroundSnapshot = aboutChildBackBackground,
                             motionEnabled = motionEnabled,
-                            backDispatchBlocked = backPopInFlight,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             PrivacyPolicyScreen(onBack = requestBack)
@@ -853,7 +860,6 @@ fun MailApp(
                             TelegramMailTransition(
                                 backgroundSnapshot = mailTransitionBackground,
                                 motionEnabled = motionEnabled,
-                                backDispatchBlocked = backPopInFlight,
                                 onBackCommitted = ::popBackStackOnce,
                             ) { requestBack, reportContentReady ->
                                 DetailScreen(
@@ -955,6 +961,7 @@ private fun MainTabs(
     mainChromeVisible: Boolean,
     onMainChromeVisibilityChanged: (Boolean) -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
+    onReplyMessage: (MessageListRow) -> Unit,
     onCompose: (String) -> Unit,
 ) {
     val accounts by homeVm.accounts.collectAsState()
@@ -1082,6 +1089,7 @@ private fun MainTabs(
                             onOpenDrawer = { scope.launch { drawerState.open() } },
                             onAddAccount = onAddAccount,
                             onOpenMessage = onOpenMessage,
+                            onReplyMessage = onReplyMessage,
                             onCompose = { onCompose("") },
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

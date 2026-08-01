@@ -219,7 +219,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             searchQuery.value = ""
             selectedAccount.value = accountId
             folder.value = targetFolder
-            if (targetFolder == "SENT" || targetFolder == "DRAFTS") {
+            if (targetFolder in setOf("SENT", "DRAFTS", "SPAM", "TRASH")) {
                 refreshAccount(accountId, initialDelayMs = 120L, silent = true, folderType = targetFolder)
             }
         }
@@ -318,7 +318,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                     )
                 }
                 withTimeout(60_000L) {
-                    if (folderType == "SENT" || folderType == "DRAFTS") {
+                    if (folderType in setOf("SENT", "DRAFTS", "SPAM", "TRASH")) {
                         if (accountId == null) {
                             container.syncFolderAll(
                                 folderType,
@@ -409,6 +409,20 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
             .onFailure { error.value = container.repository.failure(it) }
     }
 
+    fun permanentlyDelete(message: MessageListRow) = viewModelScope.launch {
+        optimisticReadIds -= message.id
+        runCatching { container.repository.permanentlyDeleteMessage(message.id) }
+            .onFailure { error.value = container.repository.failure(it) }
+    }
+
+    fun moveToInbox(messages: List<MessageListRow>) = viewModelScope.launch {
+        messages.forEach { message ->
+            optimisticReadIds -= message.id
+            runCatching { container.repository.moveMessage(message.id, "INBOX") }
+                .onFailure { error.value = container.repository.failure(it) }
+        }
+    }
+
     fun markRead(message: MessageListRow) = viewModelScope.launch {
         if (!message.unread) return@launch
         optimisticReadIds += message.id
@@ -448,6 +462,14 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                     container.repository.deleteMessage(message.id)
                 }
             }
+                .onFailure { error.value = container.repository.failure(it) }
+        }
+    }
+
+    fun permanentlyDeleteMany(messages: List<MessageListRow>) = viewModelScope.launch {
+        messages.forEach { message ->
+            optimisticReadIds -= message.id
+            runCatching { container.repository.permanentlyDeleteMessage(message.id) }
                 .onFailure { error.value = container.repository.failure(it) }
         }
     }
