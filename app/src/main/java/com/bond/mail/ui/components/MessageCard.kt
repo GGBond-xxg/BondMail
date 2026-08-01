@@ -1,6 +1,5 @@
 package com.bond.mail.ui.components
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -100,16 +99,14 @@ fun MessageCard(
         MailDensity.STANDARD -> 54.dp
         MailDensity.COMPACT -> 44.dp
     }
-    val targetRowColor = when {
+    // Read state is changed optimistically before the detail transition captures the mailbox.
+    // Do not animate this color: the captured background would otherwise freeze an intermediate
+    // unread-blue frame and keep showing it until the reader is closed.
+    val rowColor = when {
         selected -> MaterialTheme.colorScheme.secondaryContainer
         message.unread -> MaterialTheme.bondSurfaces.contentUnread
         else -> MaterialTheme.bondSurfaces.content
     }
-    val rowColor by animateColorAsState(
-        targetValue = targetRowColor,
-        animationSpec = tween(BondMotionDuration.EffectShort),
-        label = "message-row-color",
-    )
 
     val timeLabel = remember(message.receivedAt) { formatMailTime(message.receivedAt) }
     val outgoing = message.folderType == "SENT" || message.folderType == "DRAFTS"
