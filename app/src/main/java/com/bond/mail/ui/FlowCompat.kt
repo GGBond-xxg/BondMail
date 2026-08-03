@@ -7,4 +7,6 @@ import com.bond.mail.data.settings.AppSettings
 import kotlinx.coroutines.flow.Flow
 
 @Composable
-fun Flow<AppSettings>.collectAsStateWithLifecycleCompat(): State<AppSettings> = collectAsStateWithLifecycle(initialValue = AppSettings())
+fun Flow<AppSettings>.collectAsStateWithLifecycleCompat(
+    initialValue: AppSettings = AppSettings(),
+): State<AppSettings> = collectAsStateWithLifecycle(initialValue = initialValue)

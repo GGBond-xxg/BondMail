@@ -25,7 +25,6 @@ class MailNotificationManager(private val context: Context) {
      * old silent channel cannot be repaired by changing its Kotlin declaration, so this release uses
      * a new HIGH-importance channel ID.
      */
-    private val channelId = "new_mail_alerts_v3"
     private val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
     init {
@@ -36,7 +35,7 @@ class MailNotificationManager(private val context: Context) {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
             val channel = NotificationChannel(
-                channelId,
+                NEW_MAIL_CHANNEL_ID,
                 context.getString(R.string.notifications),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
@@ -49,49 +48,13 @@ class MailNotificationManager(private val context: Context) {
                 setSound(defaultSound, audioAttributes)
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
-            val backgroundSyncChannel = NotificationChannel(
-                BACKGROUND_SYNC_CHANNEL_ID,
-                context.getString(R.string.background_sync_channel),
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                description = context.getString(R.string.background_sync_active)
-                setSound(null, null)
-                enableVibration(false)
-                enableLights(false)
-                setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-                if (Build.VERSION.SDK_INT >= 33) setBlockable(true)
-            }
-            manager.createNotificationChannels(listOf(channel, backgroundSyncChannel))
+            manager.createNotificationChannel(channel)
+            // v1.2.0 replaced the permanent foreground service with data-only FCM wakeups.
+            // Remove the obsolete channel so upgraded devices no longer show a misleading
+            // "background sync" notification category.
+            manager.cancel(LEGACY_FOREGROUND_NOTIFICATION_ID)
+            manager.deleteNotificationChannel(LEGACY_BACKGROUND_SYNC_CHANNEL_ID)
         }
-    }
-
-    fun continuousSyncNotification(intervalMinutes: Int): Notification {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pending = PendingIntent.getActivity(
-            context,
-            ContinuousMailSyncService.FOREGROUND_NOTIFICATION_ID,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        return NotificationCompat.Builder(context, BACKGROUND_SYNC_CHANNEL_ID)
-            .setSmallIcon(R.drawable.bondmail_notification_monet)
-            .setContentTitle(context.getString(R.string.background_sync_active))
-            .setContentText(
-                context.getString(R.string.background_sync_active_detail, intervalMinutes),
-            )
-            .setContentIntent(pending)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setOngoing(true)
-            .setSilent(true)
-            .setOnlyAlertOnce(true)
-            .setShowWhen(false)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .buildPreferringSmallIcon()
     }
 
     fun canPostNotifications(): Boolean {
@@ -122,13 +85,15 @@ class MailNotificationManager(private val context: Context) {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(context, channelId)
+        val notification = NotificationCompat.Builder(context, NEW_MAIL_CHANNEL_ID)
             .setSmallIcon(R.drawable.bondmail_notification_monet)
             .setContentTitle(message.senderName.ifBlank { message.senderAddress })
             .setContentText(message.subject)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message.subject))
             .setContentIntent(pending)
             .setAutoCancel(true)
+            .setNumber(1)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .setCategory(NotificationCompat.CATEGORY_EMAIL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -148,6 +113,63 @@ class MailNotificationManager(private val context: Context) {
         notificationManager.notify(message.id.hashCode(), notification)
     }
 
+    @SuppressLint("MissingPermission")
+    fun showCloudMessage(
+        title: String,
+        body: String,
+        notificationKey: String,
+    ) {
+        if (!canPostNotifications()) return
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val notificationId = notificationKey.hashCode()
+        val pending = PendingIntent.getActivity(
+            context,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, NEW_MAIL_CHANNEL_ID)
+            .setSmallIcon(R.drawable.bondmail_notification_monet)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setNumber(1)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setSound(defaultSound)
+            .setVibrate(VIBRATION_PATTERN)
+            .setLights(NOTIFICATION_LIGHT_COLOR, 260, 900)
+            .setDefaults(
+                NotificationCompat.DEFAULT_SOUND or
+                    NotificationCompat.DEFAULT_VIBRATE or
+                    NotificationCompat.DEFAULT_LIGHTS,
+            )
+            .setSilent(false)
+            .setOnlyAlertOnce(false)
+            .setShowWhen(true)
+            .buildPreferringSmallIcon()
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
+    }
+
+    /**
+     * Opening BondMail acknowledges every pending new-mail alert. Keep the foreground-service
+     * notification intact: it belongs to a separate channel and is required for reliable polling.
+     * Removing all alert-channel notifications also clears the launcher badge on Android launchers.
+     */
+    fun clearNewMailNotifications() {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.activeNotifications
+            .filter { entry -> entry.notification.channelId in NEW_MAIL_CHANNEL_IDS }
+            .forEach { entry -> manager.cancel(entry.tag, entry.id) }
+    }
+
     /**
      * Ask platforms that support this public notification hint to render the dedicated
      * transparent small icon instead of substituting the launcher icon.
@@ -159,7 +181,14 @@ class MailNotificationManager(private val context: Context) {
     }
 
     companion object {
-        const val BACKGROUND_SYNC_CHANNEL_ID = "background_mail_sync_v1"
+        const val NEW_MAIL_CHANNEL_ID = "new_mail_alerts_v3"
+        private const val LEGACY_BACKGROUND_SYNC_CHANNEL_ID = "background_mail_sync_v1"
+        private const val LEGACY_FOREGROUND_NOTIFICATION_ID = 0xB0D
+        private val NEW_MAIL_CHANNEL_IDS = setOf(
+            "new_mail_alerts_v1",
+            "new_mail_alerts_v2",
+            NEW_MAIL_CHANNEL_ID,
+        )
         private const val EXTRA_PREFER_SMALL_ICON = "android.app.preferSmallIcon"
         private const val NOTIFICATION_LIGHT_COLOR = 0xFF0375FD.toInt()
         private val VIBRATION_PATTERN = longArrayOf(0L, 180L, 90L, 180L)

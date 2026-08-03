@@ -1,6 +1,8 @@
 package com.bond.mail.ui.components
 
 import android.content.Context
+import android.graphics.BitmapFactory
+import android.util.Base64
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,8 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
@@ -32,6 +38,7 @@ import com.bond.mail.data.mail.BrandMatcher
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 data class BrandAvatarPalette(
     val background: Color,
@@ -71,6 +78,8 @@ fun brandAvatarPalette(
             1 -> scheme.onSecondaryContainer
             else -> scheme.onTertiaryContainer
         }
+    } else if (brand.key in DARK_FOREGROUND_BRANDS) {
+        Color(0xFF102A1D)
     } else if (background.luminance() > 0.52f) {
         Color.Black
     } else {
@@ -111,7 +120,9 @@ fun BrandAvatar(
                 logo = logo,
                 brandKey = brand.key,
                 tint = foreground,
-                modifier = Modifier.size(size * 0.54f),
+                // Full-colour embedded artwork already contains its own square background. Fill
+                // the parent so CircleShape clips it into a proper round contact avatar.
+                modifier = Modifier.size(if (logo.raster != null) size else size * 0.54f),
             )
         } else if (brand.key in MICROSOFT_BRAND_KEYS) {
             MicrosoftMark(
@@ -192,7 +203,15 @@ private fun BrandSvg(
             translate(offsetX, offsetY)
             scale(scale, scale, pivot = androidx.compose.ui.geometry.Offset.Zero)
         }) {
-            logo.paths.forEach { path -> drawPath(path, tint) }
+            logo.raster?.let { image ->
+                drawImage(
+                    image = image,
+                    dstSize = IntSize(
+                        logo.contentWidth.roundToInt().coerceAtLeast(1),
+                        logo.contentHeight.roundToInt().coerceAtLeast(1),
+                    ),
+                )
+            } ?: logo.paths.forEach { path -> drawPath(path, tint) }
         }
     }
 }
@@ -232,6 +251,12 @@ private val MICROSOFT_BRAND_KEYS = setOf(
     "live.com",
 )
 
+private val DARK_FOREGROUND_BRANDS = setOf(
+    "wise",
+    "bitget",
+    "trae",
+)
+
 private data class ContactLogo(
     val contentLeft: Float,
     val contentTop: Float,
@@ -239,6 +264,8 @@ private data class ContactLogo(
     val contentHeight: Float,
     val paths: List<Path>,
     val pathData: List<String>,
+    val evenOddPaths: List<Boolean>,
+    val raster: ImageBitmap? = null,
 )
 
 internal fun contactLogoSvgMarkup(
@@ -248,9 +275,15 @@ internal fun contactLogoSvgMarkup(
 ): String? {
     val brand = BrandMatcher.match(senderName, senderAddress)
     val logo = ContactLogoStore.load(context, brand.key, senderAddress) ?: return null
-    val paths = logo.pathData.joinToString("") { data ->
-        """<path d="${data.replace("&", "&amp;").replace("\"", "&quot;")}"/>"""
-    }
+    if (logo.pathData.isEmpty()) return null
+    val paths = logo.pathData.mapIndexed { index, data ->
+        val fillRule = if (logo.evenOddPaths.getOrElse(index) { false }) {
+            """ fill-rule="evenodd""""
+        } else {
+            ""
+        }
+        """<path$fillRule d="${data.replace("&", "&amp;").replace("\"", "&quot;")}"/>"""
+    }.joinToString("")
     return """<svg viewBox="${logo.contentLeft} ${logo.contentTop} ${logo.contentWidth} ${logo.contentHeight}" aria-hidden="true">$paths</svg>"""
 }
 
@@ -274,6 +307,10 @@ private object ContactLogoStore {
     )
     private val widthRegex = Regex("""\bwidth\s*=\s*["']\s*([\d.]+)""", RegexOption.IGNORE_CASE)
     private val heightRegex = Regex("""\bheight\s*=\s*["']\s*([\d.]+)""", RegexOption.IGNORE_CASE)
+    private val embeddedImageRegex = Regex(
+        """<image\b[^>]*\b(?:href|xlink:href)\s*=\s*["']data:image/(?:png|jpe?g|webp);base64,([^"']+)["']""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
+    )
 
     fun load(context: Context, brandKey: String, senderAddress: String): ContactLogo? {
         val domain = senderAddress.substringAfterLast('@', "").lowercase().trim()
@@ -314,11 +351,15 @@ private object ContactLogoStore {
         val parsed = pathRegex.findAll(svg)
             .mapNotNull { match ->
                 val data = match.groupValues[2]
-                PathParser.createPathFromPathData(data)?.asComposePath()?.let { data to it }
+                val evenOdd = FILL_RULE_EVEN_ODD.containsMatchIn(match.value)
+                PathParser.createPathFromPathData(data)?.asComposePath()?.let { path ->
+                    if (evenOdd) path.fillType = PathFillType.EvenOdd
+                    Triple(data, path, evenOdd)
+                }
             }
             .toList()
-        return parsed.takeIf(List<Pair<String, Path>>::isNotEmpty)?.let { pairs ->
-            val bounds = pairs.map { it.second.getBounds() }
+        return parsed.takeIf(List<Triple<String, Path, Boolean>>::isNotEmpty)?.let { triples ->
+            val bounds = triples.map { it.second.getBounds() }
             val left = bounds.minOfOrNull { it.left } ?: 0f
             val top = bounds.minOfOrNull { it.top } ?: 0f
             val right = bounds.maxOfOrNull { it.right } ?: width
@@ -328,10 +369,31 @@ private object ContactLogoStore {
                 contentTop = top,
                 contentWidth = (right - left).takeIf { it > 0f } ?: width,
                 contentHeight = (bottom - top).takeIf { it > 0f } ?: height,
-                paths = pairs.map(Pair<String, Path>::second),
-                pathData = pairs.map(Pair<String, Path>::first),
+                paths = triples.map { it.second },
+                pathData = triples.map { it.first },
+                evenOddPaths = triples.map { it.third },
+                raster = null,
             )
-        }
+        } ?: embeddedImageRegex.find(svg)?.groupValues?.getOrNull(1)
+            ?.let { encoded ->
+                runCatching {
+                    Base64.decode(encoded.filterNot(Char::isWhitespace), Base64.DEFAULT)
+                }.getOrNull()
+            }
+            ?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+            ?.asImageBitmap()
+            ?.let { image ->
+                ContactLogo(
+                    contentLeft = 0f,
+                    contentTop = 0f,
+                    contentWidth = width,
+                    contentHeight = height,
+                    paths = emptyList(),
+                    pathData = emptyList(),
+                    evenOddPaths = emptyList(),
+                    raster = image,
+                )
+            }
     }
 
     private fun sanitize(value: String): String =
@@ -356,6 +418,11 @@ private object ContactLogoStore {
         "neverless" -> "neverless"
         else -> key
     }
+
+    private val FILL_RULE_EVEN_ODD = Regex(
+        """fill-rule\s*=\s*["']evenodd["']""",
+        RegexOption.IGNORE_CASE,
+    )
 }
 
 private fun fixedBrandColor(key: String): Color? = when (key) {
@@ -363,6 +430,18 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "okx" -> Color(0xFF111111)
     "bybit" -> Color(0xFFF7A600)
     "bitget" -> Color(0xFF00D4AA)
+    "ibkr" -> Color(0xFFD81222)
+    "agoda" -> Color(0xFF5392F9)
+    "lottiefiles" -> Color(0xFF00BFA5)
+    "wise" -> Color(0xFF9FE870)
+    "longbridge" -> Color(0xFF476C88)
+    "futu" -> Color(0xFFFF6900)
+    "robinhood" -> Color(0xFF00C805)
+    "n26" -> Color(0xFF36A18B)
+    "ifast" -> Color(0xFF2F3D3E)
+    "cathay" -> Color(0xFF005D63)
+    "trae" -> Color(0xFF32F08C)
+    "osl" -> Color(0xFF121E31)
     "coinbase" -> Color(0xFF0052FF)
     "kraken" -> Color(0xFF5741D9)
     "github" -> Color(0xFF24292F)

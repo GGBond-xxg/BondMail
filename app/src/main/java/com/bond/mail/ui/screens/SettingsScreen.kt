@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -75,7 +74,6 @@ fun SettingsScreen(
     notificationPermissionGranted: Boolean,
     onOpenNotificationSettings: () -> Unit,
     onOpenBackgroundSettings: () -> Unit,
-    onOpenBackgroundNotificationSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -223,13 +221,6 @@ fun SettingsScreen(
                     title = tr("background_run_settings"),
                     subtitle = tr("background_run_settings_note_short"),
                     onClick = onOpenBackgroundSettings,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Default.Sync,
-                    title = tr("background_sync_notification"),
-                    subtitle = tr("background_sync_notification_note"),
-                    onClick = onOpenBackgroundNotificationSettings,
                 )
             }
         }

@@ -1,6 +1,7 @@
 package com.bond.mail
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -16,6 +17,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.performance.UiPerformanceGate
+import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.ThemeMode
 import com.bond.mail.ui.MailApp
 import com.bond.mail.ui.collectAsStateWithLifecycleCompat
@@ -23,6 +25,8 @@ import com.bond.mail.ui.i18n.JsonStringsProvider
 import com.bond.mail.ui.motion.LocalThemeRevealController
 import com.bond.mail.ui.motion.ThemeRevealController
 import com.bond.mail.ui.theme.BondMailTheme
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -34,7 +38,12 @@ class MainActivity : FragmentActivity() {
     @Volatile
     private var firstComposeFrameReady = false
 
+    @Volatile
+    private var systemBarsDarkTheme: Boolean? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        val container = (application as MailApplication).container
+        val startupThemeHint = container.settings.startupThemeHint()
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { !firstComposeFrameReady }
         splash.setOnExitAnimationListener { splashView ->
@@ -44,13 +53,17 @@ class MainActivity : FragmentActivity() {
             // display frame so the first app buffer is already underneath before removing it.
             window.decorView.postOnAnimation {
                 splashView.remove()
+                // Some OEM splash implementations restore the starting theme's system-bar flags
+                // while removing their overlay. Re-apply the setting after that hand-off.
+                applyLastSystemBarAppearance()
+                window.decorView.postOnAnimation(::applyLastSystemBarAppearance)
             }
         }
 
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        startupThemeHint?.let { applySystemBarAppearance(resolveDarkTheme(it)) }
         initialMessageId = intent.getStringExtra("message_id")
-        val container = (application as MailApplication).container
 
         useSystemManagedRefreshRate()
         UiPerformanceGate.onForeground()
@@ -58,6 +71,10 @@ class MainActivity : FragmentActivity() {
         // The application has already prepared the detached WebView behind the launch splash.
         // Keep database preload here so the first visible inbox frame still contains local mail.
         lifecycleScope.launch {
+            val initialSettings = async {
+                runCatching { container.settings.settings.first() }
+                    .getOrDefault(AppSettings())
+            }
             withTimeoutOrNull(1_500L) {
                 runCatching { container.repository.preloadStartupSnapshot() }
                     .onFailure { error ->
@@ -68,7 +85,10 @@ class MainActivity : FragmentActivity() {
                         )
                     }
             }
-            installContent(container)
+            val settings = initialSettings.await()
+            container.settings.rememberStartupTheme(settings.themeMode)
+            applySystemBarAppearance(resolveDarkTheme(settings))
+            installContent(container, settings)
         }
 
         // Safety valve: a rendering problem must never leave the system splash on screen forever.
@@ -79,9 +99,29 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         useSystemManagedRefreshRate()
         UiPerformanceGate.onForeground()
+        applyLastSystemBarAppearance()
     }
 
-    private fun installContent(container: AppContainer) {
+    override fun onStart() {
+        super.onStart()
+        val container = (application as MailApplication).container
+        // Mark the app visible before Compose/database warm-up finishes, preventing a background
+        // worker from posting an alert underneath the launch splash.
+        container.setAppForeground(true)
+        container.notifications.clearNewMailNotifications()
+    }
+
+    override fun onStop() {
+        (application as MailApplication).container.setAppForeground(false)
+        super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applyLastSystemBarAppearance()
+    }
+
+    private fun installContent(container: AppContainer, initialSettings: AppSettings) {
         if (contentInstalled || isFinishing || isDestroyed) return
         contentInstalled = true
         val revealController = ThemeRevealController(
@@ -91,7 +131,7 @@ class MainActivity : FragmentActivity() {
         )
         themeRevealController = revealController
         setContent {
-            val settings by container.settings.settings.collectAsStateWithLifecycleCompat()
+            val settings by container.settings.settings.collectAsStateWithLifecycleCompat(initialSettings)
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -99,10 +139,7 @@ class MainActivity : FragmentActivity() {
             }
 
             SideEffect {
-                WindowCompat.getInsetsController(window, window.decorView).apply {
-                    isAppearanceLightStatusBars = !darkTheme
-                    isAppearanceLightNavigationBars = !darkTheme
-                }
+                applySystemBarAppearance(darkTheme)
                 revealController.onThemeComposed(settings.themeMode)
             }
 
@@ -118,6 +155,36 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    private fun resolveDarkTheme(settings: AppSettings): Boolean = when (settings.themeMode) {
+        ThemeMode.SYSTEM -> isSystemDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    private fun resolveDarkTheme(themeMode: ThemeMode): Boolean = when (themeMode) {
+        ThemeMode.SYSTEM -> {
+            isSystemDarkTheme()
+        }
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    private fun isSystemDarkTheme(): Boolean =
+        resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+            Configuration.UI_MODE_NIGHT_YES
+
+    private fun applySystemBarAppearance(darkTheme: Boolean) {
+        systemBarsDarkTheme = darkTheme
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
+    private fun applyLastSystemBarAppearance() {
+        systemBarsDarkTheme?.let(::applySystemBarAppearance)
     }
 
     override fun onDestroy() {
@@ -155,5 +222,6 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         initialMessageId = intent.getStringExtra("message_id")
+        (application as MailApplication).container.notifications.clearNewMailNotifications()
     }
 }

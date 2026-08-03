@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bondmail-push",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "push.usdit.eu.cc",
+      "custom_domain": true
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bondmail-push-db",
+      "database_id": "e61ab3ea-3082-4496-8810-99eeaaacad7e",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

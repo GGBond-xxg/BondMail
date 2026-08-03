@@ -17,8 +17,9 @@ import java.util.concurrent.TimeUnit
  * Schedules mail synchronization without pretending WorkManager can provide an exact alarm.
  *
  * Android only supports periodic WorkManager jobs at 15 minutes or longer. The user-facing
- * 1/5/10-minute choices are handled by [ContinuousMailSyncService], because a self-rescheduling
- * one-time chain is still freely delayed or cancelled by Android/OEM background limits.
+ * Cloudflare sends a data-only FCM tick at the selected interval. WorkManager remains registered
+ * as a legal 15-minute-or-longer fallback for devices where Google Play services are unavailable
+ * or an OEM temporarily delays FCM delivery.
  */
 class WorkScheduler(private val context: Context) {
     private val manager: WorkManager
@@ -30,17 +31,11 @@ class WorkScheduler(private val context: Context) {
 
     fun scheduleBackgroundSync(enabled: Boolean, intervalMinutes: Int) {
         val normalizedMinutes = intervalMinutes.coerceAtLeast(1)
-        val desiredMode =
-            if (usesContinuousService(normalizedMinutes)) MODE_CONTINUOUS else MODE_PERIODIC
-        val currentMode = preferences.getString(KEY_SCHEDULE_MODE, null)
-        val currentInterval = preferences.getInt(KEY_SCHEDULE_INTERVAL, -1)
-
-        // MailApplication calls this on every process start. Do not reset an already-persisted
-        // WorkManager schedule, otherwise repeatedly opening the app keeps moving the next run.
-        if (enabled && currentMode == desiredMode && currentInterval == normalizedMinutes) return
-
-        val previousToken = preferences.getString(KEY_SHORT_TOKEN, null)
-        previousToken?.let { manager.cancelUniqueWork(shortWorkName(it)) }
+        FcmRegistrationStore.updateSyncPreference(
+            context = context,
+            enabled = enabled,
+            intervalMinutes = normalizedMinutes,
+        )
 
         if (!enabled) {
             manager.cancelUniqueWork(PERIODIC_SYNC_WORK)
@@ -48,64 +43,30 @@ class WorkScheduler(private val context: Context) {
             return
         }
 
-        if (desiredMode == MODE_PERIODIC) {
-            preferences.edit()
-                .putString(KEY_SCHEDULE_MODE, MODE_PERIODIC)
-                .putInt(KEY_SCHEDULE_INTERVAL, normalizedMinutes)
-                .remove(KEY_SHORT_TOKEN)
-                .apply()
-            val request = PeriodicWorkRequestBuilder<MailSyncWorker>(
-                normalizedMinutes.toLong(),
-                TimeUnit.MINUTES,
-            )
-                .setInputData(
-                    Data.Builder()
-                        .putString(MailSyncWorker.KEY_MODE, MailSyncWorker.MODE_PERIODIC)
-                        .build(),
-                )
-                .setConstraints(networkConstraints())
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                .build()
-            manager.enqueueUniquePeriodicWork(
-                PERIODIC_SYNC_WORK,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request,
-            )
-            return
-        }
-
-        // A visible foreground-service notification is the Android-supported contract for a local
-        // mail client that the user explicitly asks to poll more often than WorkManager's minimum.
-        // Cancel the legacy short-work chain to avoid duplicate network traffic after an upgrade.
-        manager.cancelUniqueWork(PERIODIC_SYNC_WORK)
         preferences.edit()
-            .putString(KEY_SCHEDULE_MODE, MODE_CONTINUOUS)
             .putInt(KEY_SCHEDULE_INTERVAL, normalizedMinutes)
-            .remove(KEY_SHORT_TOKEN)
             .apply()
-    }
 
-    fun continuousIntervalMinutes(): Int? {
-        if (preferences.getString(KEY_SCHEDULE_MODE, null) != MODE_CONTINUOUS) return null
-        return preferences.getInt(KEY_SCHEDULE_INTERVAL, -1)
-            .takeIf(::usesContinuousService)
-    }
-
-    /** Appends the next short-poll request after a successful short-poll worker run. */
-    fun scheduleNextShortSync(intervalMinutes: Int, token: String) {
-        val activeToken = preferences.getString(KEY_SHORT_TOKEN, null)
-        val activeMode = preferences.getString(KEY_SCHEDULE_MODE, null)
-        val activeInterval = preferences.getInt(KEY_SCHEDULE_INTERVAL, -1)
-        if (
-            activeMode != MODE_SHORT ||
-            activeToken != token ||
-            activeInterval != intervalMinutes ||
-            intervalMinutes >= MIN_PERIODIC_MINUTES
-        ) return
-        enqueueShortSync(
-            intervalMinutes = intervalMinutes.coerceAtLeast(1),
-            token = token,
-            policy = ExistingWorkPolicy.APPEND_OR_REPLACE,
+        // Always keep a legal WorkManager fallback. UPDATE preserves the original enqueue time, so
+        // checking this again after process recreation repairs a missing/cancelled registration
+        // without moving the next run every time the user opens BondMail.
+        val fallbackMinutes = normalizedMinutes.coerceAtLeast(MIN_PERIODIC_MINUTES)
+        val request = PeriodicWorkRequestBuilder<MailSyncWorker>(
+            fallbackMinutes.toLong(),
+            TimeUnit.MINUTES,
+        )
+            .setInputData(
+                Data.Builder()
+                    .putString(MailSyncWorker.KEY_MODE, MailSyncWorker.MODE_PERIODIC)
+                    .build(),
+            )
+            .setConstraints(networkConstraints())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+        manager.enqueueUniquePeriodicWork(
+            PERIODIC_SYNC_WORK,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request,
         )
     }
 
@@ -120,6 +81,19 @@ class WorkScheduler(private val context: Context) {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .build()
         manager.enqueueUniqueWork(MANUAL_SYNC_WORK, ExistingWorkPolicy.KEEP, request)
+    }
+
+    fun syncFromPush() {
+        val request = OneTimeWorkRequestBuilder<MailSyncWorker>()
+            .setInputData(
+                Data.Builder()
+                    .putString(MailSyncWorker.KEY_MODE, MailSyncWorker.MODE_PUSH)
+                    .build(),
+            )
+            .setConstraints(networkConstraints())
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build()
+        manager.enqueueUniqueWork(PUSH_SYNC_WORK, ExistingWorkPolicy.REPLACE, request)
     }
 
     fun send(taskId: String) {
@@ -143,47 +117,17 @@ class WorkScheduler(private val context: Context) {
         manager.enqueueUniqueWork("draft_$taskId", ExistingWorkPolicy.REPLACE, request)
     }
 
-    private fun enqueueShortSync(
-        intervalMinutes: Int,
-        token: String,
-        policy: ExistingWorkPolicy,
-    ) {
-        val request = OneTimeWorkRequestBuilder<MailSyncWorker>()
-            .setInitialDelay(intervalMinutes.toLong(), TimeUnit.MINUTES)
-            .setInputData(
-                Data.Builder()
-                    .putString(MailSyncWorker.KEY_MODE, MailSyncWorker.MODE_SHORT_POLL)
-                    .putString(MailSyncWorker.KEY_SHORT_TOKEN, token)
-                    .putInt(MailSyncWorker.KEY_SHORT_INTERVAL, intervalMinutes)
-                    .build(),
-            )
-            .setConstraints(networkConstraints())
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        manager.enqueueUniqueWork(shortWorkName(token), policy, request)
-    }
-
     private fun networkConstraints(): Constraints =
         Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    private fun shortWorkName(token: String): String = "$SHORT_SYNC_WORK_PREFIX$token"
-
     companion object {
         private const val MIN_PERIODIC_MINUTES = 15
         private const val PERIODIC_SYNC_WORK = "mail_periodic_sync"
         private const val MANUAL_SYNC_WORK = "mail_manual_sync"
-        private const val SHORT_SYNC_WORK_PREFIX = "mail_short_sync_"
+        private const val PUSH_SYNC_WORK = "mail_push_sync"
         private const val BACKGROUND_PREFS = "bond_mail_background"
-        private const val KEY_SHORT_TOKEN = "short_sync_token"
-        private const val KEY_SCHEDULE_MODE = "schedule_mode"
         private const val KEY_SCHEDULE_INTERVAL = "schedule_interval"
-        private const val MODE_PERIODIC = "periodic"
-        private const val MODE_SHORT = "short"
-        private const val MODE_CONTINUOUS = "continuous"
-
-        fun usesContinuousService(intervalMinutes: Int): Boolean =
-            intervalMinutes in 1 until MIN_PERIODIC_MINUTES
     }
 }

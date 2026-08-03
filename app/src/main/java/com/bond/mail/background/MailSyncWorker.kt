@@ -12,8 +12,6 @@ class MailSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val container = (applicationContext as MailApplication).container
         val mode = inputData.getString(KEY_MODE) ?: MODE_PERIODIC
-        val shortToken = inputData.getString(KEY_SHORT_TOKEN).orEmpty()
-        val requestedShortInterval = inputData.getInt(KEY_SHORT_INTERVAL, 1).coerceAtLeast(1)
 
         return runCatching {
             UiPerformanceGate.awaitBackgroundWindow(
@@ -27,13 +25,6 @@ class MailSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 container.backgroundNotificationMode()
             }
             container.syncAllAndNotify(notificationMode)
-
-            if (mode == MODE_SHORT_POLL && shortToken.isNotBlank()) {
-                container.scheduler.scheduleNextShortSync(
-                    intervalMinutes = requestedShortInterval,
-                    token = shortToken,
-                )
-            }
             MailLog.d(MailLog.APP, "worker sync success mode=$mode")
             Result.success()
         }.getOrElse { error ->
@@ -44,11 +35,9 @@ class MailSyncWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     companion object {
         const val KEY_MODE = "sync_mode"
-        const val KEY_SHORT_TOKEN = "short_sync_token"
-        const val KEY_SHORT_INTERVAL = "short_sync_interval"
 
         const val MODE_PERIODIC = "periodic"
-        const val MODE_SHORT_POLL = "short_poll"
         const val MODE_MANUAL = "manual"
+        const val MODE_PUSH = "push"
     }
 }

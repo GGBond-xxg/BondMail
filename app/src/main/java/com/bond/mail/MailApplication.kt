@@ -2,6 +2,7 @@ package com.bond.mail
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import com.bond.mail.background.FcmRegistrationStore
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.ui.components.MailWebViewPool
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,7 @@ class MailApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        FcmRegistrationStore.register(this)
         // Chromium construction is synchronous. Pay that cost while the system splash is still
         // covering startup, never on the user's first message tap. A missing or updating system
         // WebView must not make the whole mail app unable to launch.

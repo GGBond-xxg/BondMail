@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 112
-        versionName = "1.1.2"
+        versionCode = 120
+        versionName = "1.2.0"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -118,6 +119,12 @@ dependencies {
     // short-lived access tokens for Gmail IMAP/SMTP without storing refresh tokens on-device.
     implementation("com.microsoft.identity.client:msal:8.4.1")
     implementation("com.google.android.gms:play-services-auth:21.6.0")
+
+    // Firebase configuration is supplied by app/google-services.json. The BoM keeps all
+    // Firebase libraries on a compatible release set without per-library version numbers.
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-messaging")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jsoup:jsoup:1.18.3")

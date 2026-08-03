@@ -124,8 +124,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
-import com.bond.mail.background.ContinuousMailSyncService
-import com.bond.mail.background.MailNotificationManager
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.MessageEntity
@@ -529,15 +527,9 @@ fun MailApp(
         notificationPermissionGranted,
     ) {
         val currentSettings = loadedSettings ?: return@LaunchedEffect
-        // Sub-15-minute polling must be promoted while the activity is visible; Android 12+
-        // generally rejects starting foreground services after an app is already backgrounded.
+        // Keep the server-side FCM interval and the legal WorkManager fallback in sync.
         container.scheduler.scheduleBackgroundSync(
             enabled = true,
-            intervalMinutes = currentSettings.syncMinutes,
-        )
-        ContinuousMailSyncService.reconcile(
-            context = context.applicationContext,
-            enabled = currentSettings.notifications && notificationPermissionGranted,
             intervalMinutes = currentSettings.syncMinutes,
         )
     }
@@ -559,18 +551,6 @@ fun MailApp(
                 Uri.parse("package:${context.packageName}"),
             ),
         )
-    }
-
-    fun openBackgroundNotificationSettings() {
-        val channelIntent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            putExtra(
-                Settings.EXTRA_CHANNEL_ID,
-                MailNotificationManager.BACKGROUND_SYNC_CHANNEL_ID,
-            )
-        }
-        runCatching { context.startActivity(channelIntent) }
-            .onFailure { openNotificationSettings() }
     }
 
     LaunchedEffect(settings.syncMinutes) {
@@ -636,7 +616,6 @@ fun MailApp(
                                 onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
                                 onOpenNotificationSettings = ::openNotificationSettings,
                                 onOpenBackgroundSettings = ::openBackgroundSettings,
-                                onOpenBackgroundNotificationSettings = ::openBackgroundNotificationSettings,
                                 onOpenAbout = {
                                     providersBackBackground = null
                                     credentialsBackBackground = null
@@ -955,7 +934,6 @@ private fun MainTabs(
     onDismissPermissionGuide: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenBackgroundSettings: () -> Unit,
-    onOpenBackgroundNotificationSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     mainChromeVisible: Boolean,
@@ -1114,7 +1092,6 @@ private fun MainTabs(
                             notificationPermissionGranted = notificationPermissionGranted,
                             onOpenNotificationSettings = onOpenNotificationSettings,
                             onOpenBackgroundSettings = onOpenBackgroundSettings,
-                            onOpenBackgroundNotificationSettings = onOpenBackgroundNotificationSettings,
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

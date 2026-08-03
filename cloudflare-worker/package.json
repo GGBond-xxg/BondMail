@@ -1,0 +1,12 @@
+{
+  "name": "bondmail-push",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "migrate:remote": "wrangler d1 migrations apply bondmail-push-db --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.118.0"
+  }
+}

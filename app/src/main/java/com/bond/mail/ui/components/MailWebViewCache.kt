@@ -203,9 +203,12 @@ internal object MailWebViewCache {
         // A number of newsletter templates incorrectly declare dark support while still using
         // black inline text, which prevents WebView from making the message readable.
         document.select("meta[name=color-scheme], meta[name=supported-color-schemes]").remove()
-        if (darkMode) {
-            disableSenderDarkMode(document)
-        }
+        // WebView's prefers-color-scheme follows the device configuration, not BondMail's
+        // user-selected Compose theme. Disable sender dark media rules in both app themes so a
+        // LIGHT BondMail window cannot receive a partial black canvas merely because ColorOS
+        // entered night mode. BondMail applies its own complete dark transformation below.
+        disableSenderDarkMode(document)
+        trimTrailingNonVisualSections(document)
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
         val senderIdentity = "${header.senderName} ${header.senderAddress}".lowercase()
@@ -224,6 +227,8 @@ internal object MailWebViewCache {
             senderIdentity.contains("samsung")
         val instagramSender = senderDomain.contains("instagram.com") ||
             senderIdentity.contains("instagram")
+        val immigrationSender = senderDomain == "imigrasi.go.id" ||
+            senderDomain.endsWith(".imigrasi.go.id")
         val cloudflareSender = senderDomain == "cloudflare.com" ||
             senderDomain.endsWith(".cloudflare.com")
         val grabSender = isGrabTransactionalSender(senderDomain, senderIdentity)
@@ -287,6 +292,9 @@ internal object MailWebViewCache {
         }
         if (appleSender) {
             body.addClass("bondmail-apple-mail")
+        }
+        if (darkMode && immigrationSender) {
+            body.addClass("bondmail-repair-inherited-light-text")
         }
         normalizeEmojiPresentation(document)
         // Preserve direct text nodes from malformed/plain HTML messages while still giving them
@@ -806,18 +814,26 @@ internal object MailWebViewCache {
                 display:block!important;width:auto!important;height:auto!important;
                 max-width:96px!important;max-height:48px!important;object-fit:contain!important
               }
+              img.bondmail-wise-logo{
+                display:block!important;width:93px!important;height:21px!important;
+                min-width:93px!important;max-width:93px!important;
+                min-height:21px!important;max-height:21px!important;
+                margin:0 auto!important;padding:0!important;
+                object-fit:contain!important;background:transparent!important
+              }
+              .bondmail-wise-logo-cell{
+                width:93px!important;min-width:93px!important;max-width:93px!important;
+                height:21px!important;min-height:21px!important;max-height:21px!important;
+                padding:0!important
+              }
               body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body{
                 background:#ffffff!important;color:#202124!important;color-scheme:light!important;
-                filter:invert(1) hue-rotate(180deg)!important
+                filter:none!important
               }
               body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body img,
               body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body video,
               body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body svg{
-                filter:invert(1) hue-rotate(180deg)!important
-              }
-              body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body img.bondmail-dark-logo{
-                background:#f5f5f5!important;padding:6px 10px!important;
-                border-radius:8px!important
+                filter:none!important
               }
               body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body{
                 background:#ffffff!important;color:#111111!important;
@@ -835,6 +851,14 @@ internal object MailWebViewCache {
               body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body video,
               body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body svg{
                 filter:none!important
+              }
+              body.bondmail-repair-inherited-light-text #bondmail-message-body p,
+              body.bondmail-repair-inherited-light-text #bondmail-message-body p *{
+                color:#202124!important;-webkit-text-fill-color:#202124!important
+              }
+              body.bondmail-repair-inherited-light-text #bondmail-message-body table.blue,
+              body.bondmail-repair-inherited-light-text #bondmail-message-body table.blue *{
+                color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
               }
               body.bondmail-apple-mail svg.bondmail-apple-brand-logo{
                 display:block!important;width:24px!important;height:29px!important;
@@ -2186,7 +2210,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v48|")
+        append("layout-v51|")
         append(key)
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|sender=").append(header.senderName.hashCode())
@@ -2317,8 +2341,9 @@ internal object MailWebViewCache {
     }
 
     /**
-     * Do not invert mail that already ships a real dark canvas (OKX and similar templates).
-     * Re-inverting those documents turns their black brand marks and backgrounds inside out.
+     * Preserve only templates that explicitly author both a dark canvas and a light foreground.
+     * A dark decorative header without a matching text color is not a native dark message: treating
+     * it as one is what produced black inherited text on the Immigration notification.
      */
     private fun hasNativeDarkCanvas(document: Document): Boolean {
         val body = document.body()
@@ -2331,8 +2356,14 @@ internal object MailWebViewCache {
                 append(element.attr("background")).append(';')
                 append(element.attr("style"))
             }
+            val foregroundSource = buildString {
+                append(element.attr("color")).append(';')
+                append(element.attr("style"))
+            }
             val textCoverage = element.text().trim().length.toFloat() / totalText.toFloat()
-            textCoverage >= 0.45f && DARK_BACKGROUND_VALUE.containsMatchIn(colorSource)
+            textCoverage >= 0.45f &&
+                DARK_BACKGROUND_VALUE.containsMatchIn(colorSource) &&
+                LIGHT_FOREGROUND_VALUE.containsMatchIn(foregroundSource)
         }
     }
 
@@ -2368,7 +2399,82 @@ internal object MailWebViewCache {
             if (GOOGLE_LOGO_HINT.containsMatchIn(identity)) {
                 image.addClass("bondmail-google-logo")
             }
+            if (WISE_LOGO_HINT.containsMatchIn(identity)) {
+                image.addClass("bondmail-wise-logo")
+                image.parent()?.addClass("bondmail-wise-logo-cell")
+            }
         }
+    }
+
+    /**
+     * Marketing senders append transparent analytics sections after the visible footer. Keeping
+     * those 1px beacons and zero-width spacer tables in the fluid normalization path can expand an
+     * otherwise empty tail to a full white viewport. Remove only consecutive non-visual top-level
+     * nodes at the very end of the original message.
+     */
+    private fun trimTrailingNonVisualSections(document: Document) {
+        var container = document.body()
+        repeat(3) {
+            trimTrailingChildren(container)
+            val onlyChild = container.children().singleOrNull() ?: return
+            if (onlyChild.ownText().isNotBlank()) return
+            container = onlyChild
+        }
+    }
+
+    private fun trimTrailingChildren(container: Element) {
+        container.children().toList().asReversed().forEach { child ->
+            if (!isTrailingNonVisualSection(child)) return
+            child.remove()
+        }
+    }
+
+    private fun isTrailingNonVisualSection(element: Element): Boolean {
+        val identity = buildString {
+            append(element.className()).append(' ')
+            append(element.id()).append(' ')
+            append(element.ownText())
+        }.lowercase()
+        val allText = element.text().trim()
+        if (
+            "zendesk-tag" in identity ||
+            "zdtag-" in identity ||
+            (allText.startsWith("zdtag-", ignoreCase = true) && allText.length <= 80)
+        ) {
+            return true
+        }
+
+        val media = element.select("img, video, svg")
+        val hasMeaningfulMedia = media.any { item ->
+            if (!item.tagName().equals("img", ignoreCase = true)) return@any true
+            val source = sequenceOf("src", "data-src", "data-original", "data-lazy-src")
+                .map(item::attr)
+                .firstOrNull(String::isNotBlank)
+                .orEmpty()
+                .lowercase()
+            val width = parsePixelDimension(item.attr("width"))
+                ?: STYLE_WIDTH_DECLARATION.find(item.attr("style"))
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.let(::parsePixelDimension)
+            val height = parsePixelDimension(item.attr("height"))
+                ?: STYLE_HEIGHT_DECLARATION.find(item.attr("style"))
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.let(::parsePixelDimension)
+            val trackingResource = HEIGHT_HINT_TRACKING_MARKERS.any(source::contains)
+            val tinyPixel = width != null && height != null && width <= 2 && height <= 2
+            !trackingResource && !tinyPixel
+        }
+        if (hasMeaningfulMedia) return false
+
+        val visibleText = element.text()
+            .replace(INVISIBLE_MAIL_TEXT, "")
+            .trim()
+        return visibleText.isEmpty() || (
+            visibleText.length <= 4 &&
+                element.select("[style*=font-size:0], [style*=font-size: 0]").isNotEmpty()
+            )
     }
 
     /**
@@ -2563,6 +2669,12 @@ internal object MailWebViewCache {
             """rgba?\(\s*(?:0|8|10|11|12|17|18|24)\s*,\s*(?:0|8|10|11|12|17|18|24)\s*,)""",
     )
 
+    private val LIGHT_FOREGROUND_VALUE = Regex(
+        """(?i)(?:^|;)\s*(?:color|-webkit-text-fill-color)\s*:\s*""" +
+            """(?:#(?:fff(?:fff)?|f[0-9a-f]f[0-9a-f]f[0-9a-f])|white|""" +
+            """rgba?\(\s*(?:2[0-5]\d)\s*,\s*(?:2[0-5]\d)\s*,\s*(?:2[0-5]\d)\s*(?:,|\)))""",
+    )
+
     private val BRAND_LOGO_HINT = Regex(
         """(?i)(?:^|[/_.\-\s])(logo|wordmark|brand)(?:[/_.\-\s]|$)""",
     )
@@ -2584,6 +2696,10 @@ internal object MailWebViewCache {
 
     private val GOOGLE_LOGO_HINT = Regex(
         """(?i)(?:google|gmail)[/_.\-\s]*(?:logo|wordmark)|(?:logo|wordmark)[/_.\-\s]*(?:google|gmail)""",
+    )
+    private val WISE_LOGO_HINT = Regex(
+        """(?i)(?:\bwise\b|transferwise).{0,80}(?:logo|wordmark)|""" +
+            """(?:logo|wordmark).{0,80}(?:\bwise\b|transferwise)""",
     )
     private val SAMSUNG_LOGO_HINT = Regex(
         """(?i)samsung.{0,64}(?:logo|wordmark)|(?:logo|wordmark).{0,64}samsung|[/_-]samsung[/_.-]""",
@@ -2620,6 +2736,9 @@ internal object MailWebViewCache {
         "1x1",
         "spacer",
         "transparent",
+    )
+    private val INVISIBLE_MAIL_TEXT = Regex(
+        """[\u0000-\u0020\u00a0\u200b-\u200f\u2060\ufeff]+""",
     )
 
     private val STYLE_WIDTH_DECLARATION = Regex(

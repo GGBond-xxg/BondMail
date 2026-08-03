@@ -29,6 +29,9 @@ data class AppSettings(
 )
 
 class SettingsStore(private val context: Context) {
+    private val startupHints =
+        context.getSharedPreferences("bond_mail_startup_hints", Context.MODE_PRIVATE)
+
     private object Keys {
         val theme = stringPreferencesKey("theme")
         val dynamic = booleanPreferencesKey("dynamic")
@@ -57,7 +60,20 @@ class SettingsStore(private val context: Context) {
         )
     }
 
-    suspend fun setTheme(value: ThemeMode) = context.dataStore.edit { it[Keys.theme] = value.name }
+    fun startupThemeHint(): ThemeMode? = startupHints.getString("theme", null)
+        ?.let { value -> runCatching { ThemeMode.valueOf(value) }.getOrNull() }
+
+    fun rememberStartupTheme(value: ThemeMode) {
+        startupHints.edit().putString("theme", value.name).apply()
+    }
+
+    suspend fun setTheme(value: ThemeMode) {
+        // Keep a tiny synchronous mirror for the window/splash theme. DataStore remains the source
+        // of truth; this hint only lets MainActivity set status-bar icon contrast before its first
+        // asynchronous DataStore emission.
+        rememberStartupTheme(value)
+        context.dataStore.edit { it[Keys.theme] = value.name }
+    }
     suspend fun setDynamic(value: Boolean) = context.dataStore.edit { it[Keys.dynamic] = value }
     suspend fun setDensity(value: MailDensity) = context.dataStore.edit { it[Keys.density] = value.name }
     suspend fun setMonetBrandIcons(value: Boolean) = context.dataStore.edit { it[Keys.monetBrandIcons] = value }
