@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.bond.mail.AppContainer
 import com.bond.mail.NewMailNotificationMode
+import com.bond.mail.background.FcmRegistrationStore
 import com.bond.mail.data.auth.GoogleAuthorizationStep
 import com.bond.mail.data.auth.OAuthAuthorizationCancelledException
 import com.bond.mail.data.auth.OAuthGrant
@@ -24,6 +25,7 @@ import com.bond.mail.data.model.UiFailure
 import com.bond.mail.data.performance.UiPerformanceGate
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.MailDensity
+import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.data.settings.ThemeMode
 import kotlinx.coroutines.CancellationException
@@ -738,6 +740,12 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun syncMinutes(value: Int) = viewModelScope.launch {
         container.settings.setSyncMinutes(value)
         container.scheduler.scheduleBackgroundSync(enabled = true, intervalMinutes = value)
+    }
+    fun pushAccessKey(value: String) = viewModelScope.launch {
+        val normalized = value.trim()
+        if (normalized.isEmpty()) return@launch
+        container.settings.setPushAccessState(PushAccessState.VERIFYING)
+        FcmRegistrationStore.updatePushAccessKey(container.appContext, normalized)
     }
     fun notifications(value: Boolean) = viewModelScope.launch { container.settings.setNotifications(value) }
     fun biometric(value: Boolean) = viewModelScope.launch { container.settings.setBiometric(value) }

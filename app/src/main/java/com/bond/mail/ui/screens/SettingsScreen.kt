@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -49,11 +50,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.bond.mail.BuildConfig
 import com.bond.mail.data.settings.MailDensity
+import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.data.settings.ThemeMode
 import com.bond.mail.ui.SettingsViewModel
@@ -83,6 +88,7 @@ fun SettingsScreen(
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
+    var pushAccessKey by remember { mutableStateOf("") }
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 108.dp else 18.dp,
         animationSpec = tween(
@@ -201,6 +207,54 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                )
+                SettingsDivider()
+                SettingLabel(tr("push_access_key"))
+                OutlinedTextField(
+                    value = pushAccessKey,
+                    onValueChange = { value -> pushAccessKey = value.take(256) },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    label = { Text(tr("push_access_key_hint")) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val (statusText, statusColor) = when (settings.pushAccessState) {
+                        PushAccessState.MISSING ->
+                            tr("push_access_missing") to MaterialTheme.colorScheme.onSurfaceVariant
+                        PushAccessState.VERIFYING ->
+                            tr("push_access_verifying") to MaterialTheme.colorScheme.primary
+                        PushAccessState.VERIFIED ->
+                            tr("push_access_verified") to MaterialTheme.colorScheme.primary
+                        PushAccessState.REJECTED ->
+                            tr("push_access_rejected") to MaterialTheme.colorScheme.error
+                    }
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = statusColor,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    )
+                    TextButton(
+                        enabled = pushAccessKey.isNotBlank() &&
+                            settings.pushAccessState != PushAccessState.VERIFYING,
+                        onClick = {
+                            viewModel.pushAccessKey(pushAccessKey)
+                            pushAccessKey = ""
+                        },
+                    ) {
+                        Text(tr("push_access_verify"))
+                    }
+                }
+                Text(
+                    text = tr("push_access_note"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                 )
             }
         }

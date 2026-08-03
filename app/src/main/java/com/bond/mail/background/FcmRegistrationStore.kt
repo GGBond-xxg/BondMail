@@ -72,10 +72,23 @@ internal object FcmRegistrationStore {
         }
     }
 
+    fun updatePushAccessKey(context: Context, value: String) {
+        PushAccessKeyStore(context).save(value)
+        if (read(context) != null) {
+            FcmDeviceRegistrationWorker.enqueue(context)
+        } else {
+            register(context)
+        }
+    }
+
+    fun hasPushAccessKey(context: Context): Boolean =
+        PushAccessKeyStore(context).read() != null
+
     internal fun snapshot(context: Context): RegistrationSnapshot? {
         val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
         val token = preferences.getString(TOKEN_KEY, null)?.takeIf(String::isNotBlank)
             ?: return null
+        val pushAccessKey = PushAccessKeyStore(context).read() ?: return null
         val installationId = preferences.getString(INSTALLATION_ID_KEY, null)
             ?.takeIf(String::isNotBlank)
             ?: UUID.randomUUID().toString().also { generated ->
@@ -90,6 +103,7 @@ internal object FcmRegistrationStore {
             installationId = installationId,
             installationSecret = installationSecret,
             fcmToken = token,
+            pushAccessKey = pushAccessKey,
             intervalMinutes = preferences.getInt(SYNC_INTERVAL_KEY, 15).toSupportedInterval(),
             enabled = preferences.getBoolean(SYNC_ENABLED_KEY, true),
         )
@@ -120,6 +134,7 @@ internal object FcmRegistrationStore {
         val installationId: String,
         val installationSecret: String,
         val fcmToken: String,
+        val pushAccessKey: String,
         val intervalMinutes: Int,
         val enabled: Boolean,
     )

@@ -1,5 +1,6 @@
 const FCM_SCOPE = "https://www.googleapis.com/auth/firebase.messaging";
 const FCM_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+const PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key";
 const ALLOWED_INTERVALS = new Set([1, 5, 10, 15, 30, 60]);
 const MAX_DUE_DEVICES_PER_TICK = 50;
 
@@ -43,6 +44,10 @@ async function registerDevice(request, env) {
   const appVersion = normalizedString(body.value.appVersion, 32);
   const intervalMinutes = Number(body.value.intervalMinutes);
   const enabled = body.value.enabled !== false;
+  const suppliedAccessKey = normalizedString(
+    request.headers.get(PUSH_ACCESS_KEY_HEADER),
+    512,
+  );
 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(installationId)) {
     return json({ ok: false, error: "invalid_installation_id" }, 400);
@@ -58,6 +63,17 @@ async function registerDevice(request, env) {
   }
 
   const secretHash = await sha256Hex(installationSecret);
+  const requiredAccessKeyHash = await configuredAccessKeyHash(env);
+  const suppliedAccessKeyHash = await sha256Hex(suppliedAccessKey);
+  if (!constantTimeEqual(suppliedAccessKeyHash, requiredAccessKeyHash)) {
+    // A device that replaces or removes a previously valid key must stop receiving immediately.
+    // The per-installation secret prevents another client from revoking someone else's record.
+    await env.DB.prepare(
+      "DELETE FROM devices WHERE installation_id = ?1 AND installation_secret_hash = ?2",
+    ).bind(installationId, secretHash).run();
+    return json({ ok: false, error: "invalid_push_access_key" }, 401);
+  }
+
   const existing = await env.DB.prepare(
     "SELECT installation_secret_hash FROM devices WHERE installation_id = ?1",
   ).bind(installationId).first();
@@ -74,14 +90,15 @@ async function registerDevice(request, env) {
     env.DB.prepare(
       `INSERT INTO devices (
          installation_id, installation_secret_hash, fcm_token, interval_minutes,
-         enabled, next_sync_at, app_version, created_at, updated_at
-       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)
+         enabled, next_sync_at, app_version, created_at, updated_at, access_key_hash
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)
        ON CONFLICT(installation_id) DO UPDATE SET
          fcm_token = excluded.fcm_token,
          interval_minutes = excluded.interval_minutes,
          enabled = excluded.enabled,
          next_sync_at = MIN(devices.next_sync_at, excluded.next_sync_at),
          app_version = excluded.app_version,
+         access_key_hash = excluded.access_key_hash,
          updated_at = excluded.updated_at`,
     ).bind(
       installationId,
@@ -92,6 +109,7 @@ async function registerDevice(request, env) {
       nextSyncAt,
       appVersion,
       now,
+      requiredAccessKeyHash,
     ),
   ]);
 
@@ -117,13 +135,16 @@ async function unregisterDevice(request, env) {
 
 async function sendScheduledSyncs(env) {
   const now = unixSeconds();
+  const accessKeyHash = await configuredAccessKeyHash(env);
   const due = await env.DB.prepare(
     `SELECT installation_id, fcm_token, interval_minutes
        FROM devices
-      WHERE enabled = 1 AND next_sync_at <= ?1
+      WHERE access_key_hash = ?1
+        AND enabled = 1
+        AND next_sync_at <= ?2
       ORDER BY next_sync_at ASC
-      LIMIT ?2`,
-  ).bind(now, MAX_DUE_DEVICES_PER_TICK).all();
+      LIMIT ?3`,
+  ).bind(accessKeyHash, now, MAX_DUE_DEVICES_PER_TICK).all();
 
   await Promise.all((due.results || []).map((device) => sendToDevice(env, device, now)));
 }
@@ -317,6 +338,12 @@ function unixSeconds() {
   return Math.floor(Date.now() / 1000);
 }
 
+async function configuredAccessKeyHash(env) {
+  const value = normalizedString(env.pwd, 512);
+  if (!value) throw new Error("Cloudflare secret binding pwd is not configured");
+  return sha256Hex(value);
+}
+
 async function sha256Hex(value) {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -325,6 +352,15 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function constantTimeEqual(left, right) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
 }
 
 function base64UrlJson(value) {

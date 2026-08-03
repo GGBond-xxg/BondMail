@@ -11,7 +11,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.bond.mail.BuildConfig
+import com.bond.mail.MailApplication
 import com.bond.mail.data.mail.MailLog
+import com.bond.mail.data.settings.PushAccessState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -24,16 +26,26 @@ internal class FcmDeviceRegistrationWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        val settings = (applicationContext as MailApplication).container.settings
         val registration = FcmRegistrationStore.snapshot(applicationContext)
-            ?: return Result.success()
+            ?: run {
+                settings.setPushAccessState(PushAccessState.MISSING)
+                return Result.success()
+            }
         return runCatching {
             upload(registration)
+            settings.setPushAccessState(PushAccessState.VERIFIED)
             MailLog.d(
                 MailLog.APP,
                 "FCM device registration uploaded interval=${registration.intervalMinutes}m",
             )
             Result.success()
         }.getOrElse { error ->
+            if (error is InvalidPushAccessKeyException) {
+                settings.setPushAccessState(PushAccessState.REJECTED)
+                MailLog.w(MailLog.APP, "FCM device registration rejected by access-key policy")
+                return@getOrElse Result.success()
+            }
             MailLog.w(
                 MailLog.APP,
                 "FCM device registration failed cause=${MailLog.causeSummary(error)}",
@@ -54,6 +66,7 @@ internal class FcmDeviceRegistrationWorker(
             readTimeout = 15_000
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty(PUSH_ACCESS_KEY_HEADER, registration.pushAccessKey)
             setRequestProperty(
                 "User-Agent",
                 "BondMail/${BuildConfig.VERSION_NAME} Android/${Build.VERSION.SDK_INT}",
@@ -78,6 +91,11 @@ internal class FcmDeviceRegistrationWorker(
                 ?.bufferedReader(Charsets.UTF_8)
                 ?.use { it.readText() }
                 .orEmpty()
+            if (status == HttpURLConnection.HTTP_UNAUTHORIZED ||
+                status == HttpURLConnection.HTTP_FORBIDDEN
+            ) {
+                throw InvalidPushAccessKeyException()
+            }
             if (status !in 200..299 || !JSONObject(response).optBoolean("ok")) {
                 throw IllegalStateException("Push registration HTTP $status")
             }
@@ -89,6 +107,7 @@ internal class FcmDeviceRegistrationWorker(
     companion object {
         private const val REGISTRATION_ENDPOINT =
             "https://push.usdit.eu.cc/v1/devices/register"
+        private const val PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key"
         private const val UNIQUE_WORK_NAME = "fcm_device_registration"
 
         fun enqueue(context: Context) {
@@ -107,4 +126,6 @@ internal class FcmDeviceRegistrationWorker(
             )
         }
     }
+
+    private class InvalidPushAccessKeyException : IllegalStateException()
 }

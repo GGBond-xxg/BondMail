@@ -14,6 +14,7 @@ private val Context.dataStore by preferencesDataStore("bond_mail_settings")
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class MailDensity { COMFORTABLE, STANDARD, COMPACT }
 enum class RemoteImagePolicy { ALWAYS, WIFI_ONLY, NEVER }
+enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED }
 
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -21,6 +22,7 @@ data class AppSettings(
     val density: MailDensity = MailDensity.STANDARD,
     val monetBrandIcons: Boolean = true,
     val syncMinutes: Int = 15,
+    val pushAccessState: PushAccessState = PushAccessState.MISSING,
     val notifications: Boolean = true,
     val notificationPermissionPromptDismissed: Boolean = false,
     val biometricLock: Boolean = false,
@@ -38,6 +40,7 @@ class SettingsStore(private val context: Context) {
         val density = stringPreferencesKey("density")
         val monetBrandIcons = booleanPreferencesKey("monet_brand_icons")
         val sync = intPreferencesKey("sync_minutes")
+        val pushAccessState = stringPreferencesKey("push_access_state")
         val notifications = booleanPreferencesKey("notifications")
         val notificationPermissionPromptDismissed = booleanPreferencesKey("notification_permission_prompt_dismissed")
         val biometric = booleanPreferencesKey("biometric")
@@ -52,6 +55,11 @@ class SettingsStore(private val context: Context) {
             density = runCatching { MailDensity.valueOf(p[Keys.density] ?: MailDensity.STANDARD.name) }.getOrDefault(MailDensity.STANDARD),
             monetBrandIcons = p[Keys.monetBrandIcons] ?: true,
             syncMinutes = p[Keys.sync] ?: 15,
+            pushAccessState = runCatching {
+                PushAccessState.valueOf(
+                    p[Keys.pushAccessState] ?: PushAccessState.MISSING.name,
+                )
+            }.getOrDefault(PushAccessState.MISSING),
             notifications = p[Keys.notifications] ?: true,
             notificationPermissionPromptDismissed = p[Keys.notificationPermissionPromptDismissed] ?: false,
             biometricLock = p[Keys.biometric] ?: false,
@@ -78,6 +86,8 @@ class SettingsStore(private val context: Context) {
     suspend fun setDensity(value: MailDensity) = context.dataStore.edit { it[Keys.density] = value.name }
     suspend fun setMonetBrandIcons(value: Boolean) = context.dataStore.edit { it[Keys.monetBrandIcons] = value }
     suspend fun setSyncMinutes(value: Int) = context.dataStore.edit { it[Keys.sync] = value }
+    suspend fun setPushAccessState(value: PushAccessState) =
+        context.dataStore.edit { it[Keys.pushAccessState] = value.name }
     suspend fun setNotifications(value: Boolean) = context.dataStore.edit { it[Keys.notifications] = value }
     suspend fun setNotificationPermissionPromptDismissed(value: Boolean) = context.dataStore.edit {
         it[Keys.notificationPermissionPromptDismissed] = value
