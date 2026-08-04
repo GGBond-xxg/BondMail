@@ -67,28 +67,26 @@ internal object FcmRegistrationStore {
             .putBoolean(SYNC_ENABLED_KEY, enabled)
             .putInt(SYNC_INTERVAL_KEY, intervalMinutes.toSupportedInterval())
             .apply()
-        if (read(context) != null) {
+        if (PushAccessConfigStore(context).read() != null) {
             FcmDeviceRegistrationWorker.enqueue(context)
         }
     }
 
-    fun updatePushAccessKey(context: Context, value: String) {
-        PushAccessKeyStore(context).save(value)
-        if (read(context) != null) {
-            FcmDeviceRegistrationWorker.enqueue(context)
-        } else {
-            register(context)
-        }
+    fun updatePushAccessConfig(
+        context: Context,
+        serviceOrigin: String,
+        accessKey: String,
+    ) {
+        PushAccessConfigStore(context).save(serviceOrigin, accessKey)
+        FcmDeviceRegistrationWorker.enqueue(context)
     }
 
-    fun hasPushAccessKey(context: Context): Boolean =
-        PushAccessKeyStore(context).read() != null
+    fun readPushAccessConfig(context: Context): PushAccessConfig? =
+        PushAccessConfigStore(context).read()
 
     internal fun snapshot(context: Context): RegistrationSnapshot? {
         val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-        val token = preferences.getString(TOKEN_KEY, null)?.takeIf(String::isNotBlank)
-            ?: return null
-        val pushAccessKey = PushAccessKeyStore(context).read() ?: return null
+        val pushConfig = PushAccessConfigStore(context).read() ?: return null
         val installationId = preferences.getString(INSTALLATION_ID_KEY, null)
             ?.takeIf(String::isNotBlank)
             ?: UUID.randomUUID().toString().also { generated ->
@@ -102,8 +100,8 @@ internal object FcmRegistrationStore {
         return RegistrationSnapshot(
             installationId = installationId,
             installationSecret = installationSecret,
-            fcmToken = token,
-            pushAccessKey = pushAccessKey,
+            serviceOrigin = pushConfig.serviceOrigin,
+            pushAccessKey = pushConfig.accessKey,
             intervalMinutes = preferences.getInt(SYNC_INTERVAL_KEY, 15).toSupportedInterval(),
             enabled = preferences.getBoolean(SYNC_ENABLED_KEY, true),
         )
@@ -133,7 +131,7 @@ internal object FcmRegistrationStore {
     internal data class RegistrationSnapshot(
         val installationId: String,
         val installationSecret: String,
-        val fcmToken: String,
+        val serviceOrigin: String,
         val pushAccessKey: String,
         val intervalMinutes: Int,
         val enabled: Boolean,

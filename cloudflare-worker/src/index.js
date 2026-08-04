@@ -14,6 +14,10 @@ export default {
       return json({ ok: true, service: "bondmail-push" });
     }
 
+    if (request.method === "GET" && url.pathname === "/v1/client-config") {
+      return clientConfig(request, env);
+    }
+
     if (request.method === "POST" && url.pathname === "/v1/devices/register") {
       return registerDevice(request, env);
     }
@@ -30,6 +34,28 @@ export default {
   },
 };
 
+async function clientConfig(request, env) {
+  if (request.headers.has("Origin")) {
+    return json({ ok: false, error: "browser_requests_not_allowed" }, 403);
+  }
+  if (!(await hasValidPushAccessKey(request, env))) {
+    return json({ ok: false, error: "invalid_push_access_key" }, 401);
+  }
+
+  const config = parseFirebaseClientConfig(env.FIREBASE_CLIENT_CONFIG_JSON);
+  const credentials = parseServiceAccount(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  if (config.projectId !== credentials.project_id) {
+    throw new Error("Firebase client and service-account projects do not match");
+  }
+  return json({
+    ok: true,
+    projectId: config.projectId,
+    applicationId: config.applicationId,
+    apiKey: config.apiKey,
+    senderId: config.senderId,
+  });
+}
+
 async function registerDevice(request, env) {
   if (request.headers.has("Origin")) {
     return json({ ok: false, error: "browser_requests_not_allowed" }, 403);
@@ -44,10 +70,6 @@ async function registerDevice(request, env) {
   const appVersion = normalizedString(body.value.appVersion, 32);
   const intervalMinutes = Number(body.value.intervalMinutes);
   const enabled = body.value.enabled !== false;
-  const suppliedAccessKey = normalizedString(
-    request.headers.get(PUSH_ACCESS_KEY_HEADER),
-    512,
-  );
 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(installationId)) {
     return json({ ok: false, error: "invalid_installation_id" }, 400);
@@ -64,8 +86,7 @@ async function registerDevice(request, env) {
 
   const secretHash = await sha256Hex(installationSecret);
   const requiredAccessKeyHash = await configuredAccessKeyHash(env);
-  const suppliedAccessKeyHash = await sha256Hex(suppliedAccessKey);
-  if (!constantTimeEqual(suppliedAccessKeyHash, requiredAccessKeyHash)) {
+  if (!(await hasValidPushAccessKey(request, env, requiredAccessKeyHash))) {
     // A device that replaces or removes a previously valid key must stop receiving immediately.
     // The per-installation secret prevents another client from revoking someone else's record.
     await env.DB.prepare(
@@ -293,6 +314,19 @@ function parseServiceAccount(raw) {
   return value;
 }
 
+function parseFirebaseClientConfig(raw) {
+  if (!raw) throw new Error("FIREBASE_CLIENT_CONFIG_JSON is not configured");
+  const value = JSON.parse(raw);
+  const projectId = normalizedString(value.projectId, 128);
+  const applicationId = normalizedString(value.applicationId, 256);
+  const apiKey = normalizedString(value.apiKey, 256);
+  const senderId = normalizedString(value.senderId, 64);
+  if (!projectId || !applicationId || !apiKey || !/^\d{6,32}$/.test(senderId)) {
+    throw new Error("Firebase client config JSON is incomplete");
+  }
+  return { projectId, applicationId, apiKey, senderId };
+}
+
 async function importPrivateKey(pem) {
   const body = pem
     .replace("-----BEGIN PRIVATE KEY-----", "")
@@ -342,6 +376,16 @@ async function configuredAccessKeyHash(env) {
   const value = normalizedString(env.pwd, 512);
   if (!value) throw new Error("Cloudflare secret binding pwd is not configured");
   return sha256Hex(value);
+}
+
+async function hasValidPushAccessKey(request, env, configuredHash = null) {
+  const suppliedValue = normalizedString(
+    request.headers.get(PUSH_ACCESS_KEY_HEADER),
+    512,
+  );
+  const suppliedHash = await sha256Hex(suppliedValue);
+  const requiredHash = configuredHash || await configuredAccessKeyHash(env);
+  return constantTimeEqual(suppliedHash, requiredHash);
 }
 
 async function sha256Hex(value) {

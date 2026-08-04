@@ -1,5 +1,12 @@
 # BondMail
 
+## 自建 Cloudflare FCM 推送
+
+CF FCM 是可选功能，不配置时不会影响邮箱登录、手动刷新或本地定时收信。
+需要为自己或其他用户部署独立推送服务时，请使用
+[BondMail Cloudflare Push](https://github.com/GGBond-xxg/BondMail-Cloudflare-Push)。
+部署完成后，只需在应用设置中填写 Worker 域名和 `pwd` 访问密钥。
+
 ## v1.1.1 未读邮件即时切换已读样式
 
 点击未读邮件时，卡片底色现在与蓝色标记、圆点和文字字重一起立即切换为已读样式。详情页打开与返回动画不会再冻结颜色过渡中的蓝色帧。完整说明见 `docs/CHANGELOG_v1.1.1.md`。

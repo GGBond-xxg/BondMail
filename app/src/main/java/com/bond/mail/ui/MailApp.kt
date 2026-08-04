@@ -160,6 +160,7 @@ import com.bond.mail.ui.screens.HomeScreen
 import com.bond.mail.ui.screens.OpenSourceLicensesScreen
 import com.bond.mail.ui.screens.PrivacyPolicyScreen
 import com.bond.mail.ui.screens.ProviderPickerScreen
+import com.bond.mail.ui.screens.PushSettingsScreen
 import com.bond.mail.ui.screens.SettingsScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -173,6 +174,7 @@ private const val PROVIDERS = "providers"
 private const val CREDENTIALS = "credentials/{providerId}"
 private const val DETAIL = "detail/{messageId}"
 private const val ABOUT = "about"
+private const val PUSH_SETTINGS = "settings/push"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
@@ -259,6 +261,9 @@ fun MailApp(
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
     var aboutBackBackground by remember {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    var pushSettingsBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
     var aboutChildBackBackground by remember {
@@ -619,6 +624,7 @@ fun MailApp(
                                 onOpenAbout = {
                                     providersBackBackground = null
                                     credentialsBackBackground = null
+                                    pushSettingsBackBackground = null
                                     aboutChildBackBackground = null
                                     navigateAfterSnapshot(
                                         route = ABOUT,
@@ -626,8 +632,20 @@ fun MailApp(
                                         store = { aboutBackBackground = it },
                                     )
                                 },
+                                onOpenPushSettings = {
+                                    providersBackBackground = null
+                                    credentialsBackBackground = null
+                                    aboutBackBackground = null
+                                    aboutChildBackBackground = null
+                                    navigateAfterSnapshot(
+                                        route = PUSH_SETTINGS,
+                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                                        store = { pushSettingsBackBackground = it },
+                                    )
+                                },
                                 onAddAccount = {
                                     aboutBackBackground = null
+                                    pushSettingsBackBackground = null
                                     aboutChildBackBackground = null
                                     credentialsBackBackground = null
                                     navigateAfterSnapshot(
@@ -737,6 +755,21 @@ fun MailApp(
                                     showPermissionGuide = !notificationPermissionGranted &&
                                         !settings.notificationPermissionPromptDismissed
                                 },
+                            )
+                        }
+                    }
+
+                    composable(
+                        route = PUSH_SETTINGS,
+                    ) {
+                        BondBackScreen(
+                            backgroundSnapshot = pushSettingsBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            PushSettingsScreen(
+                                viewModel = settingsVm,
+                                onBack = requestBack,
                             )
                         }
                     }
@@ -934,6 +967,7 @@ private fun MainTabs(
     onDismissPermissionGuide: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenBackgroundSettings: () -> Unit,
+    onOpenPushSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     mainChromeVisible: Boolean,
@@ -1092,6 +1126,7 @@ private fun MainTabs(
                             notificationPermissionGranted = notificationPermissionGranted,
                             onOpenNotificationSettings = onOpenNotificationSettings,
                             onOpenBackgroundSettings = onOpenBackgroundSettings,
+                            onOpenPushSettings = onOpenPushSettings,
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

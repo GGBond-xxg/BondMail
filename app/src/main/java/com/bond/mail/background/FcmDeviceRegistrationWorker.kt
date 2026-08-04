@@ -14,12 +14,19 @@ import com.bond.mail.BuildConfig
 import com.bond.mail.MailApplication
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.settings.PushAccessState
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 internal class FcmDeviceRegistrationWorker(
     context: Context,
@@ -33,7 +40,9 @@ internal class FcmDeviceRegistrationWorker(
                 return Result.success()
             }
         return runCatching {
-            upload(registration)
+            val clientConfig = downloadClientConfig(registration)
+            val fcmToken = resolveFcmToken(clientConfig)
+            upload(registration, fcmToken)
             settings.setPushAccessState(PushAccessState.VERIFIED)
             MailLog.d(
                 MailLog.APP,
@@ -57,9 +66,12 @@ internal class FcmDeviceRegistrationWorker(
 
     private suspend fun upload(
         registration: FcmRegistrationStore.RegistrationSnapshot,
+        fcmToken: String,
     ) = withContext(Dispatchers.IO) {
         val connection = (
-            URI.create(REGISTRATION_ENDPOINT).toURL().openConnection() as HttpURLConnection
+            URI.create("${registration.serviceOrigin}/v1/devices/register")
+                .toURL()
+                .openConnection() as HttpURLConnection
             ).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
@@ -76,7 +88,7 @@ internal class FcmDeviceRegistrationWorker(
             val payload = JSONObject()
                 .put("installationId", registration.installationId)
                 .put("installationSecret", registration.installationSecret)
-                .put("fcmToken", registration.fcmToken)
+                .put("fcmToken", fcmToken)
                 .put("intervalMinutes", registration.intervalMinutes)
                 .put("enabled", registration.enabled)
                 .put("appVersion", BuildConfig.VERSION_NAME)
@@ -104,9 +116,85 @@ internal class FcmDeviceRegistrationWorker(
         }
     }
 
+    private suspend fun downloadClientConfig(
+        registration: FcmRegistrationStore.RegistrationSnapshot,
+    ): PushFirebaseClientConfig = withContext(Dispatchers.IO) {
+        val connection = (
+            URI.create("${registration.serviceOrigin}/v1/client-config")
+                .toURL()
+                .openConnection() as HttpURLConnection
+            ).apply {
+            requestMethod = "GET"
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            setRequestProperty(PUSH_ACCESS_KEY_HEADER, registration.pushAccessKey)
+            setRequestProperty(
+                "User-Agent",
+                "BondMail/${BuildConfig.VERSION_NAME} Android/${Build.VERSION.SDK_INT}",
+            )
+        }
+        try {
+            val status = connection.responseCode
+            val responseStream =
+                if (status in 200..299) connection.inputStream else connection.errorStream
+            val response = responseStream
+                ?.bufferedReader(Charsets.UTF_8)
+                ?.use { it.readText() }
+                .orEmpty()
+            if (status == HttpURLConnection.HTTP_UNAUTHORIZED ||
+                status == HttpURLConnection.HTTP_FORBIDDEN
+            ) {
+                throw InvalidPushAccessKeyException()
+            }
+            if (status !in 200..299) {
+                throw IllegalStateException("Push client config HTTP $status")
+            }
+            val payload = JSONObject(response)
+            if (!payload.optBoolean("ok")) {
+                throw IllegalStateException("Push client config rejected")
+            }
+            PushFirebaseClientConfig(
+                projectId = payload.requireString("projectId"),
+                applicationId = payload.requireString("applicationId"),
+                apiKey = payload.requireString("apiKey"),
+                senderId = payload.requireString("senderId"),
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun resolveFcmToken(config: PushFirebaseClientConfig): String {
+        val appName = "bondmail-push-${config.applicationId.sha256Prefix()}"
+        val firebaseApp = FirebaseApp.getApps(applicationContext)
+            .firstOrNull { app -> app.name == appName }
+            ?: synchronized(FirebaseApp::class.java) {
+                FirebaseApp.getApps(applicationContext)
+                    .firstOrNull { app -> app.name == appName }
+                    ?: FirebaseApp.initializeApp(
+                        applicationContext,
+                        FirebaseOptions.Builder()
+                            .setProjectId(config.projectId)
+                            .setApplicationId(config.applicationId)
+                            .setApiKey(config.apiKey)
+                            .setGcmSenderId(config.senderId)
+                            .build(),
+                        appName,
+                    )
+            }
+        return suspendCancellableCoroutine { continuation ->
+            firebaseApp.get(FirebaseMessaging::class.java).token
+                .addOnSuccessListener { token ->
+                    if (continuation.isActive) continuation.resume(token)
+                }
+                .addOnFailureListener { error ->
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
+        }
+    }
+
     companion object {
-        private const val REGISTRATION_ENDPOINT =
-            "https://push.usdit.eu.cc/v1/devices/register"
         private const val PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key"
         private const val UNIQUE_WORK_NAME = "fcm_device_registration"
 
@@ -126,6 +214,23 @@ internal class FcmDeviceRegistrationWorker(
             )
         }
     }
+
+    private fun JSONObject.requireString(name: String): String =
+        optString(name).trim().takeIf(String::isNotEmpty)
+            ?: throw IllegalStateException("Push client config is missing $name")
+
+    private fun String.sha256Prefix(): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(toByteArray(Charsets.UTF_8))
+            .take(8)
+            .joinToString(separator = "") { byte -> "%02x".format(byte) }
+
+    private data class PushFirebaseClientConfig(
+        val projectId: String,
+        val applicationId: String,
+        val apiKey: String,
+        val senderId: String,
+    )
 
     private class InvalidPushAccessKeyException : IllegalStateException()
 }

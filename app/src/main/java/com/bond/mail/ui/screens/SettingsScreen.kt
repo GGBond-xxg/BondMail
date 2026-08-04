@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -23,15 +24,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.BatterySaver
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -50,9 +55,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -79,6 +81,7 @@ fun SettingsScreen(
     notificationPermissionGranted: Boolean,
     onOpenNotificationSettings: () -> Unit,
     onOpenBackgroundSettings: () -> Unit,
+    onOpenPushSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -88,7 +91,7 @@ fun SettingsScreen(
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
-    var pushAccessKey by remember { mutableStateOf("") }
+    var syncIntervalExpanded by remember { mutableStateOf(false) }
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 108.dp else 18.dp,
         animationSpec = tween(
@@ -195,13 +198,67 @@ fun SettingsScreen(
         item {
             SettingsCard {
                 SettingLabel(tr("sync_interval"))
-                ChoiceChips(
-                    options = listOf(1, 5, 10, 15).map { minutes ->
-                        minutes to tr("minutes_short", minutes.toString())
-                    },
-                    selected = settings.syncMinutes,
-                    onSelect = viewModel::syncMinutes,
-                )
+                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                    Surface(
+                        onClick = { syncIntervalExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(
+                                horizontal = 16.dp,
+                                vertical = 13.dp,
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = tr(
+                                    "minutes_short",
+                                    settings.syncMinutes.toString(),
+                                ),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ExpandMore,
+                                contentDescription = tr("sync_interval"),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = syncIntervalExpanded,
+                        onDismissRequest = { syncIntervalExpanded = false },
+                        shape = RoundedCornerShape(18.dp),
+                        containerColor = MaterialTheme.bondSurfaces.popup,
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                    ) {
+                        listOf(1, 5, 10, 15).forEach { minutes ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(tr("minutes_short", minutes.toString()))
+                                },
+                                trailingIcon = {
+                                    if (settings.syncMinutes == minutes) {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                },
+                                onClick = {
+                                    syncIntervalExpanded = false
+                                    viewModel.syncMinutes(minutes)
+                                },
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = tr("sync_interval_note_short"),
                     style = MaterialTheme.typography.bodySmall,
@@ -209,52 +266,16 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
                 )
                 SettingsDivider()
-                SettingLabel(tr("push_access_key"))
-                OutlinedTextField(
-                    value = pushAccessKey,
-                    onValueChange = { value -> pushAccessKey = value.take(256) },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    label = { Text(tr("push_access_key_hint")) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val (statusText, statusColor) = when (settings.pushAccessState) {
-                        PushAccessState.MISSING ->
-                            tr("push_access_missing") to MaterialTheme.colorScheme.onSurfaceVariant
-                        PushAccessState.VERIFYING ->
-                            tr("push_access_verifying") to MaterialTheme.colorScheme.primary
-                        PushAccessState.VERIFIED ->
-                            tr("push_access_verified") to MaterialTheme.colorScheme.primary
-                        PushAccessState.REJECTED ->
-                            tr("push_access_rejected") to MaterialTheme.colorScheme.error
-                    }
-                    Text(
-                        text = statusText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = statusColor,
-                        modifier = Modifier.weight(1f).padding(end = 8.dp),
-                    )
-                    TextButton(
-                        enabled = pushAccessKey.isNotBlank() &&
-                            settings.pushAccessState != PushAccessState.VERIFYING,
-                        onClick = {
-                            viewModel.pushAccessKey(pushAccessKey)
-                            pushAccessKey = ""
-                        },
-                    ) {
-                        Text(tr("push_access_verify"))
-                    }
-                }
-                Text(
-                    text = tr("push_access_note"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                SettingsActionRow(
+                    icon = Icons.Default.Cloud,
+                    title = tr("push_settings_title"),
+                    subtitle = when (settings.pushAccessState) {
+                        PushAccessState.MISSING -> tr("push_access_missing_short")
+                        PushAccessState.VERIFYING -> tr("push_access_verifying")
+                        PushAccessState.VERIFIED -> tr("push_access_verified_short")
+                        PushAccessState.REJECTED -> tr("push_access_rejected_short")
+                    },
+                    onClick = onOpenPushSettings,
                 )
             }
         }
