@@ -255,17 +255,26 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     fun onAppForegrounded() {
         appForeground = true
         recoveryScheduledThisForeground = false
-        scheduleForegroundRecovery(delayMs = if (recoveryPending) 350L else 900L)
+        // OEMs may delay both FCM and periodic WorkManager while the app is backgrounded. Always
+        // reconcile once after the app becomes visible so a long-idle mailbox is never left stale
+        // until the next foreground timer tick.
+        scheduleForegroundRecovery(
+            delayMs = if (recoveryPending) 350L else 650L,
+            forceRefresh = true,
+        )
     }
 
-    private fun scheduleForegroundRecovery(delayMs: Long) {
+    private fun scheduleForegroundRecovery(
+        delayMs: Long,
+        forceRefresh: Boolean = false,
+    ) {
         if (!appForeground || recoveryScheduledThisForeground) return
         if (foregroundRecoveryJob?.isActive == true) return
         foregroundRecoveryJob = viewModelScope.launch {
             delay(delayMs)
             if (!appForeground || recoveryScheduledThisForeground) return@launch
             val unsynced = accounts.value.filter { it.enabled && it.lastSyncAt == null }
-            val needsRecovery = recoveryPending || unsynced.isNotEmpty()
+            val needsRecovery = forceRefresh || recoveryPending || unsynced.isNotEmpty()
             if (!needsRecovery) return@launch
 
             recoveryScheduledThisForeground = true
@@ -747,10 +756,17 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
             ?.serviceOrigin
             .orEmpty()
 
+    fun hasSavedPushAccessKey(): Boolean =
+        FcmRegistrationStore.readPushAccessConfig(container.appContext) != null
+
     fun pushAccessConfig(serviceOrigin: String, accessKey: String) = viewModelScope.launch {
         val normalizedOrigin = PushAccessConfigStore.normalizeServiceOrigin(serviceOrigin)
             ?: return@launch
-        val normalizedKey = accessKey.trim()
+        val normalizedKey = accessKey.trim().ifEmpty {
+            FcmRegistrationStore.readPushAccessConfig(container.appContext)
+                ?.accessKey
+                .orEmpty()
+        }
         if (normalizedKey.isEmpty()) return@launch
         container.settings.setPushAccessState(PushAccessState.VERIFYING)
         FcmRegistrationStore.updatePushAccessConfig(

@@ -56,6 +56,9 @@ fun PushSettingsScreen(
         )
     }
     var accessKey by remember { mutableStateOf("") }
+    var hasSavedAccessKey by remember(viewModel) {
+        mutableStateOf(viewModel.hasSavedPushAccessKey())
+    }
     var domainInvalid by remember { mutableStateOf(false) }
 
     Column(
@@ -139,7 +142,15 @@ fun PushSettingsScreen(
                             onValueChange = { value -> accessKey = value.take(256) },
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(tr("push_access_key")) },
-                            placeholder = { Text("pwd") },
+                            placeholder = {
+                                Text(
+                                    if (hasSavedAccessKey) {
+                                        tr("push_access_key_saved_hint")
+                                    } else {
+                                        "pwd"
+                                    },
+                                )
+                            },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
@@ -174,11 +185,12 @@ fun PushSettingsScreen(
                                 } else {
                                     serviceOrigin = normalizedOrigin.removePrefix("https://")
                                     viewModel.pushAccessConfig(normalizedOrigin, accessKey)
+                                    hasSavedAccessKey = true
                                     accessKey = ""
                                 }
                             },
                             enabled = serviceOrigin.isNotBlank() &&
-                                accessKey.isNotBlank() &&
+                                (accessKey.isNotBlank() || hasSavedAccessKey) &&
                                 settings.pushAccessState != PushAccessState.VERIFYING,
                             modifier = Modifier.fillMaxWidth(),
                         ) {

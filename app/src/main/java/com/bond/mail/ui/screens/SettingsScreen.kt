@@ -1,6 +1,7 @@
 package com.bond.mail.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -8,8 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,7 +33,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -91,7 +91,6 @@ fun SettingsScreen(
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
-    var syncIntervalExpanded by remember { mutableStateOf(false) }
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 108.dp else 18.dp,
         animationSpec = tween(
@@ -140,7 +139,8 @@ fun SettingsScreen(
         item { SectionTitle(tr("language")) }
         item {
             SettingsCard {
-                ChoiceChips(
+                DropdownSettingRow(
+                    title = tr("language"),
                     options = SupportedLanguages.options.map { language ->
                         language.code to tr(language.labelKey)
                     },
@@ -153,8 +153,21 @@ fun SettingsScreen(
         item { SectionTitle(tr("appearance")) }
         item {
             SettingsCard {
-                SettingLabel(tr("theme_mode"))
-                ChoiceChips(
+                DropdownSettingRow(
+                    title = tr("list_density"),
+                    options = MailDensity.entries.map { density ->
+                        density to when (density) {
+                            MailDensity.COMFORTABLE -> tr("comfortable")
+                            MailDensity.STANDARD -> tr("standard")
+                            MailDensity.COMPACT -> tr("compact")
+                        }
+                    },
+                    selected = settings.density,
+                    onSelect = viewModel::density,
+                )
+                SettingsDivider()
+                DropdownSettingRow(
+                    title = tr("theme_mode"),
                     options = ThemeMode.entries.map { mode ->
                         mode to when (mode) {
                             ThemeMode.SYSTEM -> tr("follow_system")
@@ -178,87 +191,20 @@ fun SettingsScreen(
                     checked = settings.dynamicColor,
                     onChecked = viewModel::dynamic,
                 )
-                SettingsDivider()
-                SettingLabel(tr("list_density"))
-                ChoiceChips(
-                    options = MailDensity.entries.map { density ->
-                        density to when (density) {
-                            MailDensity.COMFORTABLE -> tr("comfortable")
-                            MailDensity.STANDARD -> tr("standard")
-                            MailDensity.COMPACT -> tr("compact")
-                        }
-                    },
-                    selected = settings.density,
-                    onSelect = viewModel::density,
-                )
             }
         }
 
         item { SectionTitle(tr("sync")) }
         item {
             SettingsCard {
-                SettingLabel(tr("sync_interval"))
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                    Surface(
-                        onClick = { syncIntervalExpanded = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant,
-                        ),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(
-                                horizontal = 16.dp,
-                                vertical = 13.dp,
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = tr(
-                                    "minutes_short",
-                                    settings.syncMinutes.toString(),
-                                ),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Icon(
-                                imageVector = Icons.Default.ExpandMore,
-                                contentDescription = tr("sync_interval"),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = syncIntervalExpanded,
-                        onDismissRequest = { syncIntervalExpanded = false },
-                        shape = RoundedCornerShape(18.dp),
-                        containerColor = MaterialTheme.bondSurfaces.popup,
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant,
-                        ),
-                    ) {
-                        listOf(1, 5, 10, 15).forEach { minutes ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(tr("minutes_short", minutes.toString()))
-                                },
-                                trailingIcon = {
-                                    if (settings.syncMinutes == minutes) {
-                                        Icon(Icons.Default.Check, contentDescription = null)
-                                    }
-                                },
-                                onClick = {
-                                    syncIntervalExpanded = false
-                                    viewModel.syncMinutes(minutes)
-                                },
-                            )
-                        }
-                    }
-                }
+                DropdownSettingRow(
+                    title = tr("sync_interval"),
+                    options = listOf(1, 5, 10, 15).map { minutes ->
+                        minutes to tr("minutes_short", minutes.toString())
+                    },
+                    selected = settings.syncMinutes,
+                    onSelect = viewModel::syncMinutes,
+                )
                 Text(
                     text = tr("sync_interval_note_short"),
                     style = MaterialTheme.typography.bodySmall,
@@ -310,8 +256,8 @@ fun SettingsScreen(
                     onChecked = viewModel::biometric,
                 )
                 SettingsDivider()
-                SettingLabel(tr("remote_images"))
-                ChoiceChips(
+                DropdownSettingRow(
+                    title = tr("remote_images"),
                     options = RemoteImagePolicy.entries.map { policy ->
                         policy to when (policy) {
                             RemoteImagePolicy.ALWAYS -> tr("always_load")
@@ -375,40 +321,137 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SettingLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp),
-    )
-}
-
-@Composable
-@OptIn(ExperimentalLayoutApi::class)
-private fun <T> ChoiceChips(
+private fun <T> DropdownSettingRow(
+    title: String,
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
     onSelectAt: ((T, Offset) -> Unit)? = null,
 ) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+    var expanded by remember { mutableStateOf(false) }
+    var selectorCenterInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    val selectedLabel = options.firstOrNull { it.first == selected }?.second.orEmpty()
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(durationMillis = BondMotionDuration.EffectShort),
+        label = "settings-dropdown-arrow",
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        options.forEach { (value, label) ->
-            var centerInWindow by remember(value) { mutableStateOf(Offset.Unspecified) }
-            FilterChip(
-                modifier = Modifier.onGloballyPositioned { coordinates ->
-                    centerInWindow = coordinates.boundsInWindow().center
-                },
-                selected = value == selected,
-                onClick = {
-                    onSelectAt?.invoke(value, centerInWindow) ?: onSelect(value)
-                },
-                label = { Text(label, maxLines = 1) },
-            )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            modifier =
+                Modifier
+                    .widthIn(min = 154.dp, max = 210.dp)
+                    .onGloballyPositioned { coordinates ->
+                        selectorCenterInWindow = coordinates.boundsInWindow().center
+                    },
+        ) {
+            Surface(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                border =
+                    BorderStroke(
+                        1.dp,
+                        if (expanded) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                    ),
+                color =
+                    if (expanded) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f)
+                    },
+            ) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = selectedLabel,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ExpandMore,
+                        contentDescription = title,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.graphicsLayer { rotationZ = arrowRotation },
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.widthIn(min = 190.dp, max = 230.dp),
+                shape = RoundedCornerShape(18.dp),
+                containerColor = MaterialTheme.bondSurfaces.popup,
+                tonalElevation = 6.dp,
+                shadowElevation = 10.dp,
+                border =
+                    BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                    ),
+            ) {
+                options.forEach { (value, label) ->
+                    val isSelected = value == selected
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = label,
+                                fontWeight =
+                                    if (isSelected) {
+                                        FontWeight.SemiBold
+                                    } else {
+                                        FontWeight.Normal
+                                    },
+                                color =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                            )
+                        },
+                        trailingIcon = {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        },
+                        onClick = {
+                            expanded = false
+                            if (value != selected) {
+                                onSelectAt?.invoke(value, selectorCenterInWindow)
+                                    ?: onSelect(value)
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 }

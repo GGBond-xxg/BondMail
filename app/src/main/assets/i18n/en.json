@@ -252,6 +252,7 @@
   "push_domain_invalid": "Enter a valid HTTPS domain",
   "push_access_key": "Access key",
   "push_access_key_hint": "Enter the value of pwd in Cloudflare",
+  "push_access_key_saved_hint": "Saved; leave blank to keep using it",
   "push_access_missing": "Not configured; using local scheduled sync only",
   "push_access_missing_short": "Not enabled",
   "push_access_verifying": "Verifying…",

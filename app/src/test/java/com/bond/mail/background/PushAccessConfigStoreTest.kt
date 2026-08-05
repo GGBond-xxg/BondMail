@@ -31,4 +31,24 @@ class PushAccessConfigStoreTest {
         assertNull(PushAccessConfigStore.normalizeServiceOrigin("https://push.example.com/api"))
         assertNull(PushAccessConfigStore.normalizeServiceOrigin("https://push.example.com?key=value"))
     }
+
+    @Test
+    fun `moves missing and retired origins to the current service`() {
+        assertEquals(
+            PushAccessConfigStore.CURRENT_SERVICE_ORIGIN,
+            PushAccessConfigStore.migrateServiceOrigin(null),
+        )
+        assertEquals(
+            PushAccessConfigStore.CURRENT_SERVICE_ORIGIN,
+            PushAccessConfigStore.migrateServiceOrigin(
+                PushAccessConfigStore.LEGACY_SERVICE_ORIGIN,
+            ),
+        )
+        assertEquals(
+            "https://self-hosted.example.com",
+            PushAccessConfigStore.migrateServiceOrigin(
+                "https://self-hosted.example.com",
+            ),
+        )
+    }
 }

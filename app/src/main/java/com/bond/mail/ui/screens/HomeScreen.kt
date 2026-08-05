@@ -573,7 +573,7 @@ fun HomeScreen(
                         ProgressiveMailRow(
                             messageId = message.id,
                             animateArrival = animateArrival,
-                            staggerIndex = index % 8,
+                            staggerIndex = index.coerceAtMost(7),
                             modifier = Modifier.animateItem(),
                         ) {
                             SwipeToDismissBox(
@@ -658,7 +658,9 @@ fun HomeScreen(
                 .graphicsLayer { translationY = topChromeOffset.toPx() },
             color = MaterialTheme.bondSurfaces.chrome,
             tonalElevation = 0.dp,
-            shadowElevation = 3.dp,
+            // A full-width physical shadow is copied into the frozen reader backdrop as a dark
+            // rectangular strip in light mode. The chrome/page color boundary is sufficient.
+            shadowElevation = 0.dp,
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Column(
@@ -1039,36 +1041,42 @@ private fun ProgressiveMailRow(
     content: @Composable () -> Unit,
 ) {
     val motionEnabled = bondMotionEnabled()
-    val density = LocalDensity.current
-    val progress = remember(messageId) {
-        Animatable(if (animateArrival && motionEnabled) 0f else 1f)
+    var visible by remember(messageId) {
+        mutableStateOf(!animateArrival || !motionEnabled)
     }
-    val travelPx = with(density) { 10.dp.toPx() }
 
     LaunchedEffect(messageId, animateArrival, motionEnabled) {
-        if (animateArrival && motionEnabled && progress.value < 1f) {
-            delay(staggerIndex.coerceIn(0, 7) * 18L)
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = BondMotionDuration.ElementEnter,
-                    easing = BondMotionEasing.EmphasizedDecelerate,
-                ),
-            )
-        } else {
-            progress.snapTo(1f)
+        if (animateArrival && motionEnabled) {
+            // 18 ms is less than two frames on a 90 Hz panel and looked like one bulk flash.
+            // Keep each new row at zero height until its turn so the list grows one mail at a time.
+            delay(staggerIndex.coerceIn(0, 7) * 90L)
         }
+        visible = true
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = progress.value
-                translationY = (1f - progress.value) * travelPx
-            },
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier.fillMaxWidth(),
+        enter = expandVertically(
+            expandFrom = Alignment.Top,
+            animationSpec = tween(
+                durationMillis = 260,
+                easing = BondMotionEasing.EmphasizedDecelerate,
+            ),
+        ) + fadeIn(
+            animationSpec = tween(
+                durationMillis = 210,
+                easing = BondMotionEasing.EmphasizedDecelerate,
+            ),
+        ) + slideInVertically(
+            initialOffsetY = { height -> height / 5 },
+            animationSpec = tween(
+                durationMillis = 260,
+                easing = BondMotionEasing.EmphasizedDecelerate,
+            ),
+        ),
     ) {
-        content()
+        Box(Modifier.fillMaxWidth()) { content() }
     }
 }
 

@@ -252,6 +252,7 @@
   "push_domain_invalid": "请输入有效的 HTTPS 域名",
   "push_access_key": "访问密钥",
   "push_access_key_hint": "输入 Cloudflare 中 pwd 的值",
+  "push_access_key_saved_hint": "已保存；留空继续使用",
   "push_access_missing": "未设置，当前仅使用本地定时收信",
   "push_access_missing_short": "未启用",
   "push_access_verifying": "正在验证…",

@@ -25,11 +25,13 @@ internal class PushAccessConfigStore(context: Context) {
     fun read(): PushAccessConfig? {
         val accessKey = credentials.read(ACCESS_KEY_STORAGE_KEY)?.takeIf(String::isNotBlank)
             ?: return null
-        // v1.2.1 stored only the access key. Keep that installation working until the user opens
-        // the new configuration page and explicitly saves an origin.
-        val serviceOrigin = credentials.read(ORIGIN_STORAGE_KEY)
-            ?.let(::normalizeServiceOrigin)
-            ?: LEGACY_SERVICE_ORIGIN
+        val storedOrigin = credentials.read(ORIGIN_STORAGE_KEY)
+        val serviceOrigin = migrateServiceOrigin(storedOrigin)
+        if (normalizeServiceOrigin(storedOrigin.orEmpty()) != serviceOrigin) {
+            // v1.2.1 stored only the access key and v1.2.2 may contain the retired usdit domain.
+            // Reuse the encrypted key while moving both cases to the live endpoint.
+            credentials.save(ORIGIN_STORAGE_KEY, serviceOrigin)
+        }
         return PushAccessConfig(serviceOrigin = serviceOrigin, accessKey = accessKey)
     }
 
@@ -40,6 +42,15 @@ internal class PushAccessConfigStore(context: Context) {
 
     companion object {
         const val LEGACY_SERVICE_ORIGIN = "https://push.usdit.eu.cc"
+        const val CURRENT_SERVICE_ORIGIN = "https://push.maili.eu.cc"
+
+        internal fun migrateServiceOrigin(rawValue: String?): String {
+            val normalized = rawValue?.let(::normalizeServiceOrigin)
+            return when (normalized) {
+                null, LEGACY_SERVICE_ORIGIN -> CURRENT_SERVICE_ORIGIN
+                else -> normalized
+            }
+        }
 
         fun normalizeServiceOrigin(rawValue: String): String? {
             val trimmed = rawValue.trim().trimEnd('/')

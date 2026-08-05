@@ -1175,7 +1175,9 @@ private fun FloatingBottomDock(
             color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
             tonalElevation = 0.dp,
-            shadowElevation = 6.dp,
+            // The border already separates the floating dock. A large physical shadow becomes a
+            // bright rectangular band when the home screen is frozen under the mail transition.
+            shadowElevation = 0.dp,
         ) {
             BoxWithConstraints(
                 modifier = Modifier

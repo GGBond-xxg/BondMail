@@ -26,8 +26,14 @@ internal object FcmRegistrationStore {
 
     @Suppress("DEPRECATION")
     fun register(context: Context) {
+        // Refresh the self-hosted Firebase token and Worker registration on every process start.
+        // Do not make that depend on the default Firebase project's token callback: a custom
+        // deployment must remain repairable when the bundled project is delayed or unavailable.
+        if (PushAccessConfigStore(context).read() != null) {
+            FcmDeviceRegistrationWorker.enqueue(context)
+        }
         FirebaseMessaging.getInstance().token
-            .addOnSuccessListener { token -> save(context, token) }
+            .addOnSuccessListener { token -> storeToken(context, token) }
             .addOnFailureListener { error ->
                 MailLog.w(
                     MailLog.APP,
@@ -38,8 +44,14 @@ internal object FcmRegistrationStore {
     }
 
     fun save(context: Context, token: String) {
+        if (storeToken(context, token) && PushAccessConfigStore(context).read() != null) {
+            FcmDeviceRegistrationWorker.enqueue(context)
+        }
+    }
+
+    private fun storeToken(context: Context, token: String): Boolean {
         val normalized = token.trim()
-        if (normalized.isEmpty()) return
+        if (normalized.isEmpty()) return false
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(TOKEN_KEY, normalized)
@@ -49,7 +61,7 @@ internal object FcmRegistrationStore {
             MailLog.APP,
             "FCM registration ready fingerprint=${fingerprint(normalized)}",
         )
-        FcmDeviceRegistrationWorker.enqueue(context)
+        return true
     }
 
     fun read(context: Context): String? =

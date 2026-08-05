@@ -6,7 +6,7 @@
   "workers_dev": true,
   "routes": [
     {
-      "pattern": "push.usdit.eu.cc",
+      "pattern": "push.maili.eu.cc",
       "custom_domain": true
     }
   ],
