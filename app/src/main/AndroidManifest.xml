@@ -44,6 +44,41 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Identifies BondMail as a complete e-mail application, not only as a mailto:
+                 handler. OEM default-app pickers use APP_EMAIL to find Gmail-like candidates. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.APP_EMAIL" />
+            </intent-filter>
+            <!-- Register BondMail as a real e-mail target. ColorOS and Android derive their
+                 default-mail candidates from apps that can handle mailto: links. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SENDTO" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="mailto" />
+            </intent-filter>
+            <!-- Mail clients also accept arbitrary shared attachments. Using */* matches Gmail's
+                 behaviour and lets document/image apps offer BondMail in their e-mail chooser. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="*/*" />
+            </intent-filter>
         </activity>
 
         <service

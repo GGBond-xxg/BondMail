@@ -124,6 +124,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
+import com.bond.mail.ExternalComposeRequest
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.MessageEntity
@@ -208,6 +209,8 @@ private fun MessageEntity.withLatestListState(row: MessageListRow): MessageEntit
 fun MailApp(
     container: AppContainer,
     initialMessageId: String?,
+    externalComposeRequest: ExternalComposeRequest?,
+    onExternalComposeRequestConsumed: (Long) -> Unit,
     onFirstContentReady: () -> Unit = {},
 ) {
     val loadedSettings by container.settings.settings.collectAsState(initial = null)
@@ -547,6 +550,21 @@ fun MailApp(
             selectedMessage = null
             navigateOnce("detail/${Uri.encode(initialMessageId)}")
         }
+    }
+
+    LaunchedEffect(externalComposeRequest?.requestId) {
+        val request = externalComposeRequest ?: return@LaunchedEffect
+        composeAccountId = homeVm.selectedAccount.value.orEmpty()
+        composeTo = request.to
+        composeCc = request.cc
+        composeBcc = request.bcc
+        composeSubject = request.subject
+        composeBody = request.body
+        composeAttachmentUris = request.attachmentUris
+        composeDraftTaskId = null
+        composeSourceMessageId = null
+        composeVisible = true
+        onExternalComposeRequestConsumed(request.requestId)
     }
 
     fun openBackgroundSettings() {

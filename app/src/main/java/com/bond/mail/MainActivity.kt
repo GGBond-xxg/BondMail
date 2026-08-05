@@ -32,6 +32,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : FragmentActivity() {
     private var initialMessageId by mutableStateOf<String?>(null)
+    private var externalComposeRequest by mutableStateOf<ExternalComposeRequest?>(null)
+    private var externalComposeRequestSequence = 0L
     private var contentInstalled = false
     private var themeRevealController: ThemeRevealController? = null
 
@@ -63,7 +65,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         startupThemeHint?.let { applySystemBarAppearance(resolveDarkTheme(it)) }
-        initialMessageId = intent.getStringExtra("message_id")
+        acceptIntent(intent)
 
         useSystemManagedRefreshRate()
         UiPerformanceGate.onForeground()
@@ -149,6 +151,12 @@ class MainActivity : FragmentActivity() {
                         MailApp(
                             container = container,
                             initialMessageId = initialMessageId,
+                            externalComposeRequest = externalComposeRequest,
+                            onExternalComposeRequestConsumed = { requestId ->
+                                if (externalComposeRequest?.requestId == requestId) {
+                                    externalComposeRequest = null
+                                }
+                            },
                             onFirstContentReady = { firstComposeFrameReady = true },
                         )
                     }
@@ -221,7 +229,28 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        initialMessageId = intent.getStringExtra("message_id")
+        acceptIntent(intent)
         (application as MailApplication).container.notifications.clearNewMailNotifications()
+    }
+
+    private fun acceptIntent(intent: Intent) {
+        initialMessageId = intent.getStringExtra("message_id")
+        ExternalMailIntentParser.parse(
+            intent = intent,
+            requestId = ++externalComposeRequestSequence,
+        )?.let { request ->
+            // Preserve temporary URI grants while the composer and its send worker use attachments.
+            if (intent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION != 0) {
+                request.attachmentUris.forEach { rawUri ->
+                    runCatching {
+                        contentResolver.takePersistableUriPermission(
+                            android.net.Uri.parse(rawUri),
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                        )
+                    }
+                }
+            }
+            externalComposeRequest = request
+        }
     }
 }
