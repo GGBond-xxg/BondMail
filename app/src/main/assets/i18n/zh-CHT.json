@@ -265,7 +265,7 @@
   "push_access_note_short": "僅支援 HTTPS；密鑰加密儲存在本機。",
   "message_notifications_desc": "控制新郵件提醒是否顯示",
   "background_run_settings_note_short": "在系統中允許應用持續在背景執行",
-  "biometric_lock_desc": "開啟應用時驗證指紋或臉部",
+  "biometric_lock_desc": "開啟應用時驗證身分",
   "remote_images_desc": "遠端圖片可能向寄件方暴露你的 IP 位址，建議謹慎自動載入。",
   "about": "關於",
   "about_bondmail": "關於 BondMail",

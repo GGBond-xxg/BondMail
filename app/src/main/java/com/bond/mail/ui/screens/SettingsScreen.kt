@@ -249,13 +249,6 @@ fun SettingsScreen(
         item { SectionTitle(tr("privacy_security")) }
         item {
             SettingsCard {
-                SwitchSettingRow(
-                    title = tr("biometric_lock"),
-                    subtitle = tr("biometric_lock_desc"),
-                    checked = settings.biometricLock,
-                    onChecked = viewModel::biometric,
-                )
-                SettingsDivider()
                 DropdownSettingRow(
                     title = tr("remote_images"),
                     options = RemoteImagePolicy.entries.map { policy ->
@@ -273,6 +266,13 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                )
+                SettingsDivider()
+                SwitchSettingRow(
+                    title = tr("biometric_lock"),
+                    subtitle = tr("biometric_lock_desc"),
+                    checked = settings.biometricLock,
+                    onChecked = viewModel::biometric,
                 )
             }
         }

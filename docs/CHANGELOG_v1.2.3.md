@@ -26,3 +26,10 @@
   fallback when ColorOS delays FCM or periodic WorkManager delivery.
 - The push settings page can change only the Worker domain while leaving the access-key field blank
   to reuse the key already encrypted by Android Keystore.
+
+## App lock and security settings
+
+- The locked screen now owns an opaque theme-aware background and explicit foreground colors, so
+  its title remains readable during both light and dark cold starts.
+- The fingerprint is now a large accessible button that opens the biometric prompt directly.
+- Remote-image privacy controls now appear before the shorter biometric-lock option.

@@ -6,11 +6,14 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -21,6 +24,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bond.mail.ui.i18n.tr
 import androidx.core.content.ContextCompat
@@ -81,13 +86,41 @@ fun BiometricGate(enabled: Boolean, content: @Composable () -> Unit) {
         if (enabled && authenticationAvailable && !unlocked && requestUnlock) prompt()
     }
 
-    if (unlocked) content() else Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(Icons.Default.Fingerprint, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Text(tr("mail_locked"), style = MaterialTheme.typography.titleLarge)
-        Button(onClick = { requestUnlock = true }) { Text(tr("unlock")) }
+    if (unlocked) {
+        content()
+    } else {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(
+                    space = 18.dp,
+                    alignment = Alignment.CenterVertically,
+                ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                FilledTonalIconButton(
+                    onClick = { requestUnlock = true },
+                    modifier = Modifier.size(112.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Fingerprint,
+                        contentDescription = tr("unlock"),
+                        modifier = Modifier.size(64.dp),
+                    )
+                }
+                Text(
+                    text = tr("mail_locked"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }

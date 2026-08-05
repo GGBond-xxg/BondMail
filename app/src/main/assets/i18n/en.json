@@ -265,7 +265,7 @@
   "push_access_note_short": "HTTPS only; the key is encrypted on this device.",
   "message_notifications_desc": "Control whether new-mail alerts are shown",
   "background_run_settings_note_short": "Allow the app to keep running in the background",
-  "biometric_lock_desc": "Verify your fingerprint or face when opening the app",
+  "biometric_lock_desc": "Verify when opening the app",
   "remote_images_desc": "Remote images can expose your IP address to the sender. Load them with care.",
   "about": "About",
   "about_bondmail": "About BondMail",
