@@ -1,5 +1,16 @@
 # BondMail releases
 
+## v1.2.6
+
+- APK: `BondMail-v1.2.6.apk`
+- Package: `com.bond.mail`
+- Version code: `128`
+- Minimum Android version: Android 8.0 (API 26)
+- SHA-256: `EA4CFD18CC1221F3F53FE35F597E9679F0B60AE9466E679EA3838F77FA0A89FC`
+
+Fixes the adaptive launcher icon on Xiaomi/HyperOS so the launcher, splash screen,
+and system app pages share the same correctly scaled artwork.
+
 ## v1.2.5
 
 - APK: `BondMail-v1.2.5.apk`

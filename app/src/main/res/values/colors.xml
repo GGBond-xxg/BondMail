@@ -1,5 +1,5 @@
 <resources>
     <color name="bondmail_launcher_blue">#0375FD</color>
-    <color name="launcher_background">#3F6FAE</color>
+    <color name="launcher_background">#0375FD</color>
     <color name="app_window_background">#F8F9FF</color>
 </resources>
