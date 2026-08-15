@@ -14,8 +14,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 124
-        versionName = "1.2.4"
+        versionCode = 125
+        versionName = "1.2.5"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -103,6 +103,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.materialkolor:material-kolor:3.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     val roomVersion = "2.8.4"

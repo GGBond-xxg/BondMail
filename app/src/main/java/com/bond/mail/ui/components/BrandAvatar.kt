@@ -115,7 +115,18 @@ fun BrandAvatar(
             .border(1.dp, scheme.outlineVariant, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        if (logo != null) {
+        if (logo?.raster != null && monet) {
+            // Embedded JPEG/PNG logos include their own opaque brand background and cannot be
+            // recolored without becoming a solid disk. Use the brand label so these contacts (OSL
+            // in particular) participate in the active Material You palette like vector logos.
+            Text(
+                text = brand.label,
+                color = foreground,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+            )
+        } else if (logo != null) {
             BrandSvg(
                 logo = logo,
                 brandKey = brand.key,

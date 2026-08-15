@@ -206,16 +206,18 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(14.dp))
-        listOf(
+        val libraries = listOf(
             "AndroidX & Jetpack Compose" to "Apache License 2.0",
             "Kotlin & kotlinx.coroutines" to "Apache License 2.0",
+            "MaterialKolor & Material Color Utilities" to "MIT / Apache License 2.0",
             "Microsoft Authentication Library (MSAL)" to "MIT License",
             "jsoup" to "MIT License",
             "Jakarta Mail for Android" to "CDDL 1.1 / GPL 2.0 with Classpath Exception",
             "CircularRevealSwitch (Compose adaptation)" to "MIT License",
             "Simple Icons" to "CC0 1.0",
             "Bootstrap Icons" to "MIT License",
-        ).forEachIndexed { index, (library, license) ->
+        )
+        libraries.forEachIndexed { index, (library, license) ->
             Column(modifier = Modifier.padding(vertical = 9.dp)) {
                 Text(
                     text = library,
@@ -229,7 +231,9 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(top = 3.dp),
                 )
             }
-            if (index < 7) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            if (index < libraries.lastIndex) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
         }
         Text(
             text = tr("open_source_notice"),

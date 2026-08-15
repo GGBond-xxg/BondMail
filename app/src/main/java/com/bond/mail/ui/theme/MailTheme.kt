@@ -19,9 +19,11 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.ThemeMode
+import com.materialkolor.PaletteStyle
+import com.materialkolor.rememberDynamicColorScheme
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF2563EB),
+    primary = Color(0xFFFF6B9D),
     secondary = Color(0xFF4F5F7A),
     tertiary = Color(0xFF6E5A96),
     background = Color(0xFFF5F7FC),
@@ -34,7 +36,7 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFAFC6FF),
+    primary = Color(0xFFFFB0C8),
     secondary = Color(0xFFBBC6DC),
     tertiary = Color(0xFFD8B9FF),
     background = Color(0xFF0F1217),
@@ -120,10 +122,19 @@ fun BondMailTheme(settings: AppSettings, content: @Composable () -> Unit) {
         ThemeMode.DARK -> true
     }
     val context = LocalContext.current
+    val customColors = rememberDynamicColorScheme(
+        seedColor = Color(settings.themeColor.argb),
+        isDark = dark,
+        style = PaletteStyle.TonalSpot,
+    )
     val colors = when {
         settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+        // Turning wallpaper extraction off still keeps the complete Material You tonal system.
+        // Only its seed changes, defaulting to BondMail pink rather than falling back to a fixed
+        // unrelated palette.
+        !settings.dynamicColor -> customColors
         dark -> DarkColors
         else -> LightColors
     }

@@ -603,7 +603,7 @@ fun HomeScreen(
                                         message.contactAddressKey()
                                     ],
                                     density = settings.density,
-                                    monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
+                                    monetBrandIcons = settings.monetBrandIcons,
                                     selected = messageSelected,
                                     selectionMode = inSelectionMode,
                                     shape = itemShape,
@@ -1531,7 +1531,7 @@ private fun SearchContainerOverlay(
                                         message.contactAddressKey()
                                     ],
                                     density = settings.density,
-                                    monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
+                                    monetBrandIcons = settings.monetBrandIcons,
                                     shape = MailContentDefaults.itemShape(index, results.size),
                                     onOpen = { onOpenMessage(message) },
                                     onLongClick = {},

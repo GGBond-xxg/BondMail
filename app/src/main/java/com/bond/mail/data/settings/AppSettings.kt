@@ -12,6 +12,15 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore("bond_mail_settings")
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+enum class ThemeColor(val argb: Long) {
+    PINK(0xFFFF6B9DL),
+    RED(0xFFE8505BL),
+    ORANGE(0xFFF28C28L),
+    GREEN(0xFF2E9D68L),
+    TEAL(0xFF008C95L),
+    BLUE(0xFF3F6FAEL),
+    PURPLE(0xFF7656AFL),
+}
 enum class MailDensity { COMFORTABLE, STANDARD, COMPACT }
 enum class RemoteImagePolicy { ALWAYS, WIFI_ONLY, NEVER }
 enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED }
@@ -19,6 +28,7 @@ enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED }
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
+    val themeColor: ThemeColor = ThemeColor.PINK,
     val density: MailDensity = MailDensity.STANDARD,
     val monetBrandIcons: Boolean = true,
     val syncMinutes: Int = 15,
@@ -37,8 +47,8 @@ class SettingsStore(private val context: Context) {
     private object Keys {
         val theme = stringPreferencesKey("theme")
         val dynamic = booleanPreferencesKey("dynamic")
+        val themeColor = stringPreferencesKey("theme_color")
         val density = stringPreferencesKey("density")
-        val monetBrandIcons = booleanPreferencesKey("monet_brand_icons")
         val sync = intPreferencesKey("sync_minutes")
         val pushAccessState = stringPreferencesKey("push_access_state")
         val notifications = booleanPreferencesKey("notifications")
@@ -52,8 +62,14 @@ class SettingsStore(private val context: Context) {
         AppSettings(
             themeMode = runCatching { ThemeMode.valueOf(p[Keys.theme] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
             dynamicColor = p[Keys.dynamic] ?: true,
+            themeColor = runCatching {
+                ThemeColor.valueOf(p[Keys.themeColor] ?: ThemeColor.PINK.name)
+            }.getOrDefault(ThemeColor.PINK),
             density = runCatching { MailDensity.valueOf(p[Keys.density] ?: MailDensity.STANDARD.name) }.getOrDefault(MailDensity.STANDARD),
-            monetBrandIcons = p[Keys.monetBrandIcons] ?: true,
+            // Brand avatars are part of the active Material color system in both wallpaper and
+            // custom-seed modes. Ignore the legacy preference that coupled them to the wallpaper
+            // switch so upgrading users immediately receive consistent themed icons.
+            monetBrandIcons = true,
             syncMinutes = p[Keys.sync] ?: 15,
             pushAccessState = runCatching {
                 PushAccessState.valueOf(
@@ -83,8 +99,10 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[Keys.theme] = value.name }
     }
     suspend fun setDynamic(value: Boolean) = context.dataStore.edit { it[Keys.dynamic] = value }
+    suspend fun setThemeColor(value: ThemeColor) = context.dataStore.edit {
+        it[Keys.themeColor] = value.name
+    }
     suspend fun setDensity(value: MailDensity) = context.dataStore.edit { it[Keys.density] = value.name }
-    suspend fun setMonetBrandIcons(value: Boolean) = context.dataStore.edit { it[Keys.monetBrandIcons] = value }
     suspend fun setSyncMinutes(value: Int) = context.dataStore.edit { it[Keys.sync] = value }
     suspend fun setPushAccessState(value: PushAccessState) =
         context.dataStore.edit { it[Keys.pushAccessState] = value.name }

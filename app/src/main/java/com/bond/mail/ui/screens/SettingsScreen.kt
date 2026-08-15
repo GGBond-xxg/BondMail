@@ -62,6 +62,7 @@ import com.bond.mail.BuildConfig
 import com.bond.mail.data.settings.MailDensity
 import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
+import com.bond.mail.data.settings.ThemeColor
 import com.bond.mail.data.settings.ThemeMode
 import com.bond.mail.ui.SettingsViewModel
 import com.bond.mail.ui.i18n.SupportedLanguages
@@ -191,6 +192,17 @@ fun SettingsScreen(
                     checked = settings.dynamicColor,
                     onChecked = viewModel::dynamic,
                 )
+                if (!settings.dynamicColor) {
+                    SettingsDivider()
+                    DropdownSettingRow(
+                        title = tr("theme_color"),
+                        options = ThemeColor.entries.map { color ->
+                            color to tr("theme_color_${color.name.lowercase()}")
+                        },
+                        selected = settings.themeColor,
+                        onSelect = viewModel::themeColor,
+                    )
+                }
             }
         }
 

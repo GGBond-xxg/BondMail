@@ -225,6 +225,9 @@ internal object MailWebViewCache {
             senderDomain.endsWith(".apple.com")
         val samsungSender = senderDomain.contains("samsung") ||
             senderIdentity.contains("samsung")
+        val oslSender = senderDomain == "osl.com" ||
+            senderDomain.endsWith(".osl.com") ||
+            senderIdentity.contains("osl global")
         val instagramSender = senderDomain.contains("instagram.com") ||
             senderIdentity.contains("instagram")
         val immigrationSender = senderDomain == "imigrasi.go.id" ||
@@ -280,7 +283,7 @@ internal object MailWebViewCache {
             if (nativeDarkCanvas) {
                 body.addClass("bondmail-native-dark-mail")
             }
-            if (bybitSender || bochkSender || appleSender) {
+            if (bybitSender || bochkSender || appleSender || oslSender) {
                 // This template becomes only partially dark in Android WebView: its canvas turns
                 // black while some panels, brand marks, or inline text keep the light palette.
                 // Preserve the complete authored light message instead of showing a split canvas.

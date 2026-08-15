@@ -313,7 +313,7 @@ fun DetailScreen(
             avatarText = customContactAvatar ?: contactAvatarText(senderName, item.senderAddress),
             customAvatarText = customContactAvatar,
             avatarSvg = avatarSvg,
-            monetBrandIcons = settings.dynamicColor && settings.monetBrandIcons,
+            monetBrandIcons = settings.monetBrandIcons,
             attachments = detailAttachments,
         )
     }

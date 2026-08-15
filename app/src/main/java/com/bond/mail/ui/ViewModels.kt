@@ -28,6 +28,7 @@ import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.MailDensity
 import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
+import com.bond.mail.data.settings.ThemeColor
 import com.bond.mail.data.settings.ThemeMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -741,12 +742,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.repository.startupAccountsSnapshot(),
     )
     fun theme(value: ThemeMode) = viewModelScope.launch { container.settings.setTheme(value) }
-    fun dynamic(value: Boolean) = viewModelScope.launch {
-        container.settings.setDynamic(value)
-        container.settings.setMonetBrandIcons(value)
-    }
+    fun dynamic(value: Boolean) = viewModelScope.launch { container.settings.setDynamic(value) }
+    fun themeColor(value: ThemeColor) = viewModelScope.launch { container.settings.setThemeColor(value) }
     fun density(value: MailDensity) = viewModelScope.launch { container.settings.setDensity(value) }
-    fun monetBrandIcons(value: Boolean) = viewModelScope.launch { container.settings.setMonetBrandIcons(value) }
     fun syncMinutes(value: Int) = viewModelScope.launch {
         container.settings.setSyncMinutes(value)
         container.scheduler.scheduleBackgroundSync(enabled = true, intervalMinutes = value)

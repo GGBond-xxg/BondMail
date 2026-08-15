@@ -407,7 +407,7 @@ fun ContactsScreen(
                                 email = contactEmail,
                                 customText = contactAvatar,
                                 size = 52.dp,
-                                monet = settings.dynamicColor && settings.monetBrandIcons,
+                                monet = settings.monetBrandIcons,
                             )
                             OutlinedTextField(
                                 value = contactAvatar,
@@ -614,7 +614,7 @@ private fun ContactItem(
                 email = email,
                 customText = customAvatarText,
                 size = 46.dp,
-                monet = settings.dynamicColor && settings.monetBrandIcons,
+                monet = settings.monetBrandIcons,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {

@@ -63,3 +63,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## MaterialKolor
+
+BondMail uses `com.materialkolor:material-kolor` to generate a complete Material 3
+tonal color scheme from the user-selected theme seed.
+
+MaterialKolor is distributed under the MIT License. Its Material Color Utilities
+implementation is derived from Google's Apache License 2.0 Material Color Utilities.
+The complete upstream license texts are included in the dependency artifacts; the
+Apache License 2.0 text is also included at `licenses/Apache-2.0.txt`.
