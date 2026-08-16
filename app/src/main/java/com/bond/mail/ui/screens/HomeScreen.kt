@@ -71,7 +71,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -156,6 +155,7 @@ import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondPrimaryButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -320,7 +320,7 @@ fun HomeScreen(
                         ) {
                             Text(tr("welcome_title"), style = MaterialTheme.typography.headlineSmall)
                             Text(tr("welcome_desc"), style = MaterialTheme.typography.bodyMedium)
-                            Button(onClick = onAddAccount) {
+                            BondPrimaryButton(onClick = onAddAccount) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
                                 Text(tr("add_mailbox"))
@@ -1626,7 +1626,7 @@ private fun NotificationPermissionCard(
                 TextButton(onClick = onReject) {
                     Text(tr("notification_permission_reject"))
                 }
-                Button(onClick = onAllow) {
+                BondPrimaryButton(onClick = onAllow) {
                     Text(tr("notification_permission_allow"))
                 }
             }

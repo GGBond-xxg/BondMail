@@ -73,3 +73,11 @@ MaterialKolor is distributed under the MIT License. Its Material Color Utilities
 implementation is derived from Google's Apache License 2.0 Material Color Utilities.
 The complete upstream license texts are included in the dependency artifacts; the
 Apache License 2.0 text is also included at `licenses/Apache-2.0.txt`.
+
+## MIUIX
+
+BondMail uses `top.yukonga.miuix.kmp:miuix` for the optional MIUIX interface
+theme and native MIUIX controls.
+
+MIUIX is distributed under the Apache License, Version 2.0. The full license
+text is included at `licenses/Apache-2.0.txt`.

@@ -30,6 +30,7 @@ import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.data.settings.ThemeColor
 import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.data.settings.UiStyle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -742,6 +743,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         container.repository.startupAccountsSnapshot(),
     )
     fun theme(value: ThemeMode) = viewModelScope.launch { container.settings.setTheme(value) }
+    fun uiStyle(value: UiStyle) = viewModelScope.launch { container.settings.setUiStyle(value) }
     fun dynamic(value: Boolean) = viewModelScope.launch { container.settings.setDynamic(value) }
     fun themeColor(value: ThemeColor) = viewModelScope.launch { container.settings.setThemeColor(value) }
     fun density(value: MailDensity) = viewModelScope.launch { container.settings.setDensity(value) }
@@ -774,7 +776,6 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         )
     }
     fun notifications(value: Boolean) = viewModelScope.launch { container.settings.setNotifications(value) }
-    fun biometric(value: Boolean) = viewModelScope.launch { container.settings.setBiometric(value) }
     fun remoteImages(value: RemoteImagePolicy) = viewModelScope.launch { container.settings.setRemoteImages(value) }
     fun language(value: String) = viewModelScope.launch { container.settings.setLanguage(value) }
     fun renameAccount(id: String, displayName: String) = viewModelScope.launch { container.repository.updateAccountDisplayName(id, displayName) }

@@ -4,16 +4,19 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.performance.UiPerformanceGate
@@ -30,7 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-class MainActivity : FragmentActivity() {
+class MainActivity : ComponentActivity() {
     private var initialMessageId by mutableStateOf<String?>(null)
     private var externalComposeRequest by mutableStateOf<ExternalComposeRequest?>(null)
     private var externalComposeRequestSequence = 0L
@@ -133,6 +136,11 @@ class MainActivity : FragmentActivity() {
         )
         themeRevealController = revealController
         setContent {
+            // This holder lives outside BondMailTheme's Material/MIUIX renderer branches. When the
+            // renderer changes, the current tab, settings scroll position and other saveable UI
+            // state are restored instead of constructing a fresh MailApp on the inbox tab.
+            val appStateHolder = rememberSaveableStateHolder()
+            var selectedMainTab by rememberSaveable { mutableIntStateOf(0) }
             val settings by container.settings.settings.collectAsStateWithLifecycleCompat(initialSettings)
             val darkTheme = when (settings.themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -148,17 +156,21 @@ class MainActivity : FragmentActivity() {
             BondMailTheme(settings) {
                 CompositionLocalProvider(LocalThemeRevealController provides revealController) {
                     JsonStringsProvider(settings.languageCode) {
-                        MailApp(
-                            container = container,
-                            initialMessageId = initialMessageId,
-                            externalComposeRequest = externalComposeRequest,
-                            onExternalComposeRequestConsumed = { requestId ->
-                                if (externalComposeRequest?.requestId == requestId) {
-                                    externalComposeRequest = null
-                                }
-                            },
-                            onFirstContentReady = { firstComposeFrameReady = true },
-                        )
+                        appStateHolder.SaveableStateProvider("mail-app") {
+                            MailApp(
+                                container = container,
+                                initialMessageId = initialMessageId,
+                                externalComposeRequest = externalComposeRequest,
+                                selectedMainTab = selectedMainTab,
+                                onSelectedMainTabChange = { selectedMainTab = it },
+                                onExternalComposeRequestConsumed = { requestId ->
+                                    if (externalComposeRequest?.requestId == requestId) {
+                                        externalComposeRequest = null
+                                    }
+                                },
+                                onFirstContentReady = { firstComposeFrameReady = true },
+                            )
+                        }
                     }
                 }
             }

@@ -65,7 +65,6 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -146,6 +145,7 @@ import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.animateChromeOffset
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondPrimaryButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -1684,7 +1684,7 @@ private fun MailContentFailure(
                     text = tr("mail_content_load_failed"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Button(onClick = onRetry) {
+                BondPrimaryButton(onClick = onRetry) {
                     Text(tr("retry"))
                 }
             }

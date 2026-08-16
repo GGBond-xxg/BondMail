@@ -14,8 +14,9 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 128
-        versionName = "1.2.6"
+        versionCode = 129
+        versionName = "1.2.7"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -92,7 +93,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.fragment:fragment-ktx:1.8.8")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
@@ -104,6 +104,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.materialkolor:material-kolor:3.0.1")
+    // 0.4.7 is the stable MIUIX line built against Compose 1.8.x / Kotlin 2.1.x,
+    // matching this app's current toolchain. Keep MIUIX calls inside ui/theme adapters.
+    implementation("top.yukonga.miuix.kmp:miuix:0.4.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     val roomVersion = "2.8.4"
@@ -114,7 +117,6 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
-    implementation("androidx.biometric:biometric:1.1.0")
 
     // OAuth providers. MSAL owns Microsoft token refresh; Google Identity Services returns
     // short-lived access tokens for Gmail IMAP/SMTP without storing refresh tokens on-device.
@@ -138,4 +140,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.4.0")
 }

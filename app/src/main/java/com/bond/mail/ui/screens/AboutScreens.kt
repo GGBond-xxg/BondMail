@@ -56,10 +56,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bond.mail.BuildConfig
 import com.bond.mail.R
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
+import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.ui.theme.MiuixActionSetting
+import com.bond.mail.ui.theme.MiuixSettingsDivider
 import com.bond.mail.ui.theme.bondSurfaces
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 
 private const val PROJECT_HOME_URL = "https://github.com/GGBond-xxg/BondMail"
 
@@ -76,59 +82,7 @@ fun AboutScreen(
         title = tr("about"),
         onBack = onBack,
     ) {
-        item {
-            Card(
-                shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    MaterialTheme.colorScheme.tertiaryContainer,
-                                ),
-                            ),
-                        )
-                        .padding(horizontal = 24.dp, vertical = 28.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(
-                            painter = painterResource(R.drawable.bondmail_icon_color),
-                            contentDescription = null,
-                            modifier = Modifier.size(88.dp).clip(RoundedCornerShape(26.dp)),
-                        )
-                        Text(
-                            text = "BondMail",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(top = 14.dp),
-                        )
-                        Text(
-                            text = tr("about_tagline"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp),
-                        )
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
-                            modifier = Modifier.padding(top = 16.dp),
-                        ) {
-                            Text(
-                                text = "V${BuildConfig.VERSION_NAME}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        item { AboutHeroCard() }
 
         item {
             AboutCard {
@@ -193,6 +147,79 @@ fun AboutScreen(
                     },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun AboutHeroCard() {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixCard(
+            modifier = Modifier.fillMaxWidth(),
+            insideMargin = PaddingValues(horizontal = 24.dp, vertical = 28.dp),
+        ) {
+            AboutHeroContent()
+        }
+        return
+    }
+
+    Card(
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                        ),
+                    ),
+                )
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            AboutHeroContent()
+        }
+    }
+}
+
+@Composable
+private fun AboutHeroContent() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.bondmail_icon_color),
+            contentDescription = null,
+            modifier = Modifier.size(88.dp).clip(RoundedCornerShape(26.dp)),
+        )
+        Text(
+            text = "BondMail",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+        Text(
+            text = tr("about_tagline"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
+            modifier = Modifier.padding(top = 16.dp),
+        ) {
+            Text(
+                text = "V${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+            )
         }
     }
 }
@@ -334,6 +361,19 @@ private fun LegalPage(
 
 @Composable
 private fun PageTopBar(title: String, onBack: () -> Unit) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixTopAppBar(
+            title = title,
+            largeTitle = title,
+            defaultWindowInsetsPadding = false,
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
+                }
+            },
+        )
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -352,6 +392,14 @@ private fun PageTopBar(title: String, onBack: () -> Unit) {
 
 @Composable
 private fun AboutCard(content: @Composable ColumnScope.() -> Unit) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixCard(
+            modifier = Modifier.fillMaxWidth(),
+            insideMargin = PaddingValues(18.dp),
+            content = content,
+        )
+        return
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(26.dp),
@@ -376,6 +424,15 @@ private fun AboutActionRow(
     external: Boolean = false,
     onClick: () -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixActionSetting(
+            icon = icon,
+            title = title,
+            summary = subtitle,
+            onClick = onClick,
+        )
+        return
+    }
     val pressResetter = rememberBondPressResetter()
     key(pressResetter.epoch) {
         val interactionSource = rememberBondPressInteraction()
@@ -427,6 +484,10 @@ private fun AboutActionRow(
 
 @Composable
 private fun AboutDivider() {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixSettingsDivider()
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,

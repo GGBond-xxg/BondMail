@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -19,8 +21,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.data.settings.UiStyle
 import com.materialkolor.PaletteStyle
-import com.materialkolor.rememberDynamicColorScheme
+import com.materialkolor.dynamicColorScheme
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFFFF6B9D),
@@ -85,6 +88,8 @@ private val FallbackSurfacePalette = BondMailSurfacePalette(
 
 private val LocalBondMailSurfaces = staticCompositionLocalOf { FallbackSurfacePalette }
 
+val LocalUiStyle = staticCompositionLocalOf { UiStyle.MATERIAL3 }
+
 val MaterialTheme.bondSurfaces: BondMailSurfacePalette
     @Composable
     @ReadOnlyComposable
@@ -122,27 +127,73 @@ fun BondMailTheme(settings: AppSettings, content: @Composable () -> Unit) {
         ThemeMode.DARK -> true
     }
     val context = LocalContext.current
-    val customColors = rememberDynamicColorScheme(
-        seedColor = Color(settings.themeColor.argb),
-        isDark = dark,
-        style = PaletteStyle.TonalSpot,
-    )
-    val colors = when {
-        settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val seedColor = Color(settings.themeColor.argb)
+    // MaterialKolor generation is CPU-heavy. Cache both variants by seed so changing only
+    // light/dark mode becomes a reference swap instead of regenerating a complete tonal palette.
+    val customLightColors = remember(seedColor) {
+        dynamicColorScheme(
+            seedColor = seedColor,
+            isDark = false,
+            style = PaletteStyle.TonalSpot,
+        )
+    }
+    val customDarkColors = remember(seedColor) {
+        dynamicColorScheme(
+            seedColor = seedColor,
+            isDark = true,
+            style = PaletteStyle.TonalSpot,
+        )
+    }
+    val wallpaperLightColors = remember(context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicLightColorScheme(context)
+        } else {
+            LightColors
         }
-        // Turning wallpaper extraction off still keeps the complete Material You tonal system.
-        // Only its seed changes, defaulting to BondMail pink rather than falling back to a fixed
-        // unrelated palette.
-        !settings.dynamicColor -> customColors
+    }
+    val wallpaperDarkColors = remember(context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicDarkColorScheme(context)
+        } else {
+            DarkColors
+        }
+    }
+    val materialColors = when {
+        settings.dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (dark) wallpaperDarkColors else wallpaperLightColors
+        }
+        // Turning wallpaper extraction off still keeps the complete Material You tonal
+        // system. Only its seed changes, defaulting to BondMail pink.
+        !settings.dynamicColor -> if (dark) customDarkColors else customLightColors
         dark -> DarkColors
         else -> LightColors
     }
-    val surfaces = buildSurfacePalette(colors)
 
-    CompositionLocalProvider(LocalBondMailSurfaces provides surfaces) {
+    // Keep both framework providers at stable composition positions. Only their values change,
+    // so switching UI style no longer tears down or relocates the entire navigation/page tree.
+    BondMiuixTheme(
+        style = settings.uiStyle,
+        dark = dark,
+        materialColors = materialColors,
+        content = content,
+    )
+}
+
+@Composable
+internal fun BondMaterialTheme(
+    style: UiStyle,
+    colors: ColorScheme,
+    shapes: Shapes = Shapes(),
+    content: @Composable () -> Unit,
+) {
+    val surfaces = buildSurfacePalette(colors)
+    CompositionLocalProvider(
+        LocalBondMailSurfaces provides surfaces,
+        LocalUiStyle provides style,
+    ) {
         MaterialTheme(
             colorScheme = colors,
+            shapes = shapes,
             typography = MaterialTheme.typography,
             content = content,
         )

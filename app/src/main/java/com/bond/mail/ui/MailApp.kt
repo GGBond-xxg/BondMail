@@ -133,7 +133,6 @@ import com.bond.mail.data.model.AuthType
 import com.bond.mail.data.model.UiFailure
 import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.settings.AppSettings
-import com.bond.mail.ui.components.BiometricGate
 import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.i18n.tr
@@ -210,6 +209,8 @@ fun MailApp(
     container: AppContainer,
     initialMessageId: String?,
     externalComposeRequest: ExternalComposeRequest?,
+    selectedMainTab: Int,
+    onSelectedMainTabChange: (Int) -> Unit,
     onExternalComposeRequestConsumed: (Long) -> Unit,
     onFirstContentReady: () -> Unit = {},
 ) {
@@ -583,12 +584,11 @@ fun MailApp(
         }
     }
 
-    BiometricGate(settings.biometricLock) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.bondSurfaces.page,
-        ) {
-            Box(Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.bondSurfaces.page,
+    ) {
+        Box(Modifier.fillMaxSize()) {
                 NavHost(
                     navController = nav,
                     startDestination = MAIN,
@@ -633,6 +633,8 @@ fun MailApp(
                                 homeVm = homeVm,
                                 settingsVm = settingsVm,
                                 settings = settings,
+                                selectedTab = selectedMainTab,
+                                onSelectedTabChange = onSelectedMainTabChange,
                                 notificationPermissionGranted = notificationPermissionGranted,
                                 showPermissionGuide = showPermissionGuide,
                                 onRequestNotificationPermission = ::requestNotificationPermission,
@@ -971,14 +973,14 @@ fun MailApp(
         }
     }
 
-}
-
 @Composable
 private fun MainTabs(
     container: AppContainer,
     homeVm: HomeViewModel,
     settingsVm: SettingsViewModel,
     settings: AppSettings,
+    selectedTab: Int,
+    onSelectedTabChange: (Int) -> Unit,
     notificationPermissionGranted: Boolean,
     showPermissionGuide: Boolean,
     onRequestNotificationPermission: () -> Unit,
@@ -1001,7 +1003,6 @@ private fun MainTabs(
     val scope = rememberCoroutineScope()
     val stateHolder = rememberSaveableStateHolder()
     val motionEnabled = bondMotionEnabled()
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -1009,7 +1010,7 @@ private fun MainTabs(
 
     fun selectTab(target: Int) {
         if (target != selectedTab) {
-            selectedTab = target
+            onSelectedTabChange(target)
             onMainChromeVisibilityChanged(true)
         }
     }
@@ -1167,9 +1168,7 @@ private fun MainTabs(
                 onCompose = { onCompose("") },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer { translationY = dockOffset.toPx() }
-                    .navigationBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .graphicsLayer { translationY = dockOffset.toPx() },
             )
         }
     }
@@ -1183,7 +1182,10 @@ private fun FloatingBottomDock(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {

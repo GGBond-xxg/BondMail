@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,22 +32,22 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -54,8 +55,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.bond.mail.BuildConfig
@@ -64,6 +70,7 @@ import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.data.settings.ThemeColor
 import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.SettingsViewModel
 import com.bond.mail.ui.i18n.SupportedLanguages
 import com.bond.mail.ui.i18n.tr
@@ -75,6 +82,15 @@ import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondSwitch
+import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.ui.theme.MiuixActionSetting
+import com.bond.mail.ui.theme.MiuixDropdownSetting
+import com.bond.mail.ui.theme.MiuixPermissionSetting
+import com.bond.mail.ui.theme.MiuixSectionTitle
+import com.bond.mail.ui.theme.MiuixSettingsCard
+import com.bond.mail.ui.theme.MiuixSettingsDivider
+import com.bond.mail.ui.theme.MiuixSwitchSetting
 
 @Composable
 fun SettingsScreen(
@@ -155,6 +171,18 @@ fun SettingsScreen(
         item {
             SettingsCard {
                 DropdownSettingRow(
+                    title = tr("ui_style"),
+                    options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3).map { style ->
+                        style to when (style) {
+                            UiStyle.MATERIAL3 -> tr("ui_style_material3")
+                            UiStyle.MIUIX -> tr("ui_style_miuix")
+                        }
+                    },
+                    selected = settings.uiStyle,
+                    onSelect = viewModel::uiStyle,
+                )
+                SettingsDivider()
+                DropdownSettingRow(
                     title = tr("list_density"),
                     options = MailDensity.entries.map { density ->
                         density to when (density) {
@@ -185,23 +213,25 @@ fun SettingsScreen(
                         }
                     },
                 )
-                SettingsDivider()
-                SwitchSettingRow(
-                    title = tr("dynamic_color"),
-                    subtitle = tr("dynamic_color_desc"),
-                    checked = settings.dynamicColor,
-                    onChecked = viewModel::dynamic,
-                )
-                if (!settings.dynamicColor) {
+                if (settings.uiStyle == UiStyle.MATERIAL3) {
                     SettingsDivider()
-                    DropdownSettingRow(
-                        title = tr("theme_color"),
-                        options = ThemeColor.entries.map { color ->
-                            color to tr("theme_color_${color.name.lowercase()}")
-                        },
-                        selected = settings.themeColor,
-                        onSelect = viewModel::themeColor,
+                    SwitchSettingRow(
+                        title = tr("dynamic_color"),
+                        subtitle = tr("dynamic_color_desc"),
+                        checked = settings.dynamicColor,
+                        onChecked = viewModel::dynamic,
                     )
+                    if (!settings.dynamicColor) {
+                        SettingsDivider()
+                        DropdownSettingRow(
+                            title = tr("theme_color"),
+                            options = ThemeColor.entries.map { color ->
+                                color to tr("theme_color_${color.name.lowercase()}")
+                            },
+                            selected = settings.themeColor,
+                            onSelect = viewModel::themeColor,
+                        )
+                    }
                 }
             }
         }
@@ -216,12 +246,6 @@ fun SettingsScreen(
                     },
                     selected = settings.syncMinutes,
                     onSelect = viewModel::syncMinutes,
-                )
-                Text(
-                    text = tr("sync_interval_note_short"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
                 )
                 SettingsDivider()
                 SettingsActionRow(
@@ -273,19 +297,6 @@ fun SettingsScreen(
                     selected = settings.remoteImagePolicy,
                     onSelect = viewModel::remoteImages,
                 )
-                Text(
-                    text = tr("remote_images_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                )
-                SettingsDivider()
-                SwitchSettingRow(
-                    title = tr("biometric_lock"),
-                    subtitle = tr("biometric_lock_desc"),
-                    checked = settings.biometricLock,
-                    onChecked = viewModel::biometric,
-                )
             }
         }
 
@@ -305,6 +316,10 @@ fun SettingsScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixSectionTitle(text)
+        return
+    }
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
@@ -316,6 +331,10 @@ private fun SectionTitle(text: String) {
 
 @Composable
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixSettingsCard(content)
+        return
+    }
     Card(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
@@ -335,14 +354,42 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun <T> DropdownSettingRow(
     title: String,
+    subtitle: String? = null,
     options: List<Pair<T, String>>,
     selected: T,
     onSelect: (T) -> Unit,
     onSelectAt: ((T, Offset) -> Unit)? = null,
 ) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        val selectedIndex = options.indexOfFirst { it.first == selected }.coerceAtLeast(0)
+        MiuixDropdownSetting(
+            title = title,
+            summary = subtitle,
+            labels = options.map { it.second },
+            selectedIndex = selectedIndex,
+            onSelectedIndexChange = { index, centerInWindow ->
+                val value = options[index].first
+                if (value != selected) {
+                    onSelectAt?.invoke(value, centerInWindow) ?: onSelect(value)
+                }
+            },
+        )
+        return
+    }
     var expanded by remember { mutableStateOf(false) }
     var selectorCenterInWindow by remember { mutableStateOf(Offset.Unspecified) }
+    var selectorSize by remember { mutableStateOf(IntSize.Zero) }
+    var pendingSelection by remember { mutableStateOf<Pair<T, Offset>?>(null) }
     val selectedLabel = options.firstOrNull { it.first == selected }?.second.orEmpty()
+    val density = LocalDensity.current
+
+    LaunchedEffect(pendingSelection) {
+        val (value, origin) = pendingSelection ?: return@LaunchedEffect
+        // Draw the closed menu before a theme/style change repaints the root UI.
+        withFrameNanos { }
+        pendingSelection = null
+        onSelectAt?.invoke(value, origin) ?: onSelect(value)
+    }
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(durationMillis = BondMotionDuration.EffectShort),
@@ -354,19 +401,29 @@ private fun <T> DropdownSettingRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
         Box(
             modifier =
                 Modifier
                     .widthIn(min = 154.dp, max = 210.dp)
-                    .onGloballyPositioned { coordinates ->
-                        selectorCenterInWindow = coordinates.boundsInWindow().center
-                    },
+                     .onGloballyPositioned { coordinates ->
+                         selectorCenterInWindow = coordinates.boundsInWindow().center
+                         selectorSize = coordinates.size
+                     },
         ) {
             Surface(
                 onClick = { expanded = true },
@@ -411,57 +468,71 @@ private fun <T> DropdownSettingRow(
                     )
                 }
             }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.widthIn(min = 190.dp, max = 230.dp),
-                shape = RoundedCornerShape(18.dp),
-                containerColor = MaterialTheme.bondSurfaces.popup,
-                tonalElevation = 6.dp,
-                shadowElevation = 10.dp,
-                border =
-                    BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.outlineVariant,
+            if (expanded) {
+                val popupWidth = with(density) {
+                    selectorSize.width.toDp().coerceIn(190.dp, 230.dp)
+                }
+                Popup(
+                    alignment = Alignment.TopStart,
+                    offset = IntOffset(
+                        x = 0,
+                        y = selectorSize.height + with(density) { 4.dp.roundToPx() },
                     ),
-            ) {
-                options.forEach { (value, label) ->
-                    val isSelected = value == selected
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = label,
-                                fontWeight =
-                                    if (isSelected) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
+                    onDismissRequest = { expanded = false },
+                    properties = PopupProperties(focusable = true),
+                ) {
+                    Surface(
+                        modifier = Modifier.width(popupWidth),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.bondSurfaces.popup,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 10.dp,
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                        ),
+                    ) {
+                        // Material DropdownMenu always inserts an 8dp vertical margin. This custom
+                        // anchored surface keeps Material ripple but removes those empty bands.
+                        Column {
+                            options.forEach { (value, label) ->
+                                val isSelected = value == selected
+                                DropdownMenuItem(
+                                    modifier = Modifier.heightIn(min = 52.dp),
+                                    text = {
+                                        Text(
+                                            text = label,
+                                            fontWeight = if (isSelected) {
+                                                FontWeight.SemiBold
+                                            } else {
+                                                FontWeight.Normal
+                                            },
+                                            color = if (isSelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                        )
                                     },
-                                color =
-                                    if (isSelected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
+                                    trailingIcon = {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
                                     },
-                            )
-                        },
-                        trailingIcon = {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    onClick = {
+                                        expanded = false
+                                        if (value != selected) {
+                                            pendingSelection = value to selectorCenterInWindow
+                                        }
+                                    },
                                 )
                             }
-                        },
-                        onClick = {
-                            expanded = false
-                            if (value != selected) {
-                                onSelectAt?.invoke(value, selectorCenterInWindow)
-                                    ?: onSelect(value)
-                            }
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -475,6 +546,15 @@ private fun SwitchSettingRow(
     checked: Boolean,
     onChecked: (Boolean) -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixSwitchSetting(
+            title = title,
+            summary = subtitle,
+            checked = checked,
+            onCheckedChange = onChecked,
+        )
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -488,7 +568,7 @@ private fun SwitchSettingRow(
                 modifier = Modifier.padding(top = 2.dp, end = 12.dp),
             )
         }
-        Switch(checked = checked, onCheckedChange = onChecked)
+        BondSwitch(checked = checked, onCheckedChange = onChecked)
     }
 }
 
@@ -500,6 +580,17 @@ private fun PermissionStatusRow(
     granted: Boolean,
     onAuthorize: () -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixPermissionSetting(
+            icon = icon,
+            title = title,
+            summary = subtitle,
+            status = if (granted) tr("permission_allowed") else tr("permission_go_authorize"),
+            actionRequired = !granted,
+            onClick = onAuthorize,
+        )
+        return
+    }
     SettingsRowShell(icon = icon, title = title, subtitle = subtitle) {
         if (granted) {
             Surface(
@@ -528,6 +619,15 @@ private fun SettingsActionRow(
     subtitle: String,
     onClick: () -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixActionSetting(
+            icon = icon,
+            title = title,
+            summary = subtitle,
+            onClick = onClick,
+        )
+        return
+    }
     val pressResetter = rememberBondPressResetter()
     key(pressResetter.epoch) {
         val interactionSource = rememberBondPressInteraction()
@@ -592,6 +692,10 @@ private fun SettingsRowShell(
 
 @Composable
 private fun SettingsDivider() {
+    if (LocalUiStyle.current == UiStyle.MIUIX) {
+        MiuixSettingsDivider()
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,

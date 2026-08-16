@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.ui.SettingsViewModel
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondPrimaryButton
 
 @Composable
 fun PushSettingsScreen(
@@ -176,7 +176,7 @@ fun PushSettingsScreen(
                             fontWeight = FontWeight.Medium,
                             color = statusColor,
                         )
-                        Button(
+                        BondPrimaryButton(
                             onClick = {
                                 val normalizedOrigin =
                                     PushAccessConfigStore.normalizeServiceOrigin(serviceOrigin)

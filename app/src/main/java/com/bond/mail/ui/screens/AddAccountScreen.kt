@@ -38,7 +38,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -92,6 +91,7 @@ import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.ProviderAvatar
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondPrimaryButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -309,7 +309,7 @@ fun AccountCredentialsScreen(
                 }
 
                 item {
-                    Button(
+                    BondPrimaryButton(
                         onClick = {
                             val host = activity
                             if (host == null) {
@@ -433,7 +433,7 @@ fun AccountCredentialsScreen(
                                 ) {
                                     Text(tr("oauth_api_select_file"))
                                 }
-                                Button(
+                                BondPrimaryButton(
                                     onClick = { viewModel.saveOAuthConfiguration(apiJson) },
                                     enabled = !busy && apiJson.isNotBlank(),
                                     modifier = Modifier.weight(1f),
@@ -655,7 +655,7 @@ fun AccountCredentialsScreen(
                 }
 
                 item {
-                    Button(
+                    BondPrimaryButton(
                         onClick = viewModel::save,
                         enabled = !busy &&
                             username.isNotBlank() &&
@@ -768,7 +768,7 @@ private fun <T> MailOptionSelector(
         ) {
             options.forEach { option ->
                 if (option == selected) {
-                    Button(
+                    BondPrimaryButton(
                         onClick = { onSelected(option) },
                         enabled = enabled,
                         modifier = Modifier.weight(1f),

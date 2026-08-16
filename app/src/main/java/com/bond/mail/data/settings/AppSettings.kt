@@ -12,6 +12,18 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore("bond_mail_settings")
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+enum class UiStyle(val storageValue: String) {
+    MATERIAL3("material3"),
+    MIUIX("miuix"),
+    ;
+
+    companion object {
+        fun fromStorageValue(value: String?): UiStyle =
+            entries.firstOrNull { it.storageValue == value } ?: MATERIAL3
+    }
+}
+
 enum class ThemeColor(val argb: Long) {
     PINK(0xFFFF6B9DL),
     RED(0xFFE8505BL),
@@ -26,6 +38,7 @@ enum class RemoteImagePolicy { ALWAYS, WIFI_ONLY, NEVER }
 enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED }
 
 data class AppSettings(
+    val uiStyle: UiStyle = UiStyle.MATERIAL3,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val themeColor: ThemeColor = ThemeColor.PINK,
@@ -35,7 +48,6 @@ data class AppSettings(
     val pushAccessState: PushAccessState = PushAccessState.MISSING,
     val notifications: Boolean = true,
     val notificationPermissionPromptDismissed: Boolean = false,
-    val biometricLock: Boolean = false,
     val remoteImagePolicy: RemoteImagePolicy = RemoteImagePolicy.WIFI_ONLY,
     val languageCode: String = "system",
 )
@@ -45,6 +57,7 @@ class SettingsStore(private val context: Context) {
         context.getSharedPreferences("bond_mail_startup_hints", Context.MODE_PRIVATE)
 
     private object Keys {
+        val uiStyle = stringPreferencesKey("ui_style")
         val theme = stringPreferencesKey("theme")
         val dynamic = booleanPreferencesKey("dynamic")
         val themeColor = stringPreferencesKey("theme_color")
@@ -53,13 +66,13 @@ class SettingsStore(private val context: Context) {
         val pushAccessState = stringPreferencesKey("push_access_state")
         val notifications = booleanPreferencesKey("notifications")
         val notificationPermissionPromptDismissed = booleanPreferencesKey("notification_permission_prompt_dismissed")
-        val biometric = booleanPreferencesKey("biometric")
         val remoteImages = stringPreferencesKey("remote_images")
         val language = stringPreferencesKey("language")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
+            uiStyle = UiStyle.fromStorageValue(p[Keys.uiStyle]),
             themeMode = runCatching { ThemeMode.valueOf(p[Keys.theme] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
             dynamicColor = p[Keys.dynamic] ?: true,
             themeColor = runCatching {
@@ -78,7 +91,6 @@ class SettingsStore(private val context: Context) {
             }.getOrDefault(PushAccessState.MISSING),
             notifications = p[Keys.notifications] ?: true,
             notificationPermissionPromptDismissed = p[Keys.notificationPermissionPromptDismissed] ?: false,
-            biometricLock = p[Keys.biometric] ?: false,
             remoteImagePolicy = runCatching { RemoteImagePolicy.valueOf(p[Keys.remoteImages] ?: RemoteImagePolicy.WIFI_ONLY.name) }.getOrDefault(RemoteImagePolicy.WIFI_ONLY),
             languageCode = p[Keys.language] ?: "system",
         )
@@ -98,6 +110,9 @@ class SettingsStore(private val context: Context) {
         rememberStartupTheme(value)
         context.dataStore.edit { it[Keys.theme] = value.name }
     }
+    suspend fun setUiStyle(value: UiStyle) = context.dataStore.edit {
+        it[Keys.uiStyle] = value.storageValue
+    }
     suspend fun setDynamic(value: Boolean) = context.dataStore.edit { it[Keys.dynamic] = value }
     suspend fun setThemeColor(value: ThemeColor) = context.dataStore.edit {
         it[Keys.themeColor] = value.name
@@ -110,7 +125,6 @@ class SettingsStore(private val context: Context) {
     suspend fun setNotificationPermissionPromptDismissed(value: Boolean) = context.dataStore.edit {
         it[Keys.notificationPermissionPromptDismissed] = value
     }
-    suspend fun setBiometric(value: Boolean) = context.dataStore.edit { it[Keys.biometric] = value }
     suspend fun setRemoteImages(value: RemoteImagePolicy) = context.dataStore.edit { it[Keys.remoteImages] = value.name }
     suspend fun setLanguage(value: String) = context.dataStore.edit { it[Keys.language] = value }
 }

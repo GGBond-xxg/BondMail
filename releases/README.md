@@ -1,5 +1,16 @@
 # BondMail releases
 
+## v1.2.7
+
+- APK: `BondMail-v1.2.7.apk`
+- Package: `com.bond.mail`
+- Version code: `129`
+- Minimum Android version: Android 8.0 (API 26)
+- SHA-256: `F5AEFA4317BFD3C334F0E9D91647DA574FE050BC76994163B1C1514F7ADA769A`
+
+Adds switchable Material 3 and MIUIX interface styles, polishes MIUIX settings interactions,
+keeps Material 3 bottom navigation in both styles, and removes the retired fingerprint lock.
+
 ## v1.2.6
 
 - APK: `BondMail-v1.2.6.apk`

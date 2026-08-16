@@ -8,7 +8,7 @@ import androidx.core.net.MailTo
  * A one-shot request from another app to write an e-mail.
  *
  * Keeping this independent from the navigation state lets a cold-start request survive startup
- * preload and the biometric gate, while [requestId] makes subsequent singleTop intents observable.
+ * preload, while [requestId] makes subsequent singleTop intents observable.
  */
 data class ExternalComposeRequest(
     val requestId: Long,

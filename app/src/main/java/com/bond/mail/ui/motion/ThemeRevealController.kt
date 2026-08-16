@@ -3,6 +3,9 @@ package com.bond.mail.ui.motion
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
 import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.ViewGroup
@@ -11,13 +14,14 @@ import android.view.animation.PathInterpolator
 import android.widget.ImageView
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.geometry.Offset
-import androidx.core.view.drawToBitmap
 import com.bond.mail.data.settings.ThemeMode
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import kotlin.math.hypot
 
 /**
@@ -36,8 +40,10 @@ class ThemeRevealController(
     private var pendingTarget: ThemeMode? = null
     private var themeApplied = CompletableDeferred<Unit>()
     private var overlay: ImageView? = null
+    private var overlayBitmap: Bitmap? = null
     private var contentView: View? = null
     private var revealRunning = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     fun switchTo(target: ThemeMode, originInWindow: Offset, animationsEnabled: Boolean) {
         if (animationJob?.isActive == true || revealRunning) return
@@ -54,8 +60,10 @@ class ThemeRevealController(
                 return@launch
             }
 
-            val screenshot = runCatching { decor.rootView.drawToBitmap(Bitmap.Config.ARGB_8888) }
-                .getOrNull()
+            // View.drawToBitmap renders the entire Compose hierarchy synchronously on the main
+            // thread and caused a visible pause before the reveal. PixelCopy performs the capture
+            // through the window compositor and resumes this coroutine when the frame is ready.
+            val screenshot = captureWindow(decor.width, decor.height)
             if (screenshot == null) {
                 applyTheme(target)
                 return@launch
@@ -77,6 +85,7 @@ class ThemeRevealController(
                 ),
             )
             overlay = oldThemeLayer
+            overlayBitmap = screenshot
             contentView = content
             content.visibility = View.INVISIBLE
             pendingTarget = target
@@ -142,13 +151,49 @@ class ThemeRevealController(
         clearLayers()
     }
 
+    private suspend fun captureWindow(width: Int, height: Int): Bitmap? {
+        if (width <= 0 || height <= 0) return null
+        return suspendCancellableCoroutine { continuation ->
+            val bitmap = runCatching {
+                Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            }.getOrElse {
+                continuation.resume(null)
+                return@suspendCancellableCoroutine
+            }
+            runCatching {
+                PixelCopy.request(
+                    window,
+                    bitmap,
+                    { result ->
+                        if (continuation.isActive) {
+                            continuation.resume(
+                                if (result == PixelCopy.SUCCESS) bitmap else null,
+                            )
+                        } else {
+                            bitmap.recycle()
+                        }
+                        if (result != PixelCopy.SUCCESS && !bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                    },
+                    mainHandler,
+                )
+            }.onFailure {
+                if (!bitmap.isRecycled) bitmap.recycle()
+                if (continuation.isActive) continuation.resume(null)
+            }
+        }
+    }
+
     private fun clearLayers() {
         contentView?.visibility = View.VISIBLE
         overlay?.let { image ->
             (image.parent as? ViewGroup)?.removeView(image)
             image.setImageDrawable(null)
         }
+        overlayBitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
         overlay = null
+        overlayBitmap = null
         contentView = null
         revealRunning = false
     }
