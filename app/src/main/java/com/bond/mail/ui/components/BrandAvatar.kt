@@ -1,8 +1,13 @@
 package com.bond.mail.ui.components
 
 import android.content.Context
+import android.graphics.Matrix as AndroidMatrix
+import android.graphics.Paint
+import android.graphics.Path as AndroidPath
 import android.graphics.BitmapFactory
+import android.graphics.RectF
 import android.util.Base64
+import android.util.Xml
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,10 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
 import com.bond.mail.data.mail.BrandMatcher
+import java.io.StringReader
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.xmlpull.v1.XmlPullParser
 
 data class BrandAvatarPalette(
     val background: Color,
@@ -266,6 +273,7 @@ private val DARK_FOREGROUND_BRANDS = setOf(
     "wise",
     "bitget",
     "trae",
+    "fliggy",
 )
 
 private data class ContactLogo(
@@ -274,8 +282,7 @@ private data class ContactLogo(
     val contentWidth: Float,
     val contentHeight: Float,
     val paths: List<Path>,
-    val pathData: List<String>,
-    val evenOddPaths: List<Boolean>,
+    val markupElements: List<String>,
     val raster: ImageBitmap? = null,
 )
 
@@ -286,16 +293,8 @@ internal fun contactLogoSvgMarkup(
 ): String? {
     val brand = BrandMatcher.match(senderName, senderAddress)
     val logo = ContactLogoStore.load(context, brand.key, senderAddress) ?: return null
-    if (logo.pathData.isEmpty()) return null
-    val paths = logo.pathData.mapIndexed { index, data ->
-        val fillRule = if (logo.evenOddPaths.getOrElse(index) { false }) {
-            """ fill-rule="evenodd""""
-        } else {
-            ""
-        }
-        """<path$fillRule d="${data.replace("&", "&amp;").replace("\"", "&quot;")}"/>"""
-    }.joinToString("")
-    return """<svg viewBox="${logo.contentLeft} ${logo.contentTop} ${logo.contentWidth} ${logo.contentHeight}" aria-hidden="true">$paths</svg>"""
+    if (logo.markupElements.isEmpty()) return null
+    return """<svg viewBox="${logo.contentLeft} ${logo.contentTop} ${logo.contentWidth} ${logo.contentHeight}" aria-hidden="true">${logo.markupElements.joinToString("")}</svg>"""
 }
 
 /**
@@ -311,10 +310,6 @@ private object ContactLogoStore {
     private val viewBoxRegex = Regex(
         """viewBox\s*=\s*["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*["']""",
         RegexOption.IGNORE_CASE,
-    )
-    private val pathRegex = Regex(
-        """<path\b[^>]*\bd\s*=\s*(["'])(.*?)\1""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
     )
     private val widthRegex = Regex("""\bwidth\s*=\s*["']\s*([\d.]+)""", RegexOption.IGNORE_CASE)
     private val heightRegex = Regex("""\bheight\s*=\s*["']\s*([\d.]+)""", RegexOption.IGNORE_CASE)
@@ -359,18 +354,8 @@ private object ContactLogoStore {
         val height = viewBox?.groupValues?.getOrNull(2)?.toFloatOrNull()
             ?: heightRegex.find(svg)?.groupValues?.getOrNull(1)?.toFloatOrNull()
             ?: 24f
-        val parsed = pathRegex.findAll(svg)
-            .mapNotNull { match ->
-                val data = match.groupValues[2]
-                val evenOdd = FILL_RULE_EVEN_ODD.containsMatchIn(match.value)
-                PathParser.createPathFromPathData(data)?.asComposePath()?.let { path ->
-                    if (evenOdd) path.fillType = PathFillType.EvenOdd
-                    Triple(data, path, evenOdd)
-                }
-            }
-            .toList()
-        return parsed.takeIf(List<Triple<String, Path, Boolean>>::isNotEmpty)?.let { triples ->
-            val bounds = triples.map { it.second.getBounds() }
+        return parseVector(svg)?.let { parsed ->
+            val bounds = parsed.map { it.path.getBounds() }
             val left = bounds.minOfOrNull { it.left } ?: 0f
             val top = bounds.minOfOrNull { it.top } ?: 0f
             val right = bounds.maxOfOrNull { it.right } ?: width
@@ -380,9 +365,8 @@ private object ContactLogoStore {
                 contentTop = top,
                 contentWidth = (right - left).takeIf { it > 0f } ?: width,
                 contentHeight = (bottom - top).takeIf { it > 0f } ?: height,
-                paths = triples.map { it.second },
-                pathData = triples.map { it.first },
-                evenOddPaths = triples.map { it.third },
+                paths = parsed.map { it.path },
+                markupElements = parsed.map { it.markup },
                 raster = null,
             )
         } ?: embeddedImageRegex.find(svg)?.groupValues?.getOrNull(1)
@@ -400,12 +384,277 @@ private object ContactLogoStore {
                     contentWidth = width,
                     contentHeight = height,
                     paths = emptyList(),
-                    pathData = emptyList(),
-                    evenOddPaths = emptyList(),
+                    markupElements = emptyList(),
                     raster = image,
                 )
             }
     }
+
+    private data class ParsedShape(
+        val path: Path,
+        val markup: String,
+    )
+
+    private fun parseVector(svg: String): List<ParsedShape>? = runCatching {
+        val parser = Xml.newPullParser().apply {
+            setInput(StringReader(svg))
+        }
+        val matrices = mutableMapOf(0 to AndroidMatrix())
+        val shapes = mutableListOf<ParsedShape>()
+        var ignoredDepth = -1
+        var event = parser.eventType
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> {
+                    val depth = parser.depth
+                    val tag = parser.name.substringAfter(':').lowercase()
+                    if (ignoredDepth < 0) {
+                        val shouldIgnore = tag in IGNORED_SVG_CONTAINERS ||
+                            parser.attribute("mask")?.isNotBlank() == true
+                        if (shouldIgnore) {
+                            ignoredDepth = depth
+                        } else {
+                            val combined = AndroidMatrix(matrices[depth - 1] ?: AndroidMatrix())
+                            parser.attribute("transform")
+                                ?.takeIf(String::isNotBlank)
+                                ?.let(::parseTransform)
+                                ?.let(combined::preConcat)
+                            matrices[depth] = combined
+                            parseShape(parser, tag, combined)?.let(shapes::add)
+                        }
+                    }
+                }
+
+                XmlPullParser.END_TAG -> {
+                    val depth = parser.depth
+                    matrices.remove(depth)
+                    if (ignoredDepth == depth) ignoredDepth = -1
+                }
+            }
+            event = parser.next()
+        }
+        shapes.takeIf(List<ParsedShape>::isNotEmpty)
+    }.getOrNull()
+
+    private fun parseShape(
+        parser: XmlPullParser,
+        tag: String,
+        transform: AndroidMatrix,
+    ): ParsedShape? {
+        val source = when (tag) {
+            "path" -> parser.attribute("d")
+                ?.takeIf(String::isNotBlank)
+                ?.let(PathParser::createPathFromPathData)
+
+            "circle" -> {
+                val cx = parser.numberAttribute("cx") ?: return null
+                val cy = parser.numberAttribute("cy") ?: return null
+                val radius = parser.numberAttribute("r") ?: return null
+                AndroidPath().apply {
+                    addCircle(cx, cy, radius, AndroidPath.Direction.CW)
+                }
+            }
+
+            "ellipse" -> {
+                val cx = parser.numberAttribute("cx") ?: return null
+                val cy = parser.numberAttribute("cy") ?: return null
+                val rx = parser.numberAttribute("rx") ?: return null
+                val ry = parser.numberAttribute("ry") ?: return null
+                AndroidPath().apply {
+                    addOval(RectF(cx - rx, cy - ry, cx + rx, cy + ry), AndroidPath.Direction.CW)
+                }
+            }
+
+            "rect" -> {
+                val x = parser.numberAttribute("x") ?: 0f
+                val y = parser.numberAttribute("y") ?: 0f
+                val width = parser.numberAttribute("width") ?: return null
+                val height = parser.numberAttribute("height") ?: return null
+                val rx = parser.numberAttribute("rx") ?: 0f
+                val ry = parser.numberAttribute("ry") ?: rx
+                AndroidPath().apply {
+                    val bounds = RectF(x, y, x + width, y + height)
+                    if (rx > 0f || ry > 0f) addRoundRect(bounds, rx, ry, AndroidPath.Direction.CW)
+                    else addRect(bounds, AndroidPath.Direction.CW)
+                }
+            }
+
+            "polygon" -> parsePolygon(parser.attribute("points"))
+            else -> null
+        } ?: return null
+
+        val fillRule = parser.styledAttribute("fill-rule")
+        if (fillRule.equals("evenodd", ignoreCase = true)) {
+            source.fillType = AndroidPath.FillType.EVEN_ODD
+        }
+        val fill = parser.styledAttribute("fill")
+        val stroke = parser.styledAttribute("stroke")
+        val strokeOnly = fill.equals("none", ignoreCase = true) &&
+            !stroke.isNullOrBlank() && !stroke.equals("none", ignoreCase = true)
+        val drawablePath = if (strokeOnly) {
+            val outlined = AndroidPath()
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = parser.numberAttribute("stroke-width") ?: 1f
+                strokeCap = when (parser.styledAttribute("stroke-linecap")?.lowercase()) {
+                    "round" -> Paint.Cap.ROUND
+                    "square" -> Paint.Cap.SQUARE
+                    else -> Paint.Cap.BUTT
+                }
+                strokeJoin = when (parser.styledAttribute("stroke-linejoin")?.lowercase()) {
+                    "round" -> Paint.Join.ROUND
+                    "bevel" -> Paint.Join.BEVEL
+                    else -> Paint.Join.MITER
+                }
+            }.getFillPath(source, outlined)
+            outlined
+        } else {
+            source
+        }
+        drawablePath.transform(transform)
+        val composePath = drawablePath.asComposePath().apply {
+            if (fillRule.equals("evenodd", ignoreCase = true)) fillType = PathFillType.EvenOdd
+        }
+        return ParsedShape(
+            path = composePath,
+            markup = shapeMarkup(parser, tag, transform, strokeOnly),
+        )
+    }
+
+    private fun parsePolygon(points: String?): AndroidPath? {
+        val values = points?.let(NUMBER_REGEX::findAll)
+            ?.mapNotNull { it.value.toFloatOrNull() }
+            ?.toList()
+            .orEmpty()
+        if (values.size < 6 || values.size % 2 != 0) return null
+        return AndroidPath().apply {
+            moveTo(values[0], values[1])
+            var index = 2
+            while (index < values.size) {
+                lineTo(values[index], values[index + 1])
+                index += 2
+            }
+            close()
+        }
+    }
+
+    private fun shapeMarkup(
+        parser: XmlPullParser,
+        tag: String,
+        transform: AndroidMatrix,
+        strokeOnly: Boolean,
+    ): String {
+        val geometryAttributes = when (tag) {
+            "path" -> listOf("d")
+            "circle" -> listOf("cx", "cy", "r")
+            "ellipse" -> listOf("cx", "cy", "rx", "ry")
+            "rect" -> listOf("x", "y", "width", "height", "rx", "ry")
+            "polygon" -> listOf("points")
+            else -> emptyList()
+        }
+        val geometry = geometryAttributes.mapNotNull { name ->
+            parser.attribute(name)?.let { value -> " $name=\"${escapeXml(value)}\"" }
+        }.joinToString("")
+        val fillRule = parser.styledAttribute("fill-rule")
+            ?.takeIf { it.equals("evenodd", ignoreCase = true) }
+            ?.let { " fill-rule=\"evenodd\"" }
+            .orEmpty()
+        val paint = if (strokeOnly) {
+            val width = parser.numberAttribute("stroke-width") ?: 1f
+            val cap = parser.styledAttribute("stroke-linecap")?.let(::escapeXml).orEmpty()
+            val join = parser.styledAttribute("stroke-linejoin")?.let(::escapeXml).orEmpty()
+            buildString {
+                append(" data-bondmail-stroke=\"true\" fill=\"none\" stroke=\"currentColor\"")
+                append(" stroke-width=\"").append(width).append('\"')
+                if (cap.isNotBlank()) append(" stroke-linecap=\"").append(cap).append('\"')
+                if (join.isNotBlank()) append(" stroke-linejoin=\"").append(join).append('\"')
+            }
+        } else {
+            " fill=\"currentColor\""
+        }
+        return "<$tag$geometry$fillRule$paint transform=\"${transform.toSvgMatrix()}\"/>"
+    }
+
+    private fun parseTransform(raw: String): AndroidMatrix {
+        val result = AndroidMatrix()
+        TRANSFORM_REGEX.findAll(raw).forEach { match ->
+            val values = NUMBER_REGEX.findAll(match.groupValues[2])
+                .mapNotNull { it.value.toFloatOrNull() }
+                .toList()
+            val operation = AndroidMatrix()
+            when (match.groupValues[1].lowercase()) {
+                "matrix" -> if (values.size >= 6) {
+                    operation.setValues(
+                        floatArrayOf(
+                            values[0], values[2], values[4],
+                            values[1], values[3], values[5],
+                            0f, 0f, 1f,
+                        ),
+                    )
+                }
+
+                "translate" -> if (values.isNotEmpty()) {
+                    operation.setTranslate(values[0], values.getOrElse(1) { 0f })
+                }
+
+                "scale" -> if (values.isNotEmpty()) {
+                    operation.setScale(values[0], values.getOrElse(1) { values[0] })
+                }
+
+                "rotate" -> if (values.isNotEmpty()) {
+                    if (values.size >= 3) operation.setRotate(values[0], values[1], values[2])
+                    else operation.setRotate(values[0])
+                }
+
+                "skewx" -> if (values.isNotEmpty()) {
+                    operation.setSkew(kotlin.math.tan(Math.toRadians(values[0].toDouble())).toFloat(), 0f)
+                }
+
+                "skewy" -> if (values.isNotEmpty()) {
+                    operation.setSkew(0f, kotlin.math.tan(Math.toRadians(values[0].toDouble())).toFloat())
+                }
+
+                else -> return@forEach
+            }
+            result.preConcat(operation)
+        }
+        return result
+    }
+
+    private fun AndroidMatrix.toSvgMatrix(): String {
+        val values = FloatArray(9)
+        getValues(values)
+        return "matrix(${values[0]} ${values[3]} ${values[1]} ${values[4]} ${values[2]} ${values[5]})"
+    }
+
+    private fun XmlPullParser.attribute(name: String): String? {
+        for (index in 0 until attributeCount) {
+            if (getAttributeName(index).substringAfter(':').equals(name, ignoreCase = true)) {
+                return getAttributeValue(index)
+            }
+        }
+        return null
+    }
+
+    private fun XmlPullParser.styledAttribute(name: String): String? =
+        attribute(name) ?: attribute("style")
+            ?.split(';')
+            ?.mapNotNull { declaration ->
+                val separator = declaration.indexOf(':')
+                if (separator <= 0) null
+                else declaration.substring(0, separator).trim() to declaration.substring(separator + 1).trim()
+            }
+            ?.firstOrNull { it.first.equals(name, ignoreCase = true) }
+            ?.second
+
+    private fun XmlPullParser.numberAttribute(name: String): Float? =
+        styledAttribute(name)?.let(NUMBER_REGEX::find)?.value?.toFloatOrNull()
+
+    private fun escapeXml(value: String): String = value
+        .replace("&", "&amp;")
+        .replace("\"", "&quot;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
 
     private fun sanitize(value: String): String =
         value.lowercase().replace(Regex("[^a-z0-9._-]"), "")
@@ -430,10 +679,9 @@ private object ContactLogoStore {
         else -> key
     }
 
-    private val FILL_RULE_EVEN_ODD = Regex(
-        """fill-rule\s*=\s*["']evenodd["']""",
-        RegexOption.IGNORE_CASE,
-    )
+    private val IGNORED_SVG_CONTAINERS = setOf("defs", "clippath", "mask", "symbol")
+    private val NUMBER_REGEX = Regex("""[-+]?(?:\d*\.?\d+)(?:[eE][-+]?\d+)?""")
+    private val TRANSFORM_REGEX = Regex("""([a-zA-Z]+)\s*\(([^)]*)\)""")
 }
 
 private fun fixedBrandColor(key: String): Color? = when (key) {
@@ -443,6 +691,29 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "bitget" -> Color(0xFF00D4AA)
     "ibkr" -> Color(0xFFD81222)
     "agoda" -> Color(0xFF5392F9)
+    "qunar" -> Color(0xFF00BFEA)
+    "tongcheng" -> Color(0xFF5C09C5)
+    "variflight" -> Color(0xFF1677FF)
+    "airchina" -> Color(0xFF111111)
+    "fliggy" -> Color(0xFFFDD700)
+    "hostelworld" -> Color(0xFFF47853)
+    "airbnb" -> Color(0xFFFF385C)
+    "hotels.com" -> Color(0xFFD12D2C)
+    "expedia" -> Color(0xFF212844)
+    "booking" -> Color(0xFF0C3B7C)
+    "trainline" -> Color(0xFF00A88F)
+    "rome2rio" -> Color(0xFFDE007B)
+    "omio" -> Color(0xFF132968)
+    "citymapper" -> Color(0xFF111111)
+    "bolt" -> Color(0xFF1C274C)
+    "cabify" -> Color(0xFF212240)
+    "didi" -> Color(0xFFFC9153)
+    "lyft" -> Color(0xFF2CA39C)
+    "uber" -> Color(0xFF111111)
+    "chinapost" -> Color(0xFF006845)
+    "sfexpress" -> Color(0xFFDA2032)
+    "alipay" -> Color(0xFF1677FF)
+    "moovit" -> Color(0xFFF05523)
     "lottiefiles" -> Color(0xFF00BFA5)
     "wise" -> Color(0xFF9FE870)
     "longbridge" -> Color(0xFF476C88)

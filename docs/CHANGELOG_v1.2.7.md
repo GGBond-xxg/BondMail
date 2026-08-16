@@ -20,6 +20,17 @@
 - Added regression tests for interface-style persistence, repeated UI switching, and bottom-tab
   navigation.
 
+## Contact brand icons
+
+- Added offline sender icons for 23 travel, mobility, delivery, and payment services, including
+  Qunar, Tongcheng Travel, VariFlight, Air China, Fliggy, DiDi, China Post, SF Express, and Alipay.
+- Added Chinese and international sender-name/domain aliases for the new brands.
+- Extended the local SVG renderer to support transforms, circles, ellipses, rectangles, polygons,
+  and strokes.
+- Added matcher and on-device asset-loading regression tests for every new icon.
+- ANT Bank reuses the AiPay mark, and Fliggy coverage includes its production `alitrip.com`
+  notification address.
+
 ## Version
 
 - `versionCode = 129`

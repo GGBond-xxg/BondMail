@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="389" viewBox="0 0 225 171" fill="none">
+  <defs>
+    <linearGradient id="bodyGrad" x1="32" y1="44" x2="163" y2="126" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7A1CE0"/>
+      <stop offset="0.55" stop-color="#5C09C5"/>
+      <stop offset="1" stop-color="#43009A"/>
+    </linearGradient>
+    <linearGradient id="yellowGrad" x1="20" y1="66" x2="182" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8DB00"/>
+      <stop offset="1" stop-color="#F0C800"/>
+    </linearGradient>
+    <radialGradient id="windowGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(61 87) rotate(45) scale(15)">
+      <stop offset="0" stop-color="#FDFDFD"/>
+      <stop offset="1" stop-color="#CFCFD4"/>
+    </radialGradient>
+    <linearGradient id="podGrad" x1="86" y1="135" x2="117" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5A159D"/>
+      <stop offset="1" stop-color="#391064"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rear fins -->
+  <ellipse cx="182" cy="38" rx="23" ry="20" fill="url(#yellowGrad)"/>
+  <ellipse cx="182" cy="95" rx="23" ry="21" fill="url(#yellowGrad)"/>
+  <path d="M171 79C180 74 195 72 207 74C199 80 186 84 171 85C165 85 163 81 171 79Z" fill="url(#yellowGrad)"/>
+
+  <!-- lower yellow body accent -->
+  <path d="M5 84C8 66 21 58 40 58C64 58 84 72 100 93C83 104 60 107 38 101C18 95 3 91 5 84Z" fill="url(#yellowGrad)"/>
+
+  <!-- main blimp body -->
+  <path d="M34 57C40 31 83 20 131 26C172 31 201 52 204 76C208 106 184 124 149 128C112 132 67 126 43 104C28 90 28 72 34 57Z" fill="url(#bodyGrad)"/>
+
+  <!-- body tail taper -->
+  <path d="M174 77C187 79 199 82 211 88C200 91 186 92 175 91C162 90 160 80 174 77Z" fill="url(#bodyGrad)"/>
+
+  <!-- gondola -->
+  <ellipse cx="92" cy="139" rx="22" ry="10" fill="url(#podGrad)"/>
+
+  <!-- porthole -->
+  <circle cx="61" cy="87" r="8.5" fill="url(#windowGrad)"/>
+</svg>

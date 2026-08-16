@@ -737,8 +737,15 @@ internal object MailWebViewCache {
                 width:58%!important;height:58%!important;display:block!important;
                 fill:$avatarForegroundCss!important;color:$avatarForegroundCss!important
               }
-              #bondmail-message-header .bondmail-avatar svg path{
+              #bondmail-message-header .bondmail-avatar svg path:not([data-bondmail-stroke]),
+              #bondmail-message-header .bondmail-avatar svg circle:not([data-bondmail-stroke]),
+              #bondmail-message-header .bondmail-avatar svg ellipse:not([data-bondmail-stroke]),
+              #bondmail-message-header .bondmail-avatar svg rect:not([data-bondmail-stroke]),
+              #bondmail-message-header .bondmail-avatar svg polygon:not([data-bondmail-stroke]){
                 fill:currentColor!important
+              }
+              #bondmail-message-header .bondmail-avatar svg [data-bondmail-stroke]{
+                fill:none!important;stroke:currentColor!important
               }
               #bondmail-message-header .bondmail-meta{
                 min-width:0!important;max-width:calc(100% - 57px)!important;flex:1!important;
