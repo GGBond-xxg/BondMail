@@ -6,11 +6,12 @@
 - Package: `com.bond.mail`
 - Version code: `129`
 - Minimum Android version: Android 8.0 (API 26)
-- SHA-256: `CCFF6E61898D177BAA44425701A89B0BF99D1A9F317DEA6C17EC829C3A65E244`
+- SHA-256: `1BB68F40F75801573C57B20AE4D7CDD315D1FC229B31CC6690D09514A313836E`
 
 Adds switchable Material 3 and MIUIX styles, improves settings interactions, removes the retired
 fingerprint lock, fixes returning to Mail from other bottom-navigation pages, and adds 23 offline
-travel, mobility, delivery, and payment sender icons. ANT Bank senders reuse the AiPay icon.
+travel, mobility, delivery, and payment sender icons. ANT Bank senders reuse the AiPay icon. Mail
+accounts can be reordered directly in the drawer by long-pressing and dragging an account row.
 
 ## v1.2.6
 

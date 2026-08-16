@@ -175,6 +175,7 @@
   "mailbox_order_title": "邮箱排序",
   "mailbox_order_desc": "调整邮箱顺序后，抽屉、设置和写邮件账户列表都会使用新的顺序。",
   "move_up": "上移",
+  "reorder_mailbox": "长按并拖动以调整邮箱顺序",
   "move_down": "下移",
   "expand_accounts": "展开全部邮箱",
   "collapse_accounts": "收起邮箱列表",

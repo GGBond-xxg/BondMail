@@ -19,6 +19,9 @@
 - Fixed the bottom navigation so Mail can always be reopened after visiting Contacts or Settings.
 - Added regression tests for interface-style persistence, repeated UI switching, and bottom-tab
   navigation.
+- Restored mailbox reordering directly in the drawer: long-press and drag an account, preview the
+  order while moving, then persist it on release. Stable keyed rows prevent the gesture from being
+  cancelled when crossing the collapsed-list boundary.
 
 ## Contact brand icons
 

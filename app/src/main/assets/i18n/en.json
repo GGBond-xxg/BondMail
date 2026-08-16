@@ -175,6 +175,7 @@
   "mailbox_order_title": "Mailbox order",
   "mailbox_order_desc": "This order is used in the drawer, settings, and account pickers.",
   "move_up": "Move up",
+  "reorder_mailbox": "Long press and drag to reorder mailbox",
   "move_down": "Move down",
   "expand_accounts": "Show all mailboxes",
   "collapse_accounts": "Collapse mailbox list",

@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.AllInbox
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -106,6 +107,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.ImeAction
@@ -114,6 +116,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -1408,83 +1411,81 @@ private fun MailDrawerContent(
         }
         @Composable
         fun DrawerAccountRow(account: AccountEntity) {
+            DraggableAccountRow(
+                account = account,
+                selected = selectedAccountId == account.id && currentFolder == "INBOX",
+                orderedAccounts = orderedAccounts,
+                maxReorderIndex = maxReorderIndex,
+                onSelect = { onChooseMailbox(account.id, "INBOX") },
+                onEdit = {
+                    editTarget = account
+                    editDisplayName = account.displayName
+                    editDisplayEmail = account.visibleEmail
+                    editAvatarText = account.avatarText.orEmpty()
+                    replacementSecret = ""
+                    editBusy = false
+                    editFailure = null
+                    pendingGoogleReauthorizationAccountId = null
+                    pendingGoogleReauthorizationDisplayName = ""
+                },
+                onDelete = { deleteTarget = account },
+                onDragStarted = { accountsExpanded = true },
+                onOrderCommitted = { onReorderAccounts(orderedAccounts.map { it.id }) },
+            )
+        }
+        val expandedAccountEnter = if (drawerMotionEnabled) {
+            expandVertically(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.SharedAxis,
+                    easing = BondMotionEasing.EmphasizedDecelerate,
+                ),
+                expandFrom = Alignment.Top,
+            ) + slideInVertically(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.ElementEnter,
+                    easing = BondMotionEasing.EmphasizedDecelerate,
+                ),
+                initialOffsetY = { -minOf(it / 4, 28) },
+            ) + fadeIn(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.FadeThrough,
+                    easing = BondMotionEasing.EmphasizedDecelerate,
+                ),
+            )
+        } else {
+            expandVertically(animationSpec = snap(), expandFrom = Alignment.Top) +
+                fadeIn(animationSpec = snap())
+        }
+        val expandedAccountExit = if (drawerMotionEnabled) {
+            shrinkVertically(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.SharedAxis,
+                    easing = BondMotionEasing.EmphasizedAccelerate,
+                ),
+                shrinkTowards = Alignment.Top,
+            ) + slideOutVertically(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.EffectShort,
+                    easing = BondMotionEasing.EmphasizedAccelerate,
+                ),
+                targetOffsetY = { -minOf(it / 5, 24) },
+            ) + fadeOut(
+                animationSpec = tween(
+                    durationMillis = BondMotionDuration.EffectShort,
+                    easing = BondMotionEasing.EmphasizedAccelerate,
+                ),
+            )
+        } else {
+            shrinkVertically(animationSpec = snap(), shrinkTowards = Alignment.Top) +
+                fadeOut(animationSpec = snap())
+        }
+        orderedAccounts.forEachIndexed { index, account ->
             key(account.id) {
-                DraggableAccountRow(
-                    account = account,
-                    selected = selectedAccountId == account.id && currentFolder == "INBOX",
-                    orderedAccounts = orderedAccounts,
-                    maxReorderIndex = maxReorderIndex,
-                    onSelect = { onChooseMailbox(account.id, "INBOX") },
-                    onEdit = {
-                        editTarget = account
-                        editDisplayName = account.displayName
-                        editDisplayEmail = account.visibleEmail
-                        editAvatarText = account.avatarText.orEmpty()
-                        replacementSecret = ""
-                        editBusy = false
-                        editFailure = null
-                        pendingGoogleReauthorizationAccountId = null
-                        pendingGoogleReauthorizationDisplayName = ""
-                    },
-                    onDelete = { deleteTarget = account },
-                    onOrderCommitted = { onReorderAccounts(orderedAccounts.map { it.id }) },
-                )
-            }
-        }
-        orderedAccounts.take(COLLAPSED_ACCOUNT_LIMIT).forEach { account ->
-            DrawerAccountRow(account)
-        }
-        AnimatedVisibility(
-            visible = accountsExpanded,
-            enter = if (drawerMotionEnabled) {
-                expandVertically(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.SharedAxis,
-                        easing = BondMotionEasing.EmphasizedDecelerate,
-                    ),
-                    expandFrom = Alignment.Top,
-                ) + slideInVertically(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.ElementEnter,
-                        easing = BondMotionEasing.EmphasizedDecelerate,
-                    ),
-                    initialOffsetY = { -minOf(it / 4, 28) },
-                ) + fadeIn(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.FadeThrough,
-                        easing = BondMotionEasing.EmphasizedDecelerate,
-                    ),
-                )
-            } else {
-                expandVertically(animationSpec = snap(), expandFrom = Alignment.Top) +
-                    fadeIn(animationSpec = snap())
-            },
-            exit = if (drawerMotionEnabled) {
-                shrinkVertically(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.SharedAxis,
-                        easing = BondMotionEasing.EmphasizedAccelerate,
-                    ),
-                    shrinkTowards = Alignment.Top,
-                ) + slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.EffectShort,
-                        easing = BondMotionEasing.EmphasizedAccelerate,
-                    ),
-                    targetOffsetY = { -minOf(it / 5, 24) },
-                ) + fadeOut(
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.EffectShort,
-                        easing = BondMotionEasing.EmphasizedAccelerate,
-                    ),
-                )
-            } else {
-                shrinkVertically(animationSpec = snap(), shrinkTowards = Alignment.Top) +
-                    fadeOut(animationSpec = snap())
-            },
-        ) {
-            Column {
-                orderedAccounts.drop(COLLAPSED_ACCOUNT_LIMIT).forEach { account ->
+                AnimatedVisibility(
+                    visible = accountsExpanded || index < COLLAPSED_ACCOUNT_LIMIT,
+                    enter = expandedAccountEnter,
+                    exit = expandedAccountExit,
+                ) {
                     DrawerAccountRow(account)
                 }
             }
@@ -1826,13 +1827,17 @@ private fun DraggableAccountRow(
     onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onDragStarted: () -> Unit,
     onOrderCommitted: () -> Unit,
 ) {
     val density = LocalDensity.current
+    val hapticFeedback = LocalHapticFeedback.current
     val rowHeightPx = with(density) { 68.dp.toPx() }
     var dragOffset by remember(account.id) { mutableFloatStateOf(0f) }
+    var dragging by remember(account.id) { mutableStateOf(false) }
     var orderChanged by remember(account.id) { mutableStateOf(false) }
-    val dragging = dragOffset != 0f
+    var dragStartOrder by remember(account.id) { mutableStateOf<List<AccountEntity>?>(null) }
+    val currentMaxReorderIndex by rememberUpdatedState(maxReorderIndex)
 
     Surface(
         onClick = onSelect,
@@ -1853,20 +1858,37 @@ private fun DraggableAccountRow(
                 .padding(start = 4.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AccountAvatar(
-                account = account,
-                size = 40.dp,
-                modifier = Modifier.pointerInput(account.id) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .pointerInput(account.id) {
                     detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            onDragStarted()
+                            dragging = true
+                            orderChanged = false
+                            dragStartOrder = orderedAccounts.toList()
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
                         onDragEnd = {
                             dragOffset = 0f
                             if (orderChanged) onOrderCommitted()
+                            dragging = false
                             orderChanged = false
+                            dragStartOrder = null
                         },
                         onDragCancel = {
                             dragOffset = 0f
-                            if (orderChanged) onOrderCommitted()
+                            if (orderChanged) {
+                                dragStartOrder?.let { originalOrder ->
+                                    orderedAccounts.clear()
+                                    orderedAccounts.addAll(originalOrder)
+                                }
+                            }
+                            dragging = false
                             orderChanged = false
+                            dragStartOrder = null
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
@@ -1875,7 +1897,7 @@ private fun DraggableAccountRow(
                             if (currentIndex < 0) return@detectDragGesturesAfterLongPress
                             while (
                                 dragOffset > rowHeightPx / 2f &&
-                                currentIndex < maxReorderIndex.coerceAtMost(orderedAccounts.lastIndex)
+                                currentIndex < currentMaxReorderIndex.coerceAtMost(orderedAccounts.lastIndex)
                             ) {
                                 val moved = orderedAccounts.removeAt(currentIndex)
                                 orderedAccounts.add(currentIndex + 1, moved)
@@ -1893,22 +1915,35 @@ private fun DraggableAccountRow(
                         },
                     )
                 },
-            )
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    account.displayName,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleSmall,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.DragHandle,
+                    contentDescription = tr("reorder_mailbox"),
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(
-                    account.visibleEmail,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Spacer(Modifier.width(8.dp))
+                AccountAvatar(
+                    account = account,
+                    size = 40.dp,
                 )
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        account.displayName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        account.visibleEmail,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {
                 Icon(
