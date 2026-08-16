@@ -90,6 +90,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
@@ -1008,10 +1009,15 @@ private fun MainTabs(
         scope.launch { drawerState.close() }
     }
 
-    fun selectTab(target: Int) {
-        if (target != selectedTab) {
-            onSelectedTabChange(target)
-            onMainChromeVisibilityChanged(true)
+    val latestSelectedTab by rememberUpdatedState(selectedTab)
+    val latestOnSelectedTabChange by rememberUpdatedState(onSelectedTabChange)
+    val latestOnMainChromeVisibilityChanged by rememberUpdatedState(onMainChromeVisibilityChanged)
+    val selectTab = remember {
+        { target: Int ->
+            if (target != latestSelectedTab) {
+                latestOnSelectedTabChange(target)
+                latestOnMainChromeVisibilityChanged(true)
+            }
         }
     }
 
@@ -1164,7 +1170,7 @@ private fun MainTabs(
             )
             FloatingBottomDock(
                 selectedTab = selectedTab,
-                onSelectTab = ::selectTab,
+                onSelectTab = selectTab,
                 onCompose = { onCompose("") },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

@@ -6,10 +6,10 @@
 - Package: `com.bond.mail`
 - Version code: `129`
 - Minimum Android version: Android 8.0 (API 26)
-- SHA-256: `F5AEFA4317BFD3C334F0E9D91647DA574FE050BC76994163B1C1514F7ADA769A`
+- SHA-256: `A56FED6861EB663A8BA7DFAC846420B2029465312D3AD2ED6588E765E8916E8E`
 
-Adds switchable Material 3 and MIUIX interface styles, polishes MIUIX settings interactions,
-keeps Material 3 bottom navigation in both styles, and removes the retired fingerprint lock.
+Adds switchable Material 3 and MIUIX styles, improves settings interactions, removes the retired
+fingerprint lock, and fixes returning to Mail from other bottom-navigation pages.
 
 ## v1.2.6
 

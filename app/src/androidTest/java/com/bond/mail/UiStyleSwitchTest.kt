@@ -16,6 +16,38 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class UiStyleSwitchTest {
     @Test
+    fun bottomDockReturnsToMailAfterContactsAndSettings() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val targetContext = instrumentation.targetContext
+        val settings = (targetContext.applicationContext as MailApplication).container.settings
+        val device = UiDevice.getInstance(instrumentation)
+
+        runBlocking {
+            settings.setLanguage("en")
+            settings.setUiStyle(UiStyle.MATERIAL3)
+        }
+        startApp(device)
+
+        clickTab(device, "Settings")
+        assertTrue(
+            "Settings tab did not open",
+            device.wait(Until.hasObject(By.text("Settings")), 5_000L),
+        )
+
+        clickTab(device, "Contacts")
+        assertTrue(
+            "Contacts tab did not open",
+            device.wait(Until.hasObject(By.text("Contacts")), 5_000L),
+        )
+
+        clickTab(device, "Mail")
+        assertTrue(
+            "Mail tab did not reopen after another bottom destination",
+            device.wait(Until.hasObject(By.text("Welcome to Mail")), 5_000L),
+        )
+    }
+
+    @Test
     fun uiStyleSwitchesBothWaysAndSurvivesActivityRecreation() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val targetContext = instrumentation.targetContext
@@ -88,5 +120,12 @@ class UiStyleSwitchTest {
             "am start -W -f 0x10008000 -n com.bond.mail/.MainActivity",
         )
         device.waitForIdle(5_000L)
+    }
+
+    private fun clickTab(device: UiDevice, description: String) {
+        val icon = device.wait(Until.findObject(By.desc(description)), 5_000L)
+        assertTrue("Bottom tab $description was not found", icon != null)
+        icon.click()
+        device.waitForIdle(2_000L)
     }
 }

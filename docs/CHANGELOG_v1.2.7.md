@@ -16,7 +16,9 @@
 - Removed the fingerprint app-lock feature and its unused dependency.
 - Simplified sync-frequency and remote-image rows by removing inconsistent helper text.
 - Corrected selector popup spacing, alignment, click handling, and theme-switch responsiveness.
-- Added regression tests for interface-style persistence and repeated UI switching.
+- Fixed the bottom navigation so Mail can always be reopened after visiting Contacts or Settings.
+- Added regression tests for interface-style persistence, repeated UI switching, and bottom-tab
+  navigation.
 
 ## Version
 
