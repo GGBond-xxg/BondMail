@@ -169,6 +169,8 @@ fun PushSettingsScreen(
                                 tr("push_access_verified_short") to MaterialTheme.colorScheme.primary
                             PushAccessState.REJECTED ->
                                 tr("push_access_rejected_short") to MaterialTheme.colorScheme.error
+                            PushAccessState.FAILED ->
+                                tr("push_access_failed_short") to MaterialTheme.colorScheme.error
                         }
                         Text(
                             text = statusText,

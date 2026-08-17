@@ -256,6 +256,7 @@ fun SettingsScreen(
                         PushAccessState.VERIFYING -> tr("push_access_verifying")
                         PushAccessState.VERIFIED -> tr("push_access_verified_short")
                         PushAccessState.REJECTED -> tr("push_access_rejected_short")
+                        PushAccessState.FAILED -> tr("push_access_failed_short")
                     },
                     onClick = onOpenPushSettings,
                 )
