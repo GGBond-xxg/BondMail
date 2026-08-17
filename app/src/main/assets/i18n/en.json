@@ -267,6 +267,8 @@
   "push_access_verified_short": "Enabled",
   "push_access_rejected": "Incorrect key; CF FCM is disabled",
   "push_access_rejected_short": "Verification failed",
+  "push_access_failed": "Connection verification failed; check the service domain or network and retry",
+  "push_access_failed_short": "Connection failed; edit and retry",
   "push_access_verify": "Verify & enable",
   "push_access_note": "The key is verified by the Cloudflare Worker and encrypted locally with Android Keystore.",
   "push_access_note_short": "HTTPS only; the key is encrypted on this device.",

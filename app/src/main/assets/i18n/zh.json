@@ -267,6 +267,8 @@
   "push_access_verified_short": "已启用",
   "push_access_rejected": "密钥错误，CF FCM 未启用",
   "push_access_rejected_short": "验证失败",
+  "push_access_failed": "连接验证失败，请检查服务域名或网络后重试",
+  "push_access_failed_short": "连接失败，请修改后重试",
   "push_access_verify": "验证并启用",
   "push_access_note": "密钥由 Cloudflare Worker 验证，并使用 Android Keystore 加密保存在本机。",
   "push_access_note_short": "仅支持 HTTPS；密钥加密保存在本机。",

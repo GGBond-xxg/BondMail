@@ -35,7 +35,7 @@ enum class ThemeColor(val argb: Long) {
 }
 enum class MailDensity { COMFORTABLE, STANDARD, COMPACT }
 enum class RemoteImagePolicy { ALWAYS, WIFI_ONLY, NEVER }
-enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED }
+enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED, FAILED }
 
 data class AppSettings(
     val uiStyle: UiStyle = UiStyle.MATERIAL3,

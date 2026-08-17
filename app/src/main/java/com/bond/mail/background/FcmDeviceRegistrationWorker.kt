@@ -17,9 +17,11 @@ import com.bond.mail.data.settings.PushAccessState
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
@@ -43,24 +45,38 @@ internal class FcmDeviceRegistrationWorker(
             val clientConfig = downloadClientConfig(registration)
             val fcmToken = resolveFcmToken(clientConfig)
             upload(registration, fcmToken)
-            settings.setPushAccessState(PushAccessState.VERIFIED)
+            setPushAccessStateIfCurrent(registration, PushAccessState.VERIFIED)
             MailLog.d(
                 MailLog.APP,
                 "FCM device registration uploaded interval=${registration.intervalMinutes}m",
             )
             Result.success()
         }.getOrElse { error ->
+            if (error is CancellationException) throw error
             if (error is InvalidPushAccessKeyException) {
-                settings.setPushAccessState(PushAccessState.REJECTED)
+                setPushAccessStateIfCurrent(registration, PushAccessState.REJECTED)
                 MailLog.w(MailLog.APP, "FCM device registration rejected by access-key policy")
                 return@getOrElse Result.success()
             }
+            setPushAccessStateIfCurrent(registration, PushAccessState.FAILED)
             MailLog.w(
                 MailLog.APP,
                 "FCM device registration failed cause=${MailLog.causeSummary(error)}",
                 error,
             )
             Result.retry()
+        }
+    }
+
+    private suspend fun setPushAccessStateIfCurrent(
+        registration: FcmRegistrationStore.RegistrationSnapshot,
+        state: PushAccessState,
+    ) {
+        val current = FcmRegistrationStore.readPushAccessConfig(applicationContext) ?: return
+        if (current.serviceOrigin == registration.serviceOrigin &&
+            current.accessKey == registration.pushAccessKey
+        ) {
+            (applicationContext as MailApplication).container.settings.setPushAccessState(state)
         }
     }
 
@@ -74,8 +90,8 @@ internal class FcmDeviceRegistrationWorker(
                 .openConnection() as HttpURLConnection
             ).apply {
             requestMethod = "POST"
-            connectTimeout = 15_000
-            readTimeout = 15_000
+            connectTimeout = REQUEST_TIMEOUT_MS
+            readTimeout = REQUEST_TIMEOUT_MS
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             setRequestProperty(PUSH_ACCESS_KEY_HEADER, registration.pushAccessKey)
@@ -125,8 +141,8 @@ internal class FcmDeviceRegistrationWorker(
                 .openConnection() as HttpURLConnection
             ).apply {
             requestMethod = "GET"
-            connectTimeout = 15_000
-            readTimeout = 15_000
+            connectTimeout = REQUEST_TIMEOUT_MS
+            readTimeout = REQUEST_TIMEOUT_MS
             setRequestProperty(PUSH_ACCESS_KEY_HEADER, registration.pushAccessKey)
             setRequestProperty(
                 "User-Agent",
@@ -183,20 +199,24 @@ internal class FcmDeviceRegistrationWorker(
                         appName,
                     )
             }
-        return suspendCancellableCoroutine { continuation ->
-            firebaseApp.get(FirebaseMessaging::class.java).token
-                .addOnSuccessListener { token ->
-                    if (continuation.isActive) continuation.resume(token)
-                }
-                .addOnFailureListener { error ->
-                    if (continuation.isActive) continuation.resumeWithException(error)
-                }
+        return withTimeout(FIREBASE_TOKEN_TIMEOUT_MS) {
+            suspendCancellableCoroutine { continuation ->
+                firebaseApp.get(FirebaseMessaging::class.java).token
+                    .addOnSuccessListener { token ->
+                        if (continuation.isActive) continuation.resume(token)
+                    }
+                    .addOnFailureListener { error ->
+                        if (continuation.isActive) continuation.resumeWithException(error)
+                    }
+            }
         }
     }
 
     companion object {
         private const val PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key"
         private const val UNIQUE_WORK_NAME = "fcm_device_registration"
+        private const val REQUEST_TIMEOUT_MS = 10_000
+        private const val FIREBASE_TOKEN_TIMEOUT_MS = 15_000L
 
         fun enqueue(context: Context) {
             val request = OneTimeWorkRequestBuilder<FcmDeviceRegistrationWorker>()

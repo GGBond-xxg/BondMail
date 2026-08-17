@@ -208,15 +208,16 @@ fun ComposeScreen(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hasMeaningfulDraft = to.isNotBlank() || cc.isNotBlank() || bcc.isNotBlank() ||
             subject.isNotBlank() || body.isNotBlank() || attachments.isNotEmpty()
-        val confirmDraftClose by rememberUpdatedState(
-            hasMeaningfulDraft && !queuedClose && !resolvedClose,
-        )
+        val currentHasMeaningfulDraft = rememberUpdatedState(hasMeaningfulDraft)
         val sheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.Hidden,
             skipHiddenState = false,
             confirmValueChange = { target ->
                 when {
-                    target == SheetValue.Hidden && confirmDraftClose -> {
+                    target == SheetValue.Hidden &&
+                        currentHasMeaningfulDraft.value &&
+                        !queuedClose &&
+                        !resolvedClose -> {
                         showDraftDecision = true
                         false
                     }
@@ -756,11 +757,10 @@ fun ComposeScreen(
                         TextButton(
                             enabled = !sending,
                             onClick = {
-                                viewModel.discardDraft(draftTaskId, sourceMessageId) {
-                                    showDraftDecision = false
-                                    resolvedClose = true
-                                    scope.launch { sheetState.hide() }
-                                }
+                                showDraftDecision = false
+                                resolvedClose = true
+                                scope.launch { sheetState.hide() }
+                                viewModel.discardDraft(draftTaskId, sourceMessageId)
                             },
                         ) {
                             Text(tr("discard_draft"), color = MaterialTheme.colorScheme.error)

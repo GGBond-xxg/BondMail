@@ -742,6 +742,18 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         SharingStarted.Eagerly,
         container.repository.startupAccountsSnapshot(),
     )
+    init {
+        viewModelScope.launch {
+            settings.collectLatest { current ->
+                if (current.pushAccessState == PushAccessState.VERIFYING) {
+                    delay(PUSH_VERIFICATION_WATCHDOG_MS)
+                    if (settings.value.pushAccessState == PushAccessState.VERIFYING) {
+                        container.settings.setPushAccessState(PushAccessState.FAILED)
+                    }
+                }
+            }
+        }
+    }
     fun theme(value: ThemeMode) = viewModelScope.launch { container.settings.setTheme(value) }
     fun uiStyle(value: UiStyle) = viewModelScope.launch { container.settings.setUiStyle(value) }
     fun dynamic(value: Boolean) = viewModelScope.launch { container.settings.setDynamic(value) }
@@ -902,6 +914,10 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     }
     fun reorderAccounts(ids: List<String>) = viewModelScope.launch { container.repository.reorderAccounts(ids) }
     fun deleteAccount(id: String) = viewModelScope.launch { container.repository.deleteAccount(id) }
+
+    private companion object {
+        const val PUSH_VERIFICATION_WATCHDOG_MS = 30_000L
+    }
 }
 
 class ComposeViewModel(private val container: AppContainer) : ViewModel() {
@@ -993,10 +1009,8 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
     fun discardDraft(
         taskId: String?,
         sourceMessageId: String?,
-        onDiscarded: () -> Unit,
     ) = viewModelScope.launch {
         runCatching { container.repository.discardDraft(taskId, sourceMessageId) }
-            .onSuccess { onDiscarded() }
             .onFailure { error.value = container.repository.failure(it) }
     }
 }
