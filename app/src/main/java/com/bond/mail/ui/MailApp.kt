@@ -54,19 +54,21 @@ import androidx.compose.material.icons.filled.AllInbox
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Drafts
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.MarkEmailUnread
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -259,9 +261,6 @@ fun MailApp(
     var composeSourceMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var composeVisible by rememberSaveable { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<MessageListRow?>(null) }
-    var mailTransitionBackground by remember {
-        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
-    }
     var providersBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
@@ -551,7 +550,6 @@ fun MailApp(
         if (!initialMessageId.isNullOrBlank()) {
             // A notification can replace a reader that was opened from the list. Never let that
             // deep link inherit the previous reader's list snapshot.
-            mailTransitionBackground = null
             selectedMessage = null
             navigateOnce("detail/${Uri.encode(initialMessageId)}")
         }
@@ -588,11 +586,112 @@ fun MailApp(
         }
     }
 
+    fun openMailboxMessage(message: MessageListRow) {
+        if (message.folderType == "DRAFTS" || message.deliveryState == "DRAFT") {
+            openDraft(message)
+            return
+        }
+        appScope.launch {
+            // Keep the list's read state live underneath the reader before starting its cover
+            // motion. MainTabs now remains composed while detail is open, so later sync results and
+            // refresh motion are also visible during a predictive-back preview.
+            homeVm.openMessage(message)
+            withFrameNanos { }
+            val openedMessage = if (message.unread) message.copy(unread = false) else message
+            val initialSnapshot = detailInitialSnapshots[message.id]
+                ?.withLatestListState(openedMessage)
+                ?: openedMessage.toInitialMessage()
+            rememberDetailSnapshot(initialSnapshot)
+            detailOpenSeenRequests[message.id] = message.unread
+            selectedMessage = openedMessage
+            navigateOnce("detail/${Uri.encode(message.id)}")
+        }
+    }
+
+    @Composable
+    fun MailboxLayer() {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { coordinates ->
+                    if (
+                        coordinates.size.width > 0 &&
+                        coordinates.size.height > 0 &&
+                        firstContentReadyPosted.compareAndSet(false, true)
+                    ) {
+                        hostView.post { onFirstContentReady() }
+                    }
+                }
+                .drawWithContent {
+                    mailboxSnapshotLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(mailboxSnapshotLayer)
+                },
+        ) {
+            MainTabs(
+                container = container,
+                homeVm = homeVm,
+                settingsVm = settingsVm,
+                settings = settings,
+                selectedTab = selectedMainTab,
+                onSelectedTabChange = onSelectedMainTabChange,
+                notificationPermissionGranted = notificationPermissionGranted,
+                showPermissionGuide = showPermissionGuide,
+                onRequestNotificationPermission = ::requestNotificationPermission,
+                onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
+                onOpenNotificationSettings = ::openNotificationSettings,
+                onOpenBackgroundSettings = ::openBackgroundSettings,
+                onOpenAbout = {
+                    providersBackBackground = null
+                    credentialsBackBackground = null
+                    pushSettingsBackBackground = null
+                    aboutChildBackBackground = null
+                    navigateAfterSnapshot(
+                        route = ABOUT,
+                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                        store = { aboutBackBackground = it },
+                    )
+                },
+                onOpenPushSettings = {
+                    providersBackBackground = null
+                    credentialsBackBackground = null
+                    aboutBackBackground = null
+                    aboutChildBackBackground = null
+                    navigateAfterSnapshot(
+                        route = PUSH_SETTINGS,
+                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                        store = { pushSettingsBackBackground = it },
+                    )
+                },
+                onAddAccount = {
+                    aboutBackBackground = null
+                    pushSettingsBackBackground = null
+                    aboutChildBackBackground = null
+                    credentialsBackBackground = null
+                    navigateAfterSnapshot(
+                        route = PROVIDERS,
+                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                        store = { providersBackBackground = it },
+                    )
+                },
+                mainChromeVisible = mainChromeVisible,
+                onMainChromeVisibilityChanged = { mainChromeVisible = it },
+                onOpenMessage = ::openMailboxMessage,
+                onReplyMessage = ::replyFromList,
+                onCompose = ::prepareCompose,
+            )
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.bondSurfaces.page,
     ) {
         Box(Modifier.fillMaxSize()) {
+                // Keep the mailbox alive below every destination. In particular, predictive back
+                // from a reader must reveal current Room/refresh state rather than an old bitmap.
+                MailboxLayer()
                 NavHost(
                     navController = nav,
                     startDestination = MAIN,
@@ -613,114 +712,9 @@ fun MailApp(
                     composable(
                         route = MAIN,
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .onGloballyPositioned { coordinates ->
-                                    if (
-                                        coordinates.size.width > 0 &&
-                                        coordinates.size.height > 0 &&
-                                        firstContentReadyPosted.compareAndSet(false, true)
-                                    ) {
-                                        hostView.post { onFirstContentReady() }
-                                    }
-                                }
-                                .drawWithContent {
-                                    mailboxSnapshotLayer.record {
-                                        this@drawWithContent.drawContent()
-                                    }
-                                    drawLayer(mailboxSnapshotLayer)
-                                },
-                        ) {
-                            MainTabs(
-                                container = container,
-                                homeVm = homeVm,
-                                settingsVm = settingsVm,
-                                settings = settings,
-                                selectedTab = selectedMainTab,
-                                onSelectedTabChange = onSelectedMainTabChange,
-                                notificationPermissionGranted = notificationPermissionGranted,
-                                showPermissionGuide = showPermissionGuide,
-                                onRequestNotificationPermission = ::requestNotificationPermission,
-                                onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
-                                onOpenNotificationSettings = ::openNotificationSettings,
-                                onOpenBackgroundSettings = ::openBackgroundSettings,
-                                onOpenAbout = {
-                                    providersBackBackground = null
-                                    credentialsBackBackground = null
-                                    pushSettingsBackBackground = null
-                                    aboutChildBackBackground = null
-                                    navigateAfterSnapshot(
-                                        route = ABOUT,
-                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
-                                        store = { aboutBackBackground = it },
-                                    )
-                                },
-                                onOpenPushSettings = {
-                                    providersBackBackground = null
-                                    credentialsBackBackground = null
-                                    aboutBackBackground = null
-                                    aboutChildBackBackground = null
-                                    navigateAfterSnapshot(
-                                        route = PUSH_SETTINGS,
-                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
-                                        store = { pushSettingsBackBackground = it },
-                                    )
-                                },
-                                onAddAccount = {
-                                    aboutBackBackground = null
-                                    pushSettingsBackBackground = null
-                                    aboutChildBackBackground = null
-                                    credentialsBackBackground = null
-                                    navigateAfterSnapshot(
-                                        route = PROVIDERS,
-                                        capture = { mailboxSnapshotLayer.toImageBitmap() },
-                                        store = { providersBackBackground = it },
-                                    )
-                                },
-                                mainChromeVisible = mainChromeVisible,
-                                onMainChromeVisibilityChanged = { mainChromeVisible = it },
-                                onOpenMessage = { message ->
-                                if (message.folderType == "DRAFTS" || message.deliveryState == "DRAFT") {
-                                    openDraft(message)
-                                } else {
-                                    appScope.launch {
-                                        // Opening is the read action. Update the live list first,
-                                        // then let Compose draw that state before freezing the
-                                        // background used by the mail-reader open/close transition.
-                                        // Let the read-state update settle before freezing the
-                                        // Compose-only mailbox used by the reader transition.
-                                        homeVm.openMessage(message)
-                                        withFrameNanos { }
-                                        withFrameNanos { }
-                                        // The list can move at any time after returning from a
-                                        // reader. Capturing only on MAIN entry left an old top-of-
-                                        // list image under the next transition and could even
-                                        // capture the previous reader before NavHost removed it.
-                                        // A failed copy must clear the value too; reusing an older
-                                        // snapshot is always worse than opening without one.
-                                        mailTransitionBackground = runCatching {
-                                            mailboxSnapshotLayer.toImageBitmap()
-                                        }.getOrNull()
-                                        val openedMessage = if (message.unread) {
-                                            message.copy(unread = false)
-                                        } else {
-                                            message
-                                        }
-                                        val initialSnapshot = detailInitialSnapshots[message.id]
-                                            ?.withLatestListState(openedMessage)
-                                            ?: openedMessage.toInitialMessage()
-                                        rememberDetailSnapshot(initialSnapshot)
-                                        detailOpenSeenRequests[message.id] = message.unread
-                                        selectedMessage = openedMessage
-                                        navigateOnce("detail/${Uri.encode(message.id)}")
-                                    }
-                                }
-                                },
-                                onReplyMessage = ::replyFromList,
-                                onCompose = ::prepareCompose,
-                            )
-                        }
+                        // The mailbox is the persistent layer below NavHost. Keeping this
+                        // destination intentionally empty avoids tearing it down for a reader and
+                        // lets its refresh/new-mail state remain live during predictive back.
                     }
 
                     composable(
@@ -894,7 +888,9 @@ fun MailApp(
                         // restored for a different message.
                         key(messageId) {
                             TelegramMailTransition(
-                                backgroundSnapshot = mailTransitionBackground,
+                                // The persistent MailboxLayer directly below this destination is
+                                // the transition background; no GPU readback is needed before open.
+                                backgroundSnapshot = null,
                                 motionEnabled = motionEnabled,
                                 onBackCommitted = ::popBackStackOnce,
                             ) { requestBack, reportContentReady ->
@@ -1832,30 +1828,40 @@ private fun DraggableAccountRow(
 ) {
     val density = LocalDensity.current
     val hapticFeedback = LocalHapticFeedback.current
-    val rowHeightPx = with(density) { 68.dp.toPx() }
+    val rowHeightPx = with(density) { 74.dp.toPx() }
     var dragOffset by remember(account.id) { mutableFloatStateOf(0f) }
     var dragging by remember(account.id) { mutableStateOf(false) }
     var orderChanged by remember(account.id) { mutableStateOf(false) }
     var dragStartOrder by remember(account.id) { mutableStateOf<List<AccountEntity>?>(null) }
+    var menuExpanded by remember(account.id) { mutableStateOf(false) }
     val currentMaxReorderIndex by rememberUpdatedState(maxReorderIndex)
 
     Surface(
         onClick = onSelect,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .padding(horizontal = 16.dp, vertical = 3.dp)
             .offset { IntOffset(0, dragOffset.roundToInt()) }
             .zIndex(if (dragging) 2f else 0f),
         shape = RoundedCornerShape(18.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        // A solid primaryContainer made the selected row and the account avatar use effectively
+        // the same blue in dark themes. A restrained primary wash keeps selection obvious while
+        // preserving the avatar's circular silhouette and the drawer's visual hierarchy.
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)
         else MaterialTheme.bondSurfaces.section,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = if (selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f))
+        } else {
+            null
+        },
         shadowElevation = if (dragging) 8.dp else 0.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .padding(start = 4.dp, end = 4.dp),
+                .height(68.dp)
+                .padding(start = 16.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -1917,18 +1923,11 @@ private fun DraggableAccountRow(
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.Default.DragHandle,
-                    contentDescription = tr("reorder_mailbox"),
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
                 AccountAvatar(
                     account = account,
-                    size = 40.dp,
+                    size = 42.dp,
                 )
-                Spacer(Modifier.width(9.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         account.displayName,
@@ -1945,20 +1944,46 @@ private fun DraggableAccountRow(
                     )
                 }
             }
-            IconButton(onClick = onEdit, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = tr("edit_mail_account"),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = tr("delete"),
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            Box {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = tr("more"),
+                        modifier = Modifier.size(21.dp),
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(tr("edit_mail_account")) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Edit, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onEdit()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(tr("delete")) },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onDelete()
+                        },
+                    )
+                }
             }
         }
     }

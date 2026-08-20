@@ -66,7 +66,10 @@ fun brandAvatarPalette(
     }
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
-    val background = if (monet) {
+    val officialInk = OFFICIAL_LIGHT_AVATAR_INKS[brand.key]
+    val background = if (officialInk != null) {
+        Color.White
+    } else if (monet) {
         when (tone) {
             0 -> scheme.primaryContainer
             1 -> scheme.secondaryContainer
@@ -79,7 +82,9 @@ fun brandAvatarPalette(
             else -> scheme.tertiary
         }
     }
-    val foreground = if (monet) {
+    val foreground = if (officialInk != null) {
+        officialInk
+    } else if (monet) {
         when (tone) {
             0 -> scheme.onPrimaryContainer
             1 -> scheme.onSecondaryContainer
@@ -140,7 +145,9 @@ fun BrandAvatar(
                 tint = foreground,
                 // Full-colour embedded artwork already contains its own square background. Fill
                 // the parent so CircleShape clips it into a proper round contact avatar.
-                modifier = Modifier.size(if (logo.raster != null) size else size * 0.54f),
+                modifier = Modifier.size(
+                    if (logo.raster != null) size else size * brandLogoScale(brand.key),
+                ),
             )
         } else if (brand.key in MICROSOFT_BRAND_KEYS) {
             MicrosoftMark(
@@ -275,6 +282,20 @@ private val DARK_FOREGROUND_BRANDS = setOf(
     "trae",
     "fliggy",
 )
+
+private val OFFICIAL_LIGHT_AVATAR_INKS = mapOf(
+    "alipay" to Color(0xFF1677FF),
+    "pixiv" to Color(0xFF0096FA),
+    "plasmaone" to Color(0xFF141414),
+    "safepal" to Color(0xFF4A21EF),
+    "qianji" to Color(0xFF111111),
+)
+
+private fun brandLogoScale(key: String): Float = when (key) {
+    "alipay" -> 0.66f
+    "pixiv" -> 0.72f
+    else -> 0.54f
+}
 
 private data class ContactLogo(
     val contentLeft: Float,

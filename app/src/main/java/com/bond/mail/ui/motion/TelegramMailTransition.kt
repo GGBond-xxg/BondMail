@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -132,6 +133,7 @@ fun TelegramMailTransition(
         animateOpening = true,
         contentReadyInitially = false,
         freezeContentOnBack = true,
+        backgroundIsLive = true,
         onBackCommitted = onBackCommitted,
         content = content,
     )
@@ -157,6 +159,7 @@ fun BondBackScreen(
         animateOpening = false,
         contentReadyInitially = true,
         freezeContentOnBack = false,
+        backgroundIsLive = false,
         onBackCommitted = onBackCommitted,
     ) { requestBack, _ ->
         content(requestBack)
@@ -170,6 +173,7 @@ private fun BondBackTransition(
     animateOpening: Boolean,
     contentReadyInitially: Boolean,
     freezeContentOnBack: Boolean,
+    backgroundIsLive: Boolean,
     onBackCommitted: () -> Unit,
     content: @Composable (
         requestBack: () -> Unit,
@@ -182,7 +186,11 @@ private fun BondBackTransition(
     val latestOnBackCommitted by rememberUpdatedState(onBackCommitted)
     val openingProgress = remember {
         Animatable(
-            if (animateOpening && motionEnabled && backgroundSnapshot != null) 0f else 1f,
+            if (
+                animateOpening &&
+                motionEnabled &&
+                (backgroundIsLive || backgroundSnapshot != null)
+            ) 0f else 1f,
         )
     }
     var contentReady by remember { mutableStateOf(contentReadyInitially) }
@@ -193,7 +201,11 @@ private fun BondBackTransition(
     val maximumCornerPx = with(density) { 28.dp.toPx() }
 
     LaunchedEffect(animateOpening, motionEnabled, backgroundSnapshot, contentReady) {
-        if (!animateOpening || !motionEnabled || backgroundSnapshot == null) {
+        if (
+            !animateOpening ||
+            !motionEnabled ||
+            (!backgroundIsLive && backgroundSnapshot == null)
+        ) {
             openingProgress.snapTo(1f)
             return@LaunchedEffect
         }
@@ -222,7 +234,11 @@ private fun BondBackTransition(
         if (backIsFinishing) return
         backIsFinishing = true
         val readerFullyOpened = openingProgress.value >= 0.999f
-        if (motionEnabled && backgroundSnapshot != null && readerFullyOpened) {
+        if (
+            motionEnabled &&
+            (backgroundIsLive || backgroundSnapshot != null) &&
+            readerFullyOpened
+        ) {
             freezeReader()
             val remaining = (1f - backProgress.value).coerceIn(0f, 1f)
             backProgress.animateTo(
@@ -258,7 +274,7 @@ private fun BondBackTransition(
             events.collect { }
             return@PredictiveBackHandler
         }
-        if (!motionEnabled || backgroundSnapshot == null) {
+        if (!motionEnabled || (!backgroundIsLive && backgroundSnapshot == null)) {
             events.collect { }
             finishBack()
             return@PredictiveBackHandler
@@ -272,20 +288,31 @@ private fun BondBackTransition(
             }
             finishBack()
         } catch (_: CancellationException) {
-            backProgress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(
-                    durationMillis = TELEGRAM_CANCEL_DURATION_MS,
-                    easing = TelegramBackEasing,
-                ),
-            )
-            frozenReader = null
-            backIsFinishing = false
+            // PredictiveBackHandler cancels this coroutine when the user pulls the page back
+            // instead of committing. Animatable.animateTo is cancellable too; running it directly
+            // here used to abort before frozenReader was cleared, leaving its snapshot over the
+            // live WebView and swallowing every later drag.
+            try {
+                withContext(NonCancellable) {
+                    backProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = TELEGRAM_CANCEL_DURATION_MS,
+                            easing = TelegramBackEasing,
+                        ),
+                    )
+                }
+            } finally {
+                frozenReader = null
+                backIsFinishing = false
+            }
         }
     }
 
     Box(Modifier.fillMaxSize()) {
-        backgroundSnapshot?.let { snapshot ->
+        // The mail list is kept composed below the detail NavHost destination, so drawing its old
+        // capture here would hide refresh motion and newly arrived messages during predictive back.
+        if (!backgroundIsLive) backgroundSnapshot?.let { snapshot ->
             Image(
                 bitmap = snapshot,
                 contentDescription = null,
