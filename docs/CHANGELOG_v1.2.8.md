@@ -19,6 +19,8 @@
   avatar instead of merging into one solid block of color.
 - Corrected the Alipay / ANT Bank avatar treatment and added bundled icons for Pixiv, Plasma One,
   SafePal, and 钱迹 with sender-name and domain matching.
+- Updated the Alipay and Apple artwork, removed bright white brand-avatar plates in dark mode, and
+  added recognition for NetEase service mail.
 
 ## Interface polish
 

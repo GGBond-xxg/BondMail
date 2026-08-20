@@ -105,6 +105,8 @@ object BrandMatcher {
         "qianjiapp.com" to Brand("qianji", "钱"),
         "qianji" to Brand("qianji", "钱"),
         "钱迹" to Brand("qianji", "钱"),
+        "netease.com" to Brand("163.com", "网"),
+        "netease" to Brand("163.com", "网"),
         "moovit" to Brand("moovit", "M"),
         "robinhood" to Brand("robinhood", "RH"),
         "binance" to Brand("binance", "BN"), "bybit" to Brand("bybit", "BY"),
