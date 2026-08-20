@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.2.7](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.2.7)
-- 安装包：[BondMail-v1.2.7.apk](releases/BondMail-v1.2.7.apk)
+- 最新版本：[BondMail v1.2.8](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.2.8)
+- 安装包：[BondMail-v1.2.8.apk](releases/BondMail-v1.2.8.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [releases/README.md](releases/README.md)。
@@ -120,7 +120,7 @@ releases/            已发布 APK 与校验值
 
 ## 文档
 
-- [v1.2.7 更新说明](docs/CHANGELOG_v1.2.7.md)
+- [v1.2.8 更新说明](docs/CHANGELOG_v1.2.8.md)
 - [OAuth 配置](docs/README_OAUTH.md)
 - [测试清单](docs/TEST_CHECKLIST.md)
 - [动效规范](docs/README_MOTION_SPEC.md)

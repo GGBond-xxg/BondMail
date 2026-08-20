@@ -1,5 +1,18 @@
 # BondMail releases
 
+## v1.2.8
+
+- APK: `BondMail-v1.2.8.apk`
+- Package: `com.bond.mail`
+- Version code: `130`
+- Minimum Android version: Android 8.0 (API 26)
+- SHA-256: `178F60BD56F34BF5280998E5F75F14935CF91DA9FDE8F3DE2574F8A7155C862D`
+
+Fixes cold-start All Mailboxes refresh, keeps the live mailbox visible during predictive back,
+restores the mail-opening animation, and prevents cancelled back gestures from blocking reader
+scrolling. It also streamlines drawer account actions, improves dark-mode selection contrast, fixes
+the Alipay mark, and adds Pixiv, Plasma One, SafePal, and 钱迹 sender icons.
+
 ## v1.2.7
 
 - APK: `BondMail-v1.2.7.apk`

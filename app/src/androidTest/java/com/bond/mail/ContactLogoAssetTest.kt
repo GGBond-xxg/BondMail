@@ -36,7 +36,13 @@ class ContactLogoAssetTest {
             "顺丰速运" to "notice@sf-express.com",
             "支付宝" to "notice@alipay.com",
             "Ant Bank（HK）" to "bankupdate@notify.antbank.hk",
+            "pixiv" to "info@pixiv.net",
+            "Plasma One" to "updates@plasma.org",
+            "SafePal" to "marketing@safepal.com",
+            "钱迹" to "notice@qianjiapp.com",
             "Moovit" to "notice@moovit.com",
+            "Apple" to "no_reply@apple.com",
+            "网易邮箱账号安全" to "safe@service.netease.com",
         )
 
         senders.forEach { (name, address) ->

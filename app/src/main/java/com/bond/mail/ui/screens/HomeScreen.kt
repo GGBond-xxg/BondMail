@@ -1624,10 +1624,10 @@ private fun NotificationPermissionCard(
                 modifier = Modifier.align(Alignment.End),
             ) {
                 TextButton(onClick = onReject) {
-                    Text(tr("notification_permission_reject"))
+                    Text(tr("notification_permission_reject"), maxLines = 1)
                 }
                 BondPrimaryButton(onClick = onAllow) {
-                    Text(tr("notification_permission_allow"))
+                    Text(tr("notification_permission_allow"), maxLines = 1)
                 }
             }
         }

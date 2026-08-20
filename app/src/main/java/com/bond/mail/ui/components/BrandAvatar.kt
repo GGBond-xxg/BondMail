@@ -66,7 +66,11 @@ fun brandAvatarPalette(
     }
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
-    val background = if (monet) {
+    val officialInk = OFFICIAL_LIGHT_AVATAR_INKS[brand.key]
+    val isDarkPalette = scheme.background.luminance() < 0.5f
+    val background = if (officialInk != null) {
+        if (isDarkPalette) scheme.surfaceVariant else Color.White
+    } else if (monet) {
         when (tone) {
             0 -> scheme.primaryContainer
             1 -> scheme.secondaryContainer
@@ -79,7 +83,13 @@ fun brandAvatarPalette(
             else -> scheme.tertiary
         }
     }
-    val foreground = if (monet) {
+    val foreground = if (officialInk != null) {
+        if (isDarkPalette && brand.key in DARK_AVATAR_LIGHT_INK_BRANDS) {
+            scheme.onSurface
+        } else {
+            officialInk
+        }
+    } else if (monet) {
         when (tone) {
             0 -> scheme.onPrimaryContainer
             1 -> scheme.onSecondaryContainer
@@ -136,11 +146,12 @@ fun BrandAvatar(
         } else if (logo != null) {
             BrandSvg(
                 logo = logo,
-                brandKey = brand.key,
                 tint = foreground,
                 // Full-colour embedded artwork already contains its own square background. Fill
                 // the parent so CircleShape clips it into a proper round contact avatar.
-                modifier = Modifier.size(if (logo.raster != null) size else size * 0.54f),
+                modifier = Modifier.size(
+                    if (logo.raster != null) size else size * brandLogoScale(brand.key),
+                ),
             )
         } else if (brand.key in MICROSOFT_BRAND_KEYS) {
             MicrosoftMark(
@@ -205,18 +216,15 @@ fun ContactAvatar(
 @Composable
 private fun BrandSvg(
     logo: ContactLogo,
-    brandKey: String,
     tint: Color,
     modifier: Modifier,
 ) {
     Canvas(modifier) {
         val scale = min(size.width / logo.contentWidth, size.height / logo.contentHeight)
-        val appleOffsetX = if (brandKey == "apple") size.width * 0.015f else 0f
-        val appleOffsetY = if (brandKey == "apple") size.height * 0.055f else 0f
         val offsetX = (size.width - logo.contentWidth * scale) / 2f -
-            logo.contentLeft * scale + appleOffsetX
+            logo.contentLeft * scale
         val offsetY = (size.height - logo.contentHeight * scale) / 2f -
-            logo.contentTop * scale + appleOffsetY
+            logo.contentTop * scale
         withTransform({
             translate(offsetX, offsetY)
             scale(scale, scale, pivot = androidx.compose.ui.geometry.Offset.Zero)
@@ -275,6 +283,25 @@ private val DARK_FOREGROUND_BRANDS = setOf(
     "trae",
     "fliggy",
 )
+
+private val OFFICIAL_LIGHT_AVATAR_INKS = mapOf(
+    "alipay" to Color(0xFF1677FF),
+    "pixiv" to Color(0xFF0096FA),
+    "plasmaone" to Color(0xFF141414),
+    "safepal" to Color(0xFF4A21EF),
+    "qianji" to Color(0xFF111111),
+)
+
+private val DARK_AVATAR_LIGHT_INK_BRANDS = setOf(
+    "plasmaone",
+    "qianji",
+)
+
+private fun brandLogoScale(key: String): Float = when (key) {
+    "alipay" -> 0.66f
+    "pixiv" -> 0.72f
+    else -> 0.54f
+}
 
 private data class ContactLogo(
     val contentLeft: Float,
@@ -671,7 +698,8 @@ private object ContactLogoStore {
         "icloud" -> "icloud"
         "x.com", "twitter" -> "x"
         "chatgpt" -> "openai"
-        "163.com", "126.com" -> "neteasecloudmusic"
+        "163.com" -> "163.com"
+        "126.com" -> "126.com"
         "bank of china", "bochk" -> "bocbank"
         "za bank" -> "zabank"
         "gate.io", "gate" -> "gate"

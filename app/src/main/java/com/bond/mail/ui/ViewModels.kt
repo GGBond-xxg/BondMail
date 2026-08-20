@@ -66,6 +66,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val foregroundSession = MutableStateFlow(0L)
     private var refreshJob: Job? = null
     private var refreshingAccountId: String? = null
+    private var activeRefreshIsSilent: Boolean = false
     private var folderSelectionJob: Job? = null
     private var stagedMailboxSelection: FolderSnapshotKey? = null
     private var refreshGeneration: Long = 0L
@@ -311,7 +312,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         if (
             refreshJob?.isActive == true &&
             refreshingAccountId == accountId &&
-            activeRefreshGeneration == refreshGeneration
+            activeRefreshGeneration == refreshGeneration &&
+            // A cold-start recovery can still be waiting for UiPerformanceGate when the user
+            // explicitly pulls to refresh. Silent work may reuse an existing visible refresh, but
+            // a visible refresh must always pre-empt silent work so the gesture responds at once.
+            (silent || !activeRefreshIsSilent)
         ) return
 
         refreshJob?.cancel()
@@ -319,6 +324,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         refreshGeneration = generation
         activeRefreshGeneration = generation
         refreshingAccountId = accountId
+        activeRefreshIsSilent = silent
         val publishBusy = !silent && appForeground
         if (publishBusy) busy.value = true
 
@@ -376,6 +382,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                 if (activeRefreshGeneration == generation) {
                     if (!silent) busy.value = false
                     refreshingAccountId = null
+                    activeRefreshIsSilent = false
                     refreshJob = null
                 }
             }

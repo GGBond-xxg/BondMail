@@ -30,6 +30,11 @@ class BrandMatcherTest {
             Triple("顺丰速运", "notice@sf-express.com", "sfexpress"),
             Triple("支付宝", "notice@alipay.com", "alipay"),
             Triple("Ant Bank（HK）", "bankupdate@notify.antbank.hk", "alipay"),
+            Triple("pixiv", "info@pixiv.net", "pixiv"),
+            Triple("Plasma One", "updates@plasma.org", "plasmaone"),
+            Triple("SafePal", "marketing@safepal.com", "safepal"),
+            Triple("钱迹", "notice@qianjiapp.com", "qianji"),
+            Triple("网易邮箱账号安全", "safe@service.netease.com", "163.com"),
             Triple("Moovit", "notice@moovit.com", "moovit"),
         )
 
