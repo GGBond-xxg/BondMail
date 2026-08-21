@@ -2269,7 +2269,6 @@ internal object MailWebViewCache {
         val card = Element("section")
             .attr("id", "bondmail-message-card")
             .appendChild(createHeader(header))
-        createAttachments(header)?.let(card::appendChild)
         card.appendChild(messageBody)
 
         body.appendChild(createSubject(header))

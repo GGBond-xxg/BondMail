@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -72,6 +73,9 @@ private const val PROJECT_HOME_URL = "https://github.com/GGBond-xxg/BondMail"
 @Composable
 fun AboutScreen(
     onBack: () -> Unit,
+    updateAvailable: Boolean,
+    updateChecking: Boolean,
+    onCheckForUpdates: () -> Unit,
     onOpenSourceLicenses: () -> Unit,
     onOpenAppLicense: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
@@ -109,6 +113,32 @@ fun AboutScreen(
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
                 AboutActionRow(
+                    icon = Icons.Default.SystemUpdate,
+                    title = tr("software_version"),
+                    subtitle = if (updateChecking) {
+                        tr("checking_for_updates")
+                    } else {
+                        "V${BuildConfig.VERSION_NAME} · ${tr("check_for_updates")}"
+                    },
+                    showDot = updateAvailable,
+                    onClick = onCheckForUpdates,
+                )
+                AboutDivider()
+                AboutActionRow(
+                    icon = Icons.Default.OpenInNew,
+                    title = tr("go_to_github"),
+                    subtitle = tr("go_to_github_desc"),
+                    external = true,
+                    onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME_URL)))
+                        }.onFailure {
+                            Toast.makeText(context, externalLinkOpenFailed, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                )
+                AboutDivider()
+                AboutActionRow(
                     icon = Icons.Default.Code,
                     title = tr("open_source_licenses"),
                     subtitle = tr("open_source_licenses_desc"),
@@ -127,24 +157,6 @@ fun AboutScreen(
                     title = tr("privacy_policy"),
                     subtitle = tr("privacy_policy_desc"),
                     onClick = onOpenPrivacyPolicy,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.OpenInNew,
-                    title = tr("project_home"),
-                    subtitle = tr("project_home_desc"),
-                    external = true,
-                    onClick = {
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME_URL)))
-                        }.onFailure {
-                            Toast.makeText(
-                                context,
-                                externalLinkOpenFailed,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    },
                 )
             }
         }
@@ -422,6 +434,7 @@ private fun AboutActionRow(
     title: String,
     subtitle: String,
     external: Boolean = false,
+    showDot: Boolean = false,
     onClick: () -> Unit,
 ) {
     if (LocalUiStyle.current == UiStyle.MIUIX) {
@@ -429,6 +442,7 @@ private fun AboutActionRow(
             icon = icon,
             title = title,
             summary = subtitle,
+            showDot = showDot,
             onClick = onClick,
         )
         return
@@ -448,16 +462,27 @@ private fun AboutActionRow(
                 .padding(vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
+            Box {
+                Surface(
                 modifier = Modifier.size(46.dp),
                 shape = RoundedCornerShape(15.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Icon(
+                ) {
+                    Icon(
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.padding(11.dp),
-                )
+                    )
+                }
+                if (showDot) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(9.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.error),
+                    )
+                }
             }
             Column(modifier = Modifier.weight(1f).padding(horizontal = 14.dp)) {
                 Text(

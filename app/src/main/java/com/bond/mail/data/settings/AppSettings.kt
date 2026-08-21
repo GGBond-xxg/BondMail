@@ -50,6 +50,7 @@ data class AppSettings(
     val notificationPermissionPromptDismissed: Boolean = false,
     val remoteImagePolicy: RemoteImagePolicy = RemoteImagePolicy.WIFI_ONLY,
     val languageCode: String = "system",
+    val attachmentDownloadTreeUri: String = "",
 )
 
 class SettingsStore(private val context: Context) {
@@ -68,6 +69,7 @@ class SettingsStore(private val context: Context) {
         val notificationPermissionPromptDismissed = booleanPreferencesKey("notification_permission_prompt_dismissed")
         val remoteImages = stringPreferencesKey("remote_images")
         val language = stringPreferencesKey("language")
+        val attachmentDownloadTreeUri = stringPreferencesKey("attachment_download_tree_uri")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -93,6 +95,7 @@ class SettingsStore(private val context: Context) {
             notificationPermissionPromptDismissed = p[Keys.notificationPermissionPromptDismissed] ?: false,
             remoteImagePolicy = runCatching { RemoteImagePolicy.valueOf(p[Keys.remoteImages] ?: RemoteImagePolicy.WIFI_ONLY.name) }.getOrDefault(RemoteImagePolicy.WIFI_ONLY),
             languageCode = p[Keys.language] ?: "system",
+            attachmentDownloadTreeUri = p[Keys.attachmentDownloadTreeUri] ?: "",
         )
     }
 
@@ -127,4 +130,7 @@ class SettingsStore(private val context: Context) {
     }
     suspend fun setRemoteImages(value: RemoteImagePolicy) = context.dataStore.edit { it[Keys.remoteImages] = value.name }
     suspend fun setLanguage(value: String) = context.dataStore.edit { it[Keys.language] = value }
+    suspend fun setAttachmentDownloadTreeUri(value: String) = context.dataStore.edit {
+        it[Keys.attachmentDownloadTreeUri] = value
+    }
 }

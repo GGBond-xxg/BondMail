@@ -124,6 +124,8 @@ object BrandMatcher {
         "agricultural bank of china" to Brand("abchina", "ABC"),
         "农业银行" to Brand("abchina", "ABC"),
         "農業銀行" to Brand("abchina", "ABC"),
+        "adobe.com" to Brand("adobe", "AD"),
+        "adobe systems" to Brand("adobe", "AD"),
         "alibabacloud.com" to Brand("alibaba", "ALI"),
         "alibaba.com" to Brand("alibaba", "ALI"),
         "aliyun.com" to Brand("alibaba", "ALI"),

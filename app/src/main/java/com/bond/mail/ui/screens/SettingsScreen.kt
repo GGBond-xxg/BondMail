@@ -1,5 +1,14 @@
 package com.bond.mail.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -28,6 +37,7 @@ import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Card
@@ -52,16 +62,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.documentfile.provider.DocumentFile
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.bond.mail.BuildConfig
@@ -105,6 +119,19 @@ fun SettingsScreen(
     chromeControllerEnabled: Boolean = true,
 ) {
     val settings by viewModel.settings.collectAsState()
+    val context = LocalContext.current
+    val downloadFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        viewModel.attachmentDownloadTreeUri(uri.toString())
+    }
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
@@ -298,6 +325,19 @@ fun SettingsScreen(
                     selected = settings.remoteImagePolicy,
                     onSelect = viewModel::remoteImages,
                 )
+                SettingsDivider()
+                val selectedFolder = remember(settings.attachmentDownloadTreeUri) {
+                    settings.attachmentDownloadTreeUri
+                        .takeIf(String::isNotBlank)
+                        ?.let(Uri::parse)
+                        ?.let { uri -> DocumentFile.fromTreeUri(context, uri)?.name }
+                }
+                SettingsActionRow(
+                    icon = Icons.Default.Folder,
+                    title = tr("attachment_download_folder"),
+                    subtitle = selectedFolder ?: tr("attachment_download_folder_not_selected"),
+                    onClick = { downloadFolderPicker.launch(null) },
+                )
             }
         }
 
@@ -378,6 +418,7 @@ private fun <T> DropdownSettingRow(
         return
     }
     var expanded by remember { mutableStateOf(false) }
+    var popupMounted by remember { mutableStateOf(false) }
     var selectorCenterInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var selectorSize by remember { mutableStateOf(IntSize.Zero) }
     var pendingSelection by remember { mutableStateOf<Pair<T, Offset>?>(null) }
@@ -390,6 +431,14 @@ private fun <T> DropdownSettingRow(
         withFrameNanos { }
         pendingSelection = null
         onSelectAt?.invoke(value, origin) ?: onSelect(value)
+    }
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            popupMounted = true
+        } else if (popupMounted) {
+            delay(130L)
+            popupMounted = false
+        }
     }
     val arrowRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
@@ -469,7 +518,7 @@ private fun <T> DropdownSettingRow(
                     )
                 }
             }
-            if (expanded) {
+            if (popupMounted) {
                 val popupWidth = with(density) {
                     selectorSize.width.toDp().coerceIn(190.dp, 230.dp)
                 }
@@ -482,20 +531,32 @@ private fun <T> DropdownSettingRow(
                     onDismissRequest = { expanded = false },
                     properties = PopupProperties(focusable = true),
                 ) {
-                    Surface(
-                        modifier = Modifier.width(popupWidth),
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.bondSurfaces.popup,
-                        tonalElevation = 6.dp,
-                        shadowElevation = 10.dp,
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant,
-                        ),
-                    ) {
+                    val popupProgress by animateFloatAsState(
+                        targetValue = if (expanded) 1f else 0f,
+                        animationSpec = tween(durationMillis = if (expanded) 190 else 130),
+                        label = "settings-dropdown-popup-progress",
+                    )
+                        Surface(
+                            modifier = Modifier
+                                .width(popupWidth)
+                                .graphicsLayer {
+                                    alpha = popupProgress
+                                    scaleX = 0.92f + 0.08f * popupProgress
+                                    scaleY = 0.92f + 0.08f * popupProgress
+                                    transformOrigin = TransformOrigin(0.86f, 0f)
+                                },
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.bondSurfaces.popup,
+                            tonalElevation = 6.dp,
+                            shadowElevation = 10.dp,
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                        ) {
                         // Material DropdownMenu always inserts an 8dp vertical margin. This custom
                         // anchored surface keeps Material ripple but removes those empty bands.
-                        Column {
+                            Column {
                             options.forEach { (value, label) ->
                                 val isSelected = value == selected
                                 DropdownMenuItem(
@@ -532,8 +593,8 @@ private fun <T> DropdownSettingRow(
                                     },
                                 )
                             }
+                            }
                         }
-                    }
                 }
             }
         }

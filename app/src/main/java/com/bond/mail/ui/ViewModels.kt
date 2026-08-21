@@ -834,6 +834,9 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun notifications(value: Boolean) = viewModelScope.launch { container.settings.setNotifications(value) }
     fun remoteImages(value: RemoteImagePolicy) = viewModelScope.launch { container.settings.setRemoteImages(value) }
     fun language(value: String) = viewModelScope.launch { container.settings.setLanguage(value) }
+    fun attachmentDownloadTreeUri(value: String) = viewModelScope.launch {
+        container.settings.setAttachmentDownloadTreeUri(value)
+    }
     fun renameAccount(id: String, displayName: String) = viewModelScope.launch { container.repository.updateAccountDisplayName(id, displayName) }
     fun saveAccountSettings(
         id: String,

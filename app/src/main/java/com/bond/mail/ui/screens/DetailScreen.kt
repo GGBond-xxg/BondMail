@@ -16,7 +16,8 @@ import android.webkit.WebViewClient
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
-import androidx.core.content.FileProvider
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
@@ -62,6 +63,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.MarkEmailRead
@@ -124,6 +126,7 @@ import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.mail.MailAttachmentCodec
+import com.bond.mail.data.mail.AttachmentDownloadStore
 import com.bond.mail.data.mail.MailAttachmentInfo
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.mail.MimeParser
@@ -164,7 +167,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.io.File
 
 private const val MAIL_OPEN_READY_TIMEOUT_MS = 450L
 
@@ -228,6 +230,11 @@ fun DetailScreen(
     // gets out of the way while reading and returns when the user scrolls back.
     var bottomChromeVisible by remember(messageId) { mutableStateOf(true) }
     var confirmDelete by remember(messageId) { mutableStateOf(false) }
+    val attachmentDownloadStore = remember(context) { AttachmentDownloadStore(context.applicationContext) }
+    var attachmentListOpen by remember(messageId) { mutableStateOf(false) }
+    var attachmentDownloadPromptIndex by remember(messageId) { mutableStateOf<Int?>(null) }
+    var downloadingAttachmentIndex by remember(messageId) { mutableStateOf<Int?>(null) }
+    var pendingFolderAttachmentIndex by remember(messageId) { mutableStateOf<Int?>(null) }
     // Use Chromium's native scrolling only. Returning zero keeps the existing WebView listener
     // compatible while disabling BondMail's custom rubber-band displacement.
     val updateTopPull: (Float) -> Float = { 0f }
@@ -241,6 +248,58 @@ fun DetailScreen(
             stored = storedMessage,
             opened = immediateOpenResult,
         )
+    }
+    val latestItem by rememberUpdatedState(item)
+    val attachmentFallbackLabel = tr("attachment")
+    val attachmentDownloadedMessage = tr("downloaded")
+    val attachmentDownloadFailedMessage = tr("attachment_download_failed")
+    val attachmentOpenFailedMessage = tr("attachment_open_failed")
+
+    suspend fun downloadAttachmentTo(index: Int, treeUri: Uri) {
+        val message = latestItem ?: return
+        val attachments = MailAttachmentCodec.decode(message.attachmentsJson).ifEmpty {
+            if (message.hasAttachments) listOf(MailAttachmentInfo(name = attachmentFallbackLabel)) else emptyList()
+        }
+        val info = attachments.getOrNull(index) ?: return
+        downloadingAttachmentIndex = index
+        runCatching {
+            val downloaded = container.repository.downloadAttachment(message.id, index)
+            attachmentDownloadStore.save(
+                treeUri = treeUri,
+                messageId = message.id,
+                index = index,
+                info = downloaded.info,
+                identityInfo = info,
+                bytes = downloaded.bytes,
+            )
+        }.onSuccess {
+            Toast.makeText(context, attachmentDownloadedMessage, Toast.LENGTH_SHORT).show()
+        }.onFailure { failure ->
+            Toast.makeText(
+                context,
+                failure.message ?: attachmentDownloadFailedMessage,
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+        downloadingAttachmentIndex = null
+    }
+
+    val attachmentFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { treeUri ->
+        val index = pendingFolderAttachmentIndex
+        pendingFolderAttachmentIndex = null
+        if (treeUri == null || index == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                treeUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        scope.launch {
+            container.settings.setAttachmentDownloadTreeUri(treeUri.toString())
+            downloadAttachmentTo(index, treeUri)
+        }
     }
     LaunchedEffect(
         messageId,
@@ -455,35 +514,32 @@ fun DetailScreen(
         )
     }
 
-    fun openAttachment(index: Int) {
-        scope.launch {
-            runCatching {
-                val attachment = container.repository.downloadAttachment(item.id, index)
-                val directory = File(context.cacheDir, "attachments").apply { mkdirs() }
-                val safeName = attachment.info.name
-                    .replace(Regex("[^\\p{L}\\p{N}._ -]+"), "_")
-                    .trim()
-                    .ifBlank { "attachment-${index + 1}" }
-                val target = File(directory, "${item.id.hashCode()}-$index-$safeName")
-                target.writeBytes(attachment.bytes)
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.files",
-                    target,
-                )
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, attachment.info.contentType.substringBefore(';'))
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(Intent.createChooser(intent, attachment.info.name))
-            }.onFailure { failure ->
-                Toast.makeText(
-                    context,
-                    failure.message ?: "Unable to open attachment",
-                    Toast.LENGTH_LONG,
-                ).show()
+    fun openDownloadedAttachment(uri: Uri, info: MailAttachmentInfo) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, info.contentType.substringBefore(';').ifBlank { "application/octet-stream" })
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching { context.startActivity(Intent.createChooser(intent, info.name)) }
+            .onFailure {
+                Toast.makeText(context, attachmentOpenFailedMessage, Toast.LENGTH_LONG).show()
             }
+    }
+
+    fun requestAttachment(index: Int) {
+        val info = detailAttachments.getOrNull(index) ?: return
+        val downloaded = attachmentDownloadStore.downloadedUri(item.id, index, info)
+        if (downloaded != null) {
+            openDownloadedAttachment(downloaded, info)
+        } else {
+            attachmentDownloadPromptIndex = index
+        }
+    }
+
+    fun openAttachments() {
+        when (detailAttachments.size) {
+            0 -> Unit
+            1 -> requestAttachment(0)
+            else -> attachmentListOpen = true
         }
     }
 
@@ -533,6 +589,7 @@ fun DetailScreen(
                     previewText = "",
                     topContentInset = messageContentTopInset,
                     headerContentVisible = true,
+                    onAttachmentsClick = ::openAttachments,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -549,6 +606,7 @@ fun DetailScreen(
                         previewText = previewText,
                         topContentInset = messageContentTopInset,
                         headerContentVisible = true,
+                        onAttachmentsClick = ::openAttachments,
                         modifier = Modifier.fillMaxSize(),
                     )
                     Surface(
@@ -603,7 +661,7 @@ fun DetailScreen(
                     },
                     onRemoteImagesChanged = { hasRemoteImages = it },
                     onExternalLink = { externalUrl = it },
-                    onAttachmentClick = ::openAttachment,
+                    onAttachmentClick = ::requestAttachment,
                     onChromeVisibilityChanged = { visible -> bottomChromeVisible = visible },
                     onContentScrollChanged = { scrollY ->
                         mailContentScrollY.intValue = scrollY.coerceAtLeast(0)
@@ -644,6 +702,7 @@ fun DetailScreen(
                     onTopPullDelta = updateTopPull,
                     onTopPullRelease = releaseTopPull,
                     webView = activeMailWebView,
+                    onAttachmentsClick = ::openAttachments,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(
@@ -681,6 +740,101 @@ fun DetailScreen(
             }
         }
 
+        }
+
+        if (attachmentListOpen) {
+            BondAlertDialog(
+                onDismissRequest = { attachmentListOpen = false },
+                title = { Text(tr("attachments")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        detailAttachments.forEachIndexed { index, attachment ->
+                            val downloaded = attachmentDownloadStore.downloadedUri(item.id, index, attachment) != null
+                            Surface(
+                                onClick = {
+                                    attachmentListOpen = false
+                                    requestAttachment(index)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(attachment.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        val size = MailAttachmentCodec.formatSize(attachment.sizeBytes)
+                                        if (size.isNotBlank()) {
+                                            Text(
+                                                size,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    if (downloaded) {
+                                        Text(
+                                            tr("downloaded"),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    BondTextAction(text = tr("cancel"), onClick = { attachmentListOpen = false })
+                },
+            )
+        }
+
+        attachmentDownloadPromptIndex?.let { index ->
+            val attachment = detailAttachments.getOrNull(index)
+            if (attachment != null) {
+                val downloading = downloadingAttachmentIndex == index
+                BondAlertDialog(
+                    onDismissRequest = {
+                        if (!downloading) attachmentDownloadPromptIndex = null
+                    },
+                    title = { Text(tr("download_attachment_title")) },
+                    text = { Text(tr("download_attachment_body", attachment.name)) },
+                    confirmButton = {
+                        BondTextAction(
+                            text = if (downloading) tr("downloading") else tr("download"),
+                            enabled = !downloading,
+                            primary = true,
+                            onClick = {
+                                val treeUri = settings.attachmentDownloadTreeUri
+                                    .takeIf(String::isNotBlank)
+                                    ?.let(Uri::parse)
+                                if (treeUri == null) {
+                                    attachmentDownloadPromptIndex = null
+                                    pendingFolderAttachmentIndex = index
+                                    attachmentFolderPicker.launch(null)
+                                } else {
+                                    scope.launch {
+                                        downloadAttachmentTo(index, treeUri)
+                                        attachmentDownloadPromptIndex = null
+                                    }
+                                }
+                            },
+                        )
+                    },
+                    dismissButton = {
+                        BondTextAction(
+                            text = tr("cancel"),
+                            enabled = !downloading,
+                            onClick = { attachmentDownloadPromptIndex = null },
+                        )
+                    },
+                )
+            }
         }
 
         Surface(
@@ -1867,6 +2021,7 @@ private fun MailStableHeaderOverlay(
     onTopPullDelta: (Float) -> Float,
     onTopPullRelease: () -> Unit,
     webView: WebView?,
+    onAttachmentsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val latestWebView by rememberUpdatedState(webView)
@@ -1943,6 +2098,7 @@ private fun MailStableHeaderOverlay(
                 header = header,
                 headerLayout = headerLayout,
                 contentVisible = true,
+                onAttachmentsClick = onAttachmentsClick,
             )
         }
     }
@@ -1958,6 +2114,7 @@ private fun MailDocumentPlaceholder(
     topContentInset: Dp,
     horizontalContentInset: Dp = 12.dp,
     headerContentVisible: Boolean = true,
+    onAttachmentsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val skeleton = MaterialTheme.colorScheme.surfaceVariant
@@ -1974,7 +2131,6 @@ private fun MailDocumentPlaceholder(
             ((preview.length + 39) / 40).coerceIn(2, 7)
         }
     }
-    val attachmentRows = header.attachments.size.coerceIn(0, 2)
 
     Surface(
         modifier = modifier,
@@ -1992,13 +2148,8 @@ private fun MailDocumentPlaceholder(
             } else {
                 (previewLineCount * 21 + 34).dp
             }
-            val attachmentHeight = if (attachmentRows == 0) {
-                0.dp
-            } else {
-                (attachmentRows * 45 + (attachmentRows - 1) * 8 + 18).dp
-            }
             val compactCardHeight = (
-                headerLayout.senderBlockHeight + previewHeight + attachmentHeight
+                headerLayout.senderBlockHeight + previewHeight
             ).coerceIn(220.dp, availableCardHeight)
             val targetCardHeight = if (expandedBody) availableCardHeight else compactCardHeight
 
@@ -2029,8 +2180,8 @@ private fun MailDocumentPlaceholder(
                             header = header,
                             headerLayout = headerLayout,
                             contentVisible = headerContentVisible,
+                            onAttachmentsClick = onAttachmentsClick,
                         )
-                        MailPlaceholderAttachments(header.attachments)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2208,6 +2359,7 @@ private fun MailSenderHeaderContent(
     header: MailWebHeader,
     headerLayout: MailHeaderLayout,
     contentVisible: Boolean,
+    onAttachmentsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -2259,17 +2411,24 @@ private fun MailSenderHeaderContent(
                 // Reserve the attachment slot even before the MIME body arrives. The icon may
                 // become known later, but sender/date text must never reflow when it appears.
                 Box(
-                    modifier = Modifier.width(16.dp),
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (header.attachments.isNotEmpty()) {
+                                Modifier.clickable(onClick = onAttachmentsClick)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (header.attachments.isNotEmpty()) {
-                        Text(
-                            text = "📎",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp,
-                            lineHeight = 16.sp,
-                            letterSpacing = 0.sp,
-                            maxLines = 1,
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = tr("attachments"),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(19.dp),
                         )
                     }
                 }

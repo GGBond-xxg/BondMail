@@ -14,8 +14,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 131
-        versionName = "1.2.9"
+        versionCode = 132
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -116,6 +116,7 @@ dependencies {
 
 
     implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     // OAuth providers. MSAL owns Microsoft token refresh; Google Identity Services returns

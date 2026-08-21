@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -39,6 +40,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -121,9 +123,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bond.mail.AppContainer
+import com.bond.mail.BuildConfig
 import com.bond.mail.ExternalComposeRequest
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
 import com.bond.mail.data.db.AccountEntity
@@ -133,6 +137,11 @@ import com.bond.mail.data.model.AuthType
 import com.bond.mail.data.model.UiFailure
 import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.update.AppUpdateChecker
+import com.bond.mail.data.update.AppUpdateCheckResult
+import com.bond.mail.data.update.AppUpdateInfo
+import com.bond.mail.data.update.AppUpdateInstaller
+import com.bond.mail.data.update.UpdatePromptStore
 import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.i18n.tr
@@ -225,6 +234,7 @@ fun MailApp(
     val loadedSettings by container.settings.settings.collectAsState(initial = null)
     val settings = loadedSettings ?: AppSettings()
     val nav = rememberNavController()
+    val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val context = LocalContext.current
     val hostView = LocalView.current
@@ -233,6 +243,15 @@ fun MailApp(
     val mailboxSnapshotLayer = rememberGraphicsLayer()
     val providersSnapshotLayer = rememberGraphicsLayer()
     val aboutSnapshotLayer = rememberGraphicsLayer()
+    val updateChecker = remember { AppUpdateChecker() }
+    val updatePromptStore = remember(context) { UpdatePromptStore(context.applicationContext) }
+    val updateInstaller = remember(context) { AppUpdateInstaller(context.applicationContext) }
+    var availableUpdate by remember { mutableStateOf(updatePromptStore.pendingUpdate()) }
+    var updateAvailableDot by remember { mutableStateOf(updatePromptStore.hasPendingUpdate()) }
+    var updateChecking by remember { mutableStateOf(false) }
+    val alreadyLatestVersionMessage = tr("already_latest_version")
+    val updateCheckFailedMessage = tr("update_check_failed")
+    val updateDownloadingMessage = tr("update_downloading")
     // SplashScreen's keep condition cancels the host view's pre-draw, so waiting for a completed
     // draw would deadlock until the Activity safety timeout. Layout does run underneath the splash:
     // release it only after MAIN has a real full-size layout, then the exit listener keeps the
@@ -499,6 +518,7 @@ fun MailApp(
                 Lifecycle.Event.ON_RESUME -> {
                     container.setAppForeground(true)
                     homeVm.onAppForegrounded()
+                    updateInstaller.installIfReady()
                     val grantedNow = hasNotificationPermission()
                     notificationPermissionGranted = grantedNow
                     if (grantedNow) {
@@ -616,6 +636,53 @@ fun MailApp(
         while (true) {
             delay(settings.syncMinutes.coerceAtLeast(1) * 60_000L)
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) homeVm.refreshSilently()
+        }
+    }
+
+    fun cancelUpdatePrompt(update: AppUpdateInfo) {
+        updatePromptStore.cancel(update)
+        updateAvailableDot = true
+        availableUpdate = null
+    }
+
+    fun ignoreUpdatePrompt(update: AppUpdateInfo) {
+        updatePromptStore.ignore(update)
+        updateAvailableDot = false
+        availableUpdate = null
+    }
+
+    fun checkForUpdates() {
+        if (updateChecking) return
+        updateChecking = true
+        appScope.launch {
+            when (val result = updateChecker.check()) {
+                is AppUpdateCheckResult.Available -> availableUpdate = result.update
+                AppUpdateCheckResult.UpToDate -> Toast.makeText(
+                    context,
+                    alreadyLatestVersionMessage,
+                    Toast.LENGTH_SHORT,
+                ).show()
+                AppUpdateCheckResult.Failed -> Toast.makeText(
+                    context,
+                    updateCheckFailedMessage,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            updateChecking = false
+        }
+    }
+
+    fun openUpdateDownload(update: AppUpdateInfo) {
+        updatePromptStore.updateStarted()
+        updateAvailableDot = false
+        availableUpdate = null
+        if (updateInstaller.start(update)) {
+            Toast.makeText(context, updateDownloadingMessage, Toast.LENGTH_SHORT).show()
+            appScope.launch { updateInstaller.awaitAndInstall() }
+        } else {
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releasePageUrl)))
+            }
         }
     }
 
@@ -846,6 +913,9 @@ fun MailApp(
                             ) {
                                 AboutScreen(
                                     onBack = requestBack,
+                                    updateAvailable = updateAvailableDot,
+                                    updateChecking = updateChecking,
+                                    onCheckForUpdates = ::checkForUpdates,
                                     onOpenSourceLicenses = {
                                         navigateAfterSnapshot(
                                             route = OPEN_SOURCE_LICENSES,
@@ -1013,6 +1083,58 @@ fun MailApp(
                         sourceMessageId = composeSourceMessageId,
                         onBack = { composeVisible = false },
                         onQueued = { composeVisible = false },
+                    )
+                }
+
+                availableUpdate?.takeIf {
+                    (currentRoute == MAIN || currentRoute == ABOUT) &&
+                        !showPermissionGuide && !composeVisible
+                }?.let { update ->
+                    AlertDialog(
+                        onDismissRequest = { cancelUpdatePrompt(update) },
+                        title = { Text(tr("update_available_title")) },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    tr(
+                                        "update_available_body",
+                                        BuildConfig.VERSION_NAME,
+                                        update.version,
+                                    ),
+                                )
+                                if (update.releaseNotes.isNotBlank()) {
+                                    HorizontalDivider()
+                                    Text(
+                                        text = update.releaseNotes,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(max = 260.dp)
+                                            .verticalScroll(rememberScrollState()),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            BondTextAction(
+                                text = tr("update_now"),
+                                primary = true,
+                                onClick = { openUpdateDownload(update) },
+                            )
+                        },
+                        dismissButton = {
+                            BondTextAction(
+                                text = tr("update_cancel"),
+                                onClick = { cancelUpdatePrompt(update) },
+                            )
+                        },
+                        neutralButton = {
+                            BondTextAction(
+                                text = tr("ignore_update"),
+                                onClick = { ignoreUpdatePrompt(update) },
+                            )
+                        },
                     )
                 }
             }

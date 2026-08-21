@@ -1,5 +1,11 @@
 package com.bond.mail.ui.theme
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,6 +45,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
@@ -73,6 +81,7 @@ import top.yukonga.miuix.kmp.extra.SuperDialog as MiuixSuperDialog
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.SmoothRoundedCornerShape
 import top.yukonga.miuix.kmp.utils.pressSink
+import kotlinx.coroutines.delay
 
 /** Shared secondary-screen top bar that follows the selected UI system. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -154,9 +163,21 @@ fun BondPopupMenu(
     anchor: @Composable () -> Unit,
 ) {
     var anchorHeight by remember { mutableStateOf(0) }
+    val uiStyle = LocalUiStyle.current
+    var miuixPopupMounted by remember { mutableStateOf(false) }
+    LaunchedEffect(expanded, uiStyle) {
+        if (uiStyle != UiStyle.MIUIX) {
+            miuixPopupMounted = false
+        } else if (expanded) {
+            miuixPopupMounted = true
+        } else if (miuixPopupMounted) {
+            delay(150L)
+            miuixPopupMounted = false
+        }
+    }
     Box(modifier = modifier.onSizeChanged { anchorHeight = it.height }) {
         anchor()
-        when (LocalUiStyle.current) {
+        when (uiStyle) {
             UiStyle.MATERIAL3 -> DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
@@ -182,7 +203,7 @@ fun BondPopupMenu(
                 }
             }
 
-            UiStyle.MIUIX -> if (expanded) {
+            UiStyle.MIUIX -> if (miuixPopupMounted) {
                 val shape = remember { SmoothRoundedCornerShape(16.dp) }
                 val haptics = LocalHapticFeedback.current
                 Popup(
@@ -191,15 +212,28 @@ fun BondPopupMenu(
                     onDismissRequest = onDismissRequest,
                     properties = PopupProperties(focusable = true),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .widthIn(min = 190.dp, max = 300.dp)
-                            .shadow(11.dp, shape)
-                            .clip(shape)
-                            .background(MiuixTheme.colorScheme.surfaceContainer)
-                            .padding(vertical = 8.dp),
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = fadeIn(tween(190)) + scaleIn(
+                            initialScale = 0.9f,
+                            transformOrigin = TransformOrigin(0.92f, 0f),
+                            animationSpec = tween(220),
+                        ),
+                        exit = fadeOut(tween(120)) + scaleOut(
+                            targetScale = 0.94f,
+                            transformOrigin = TransformOrigin(0.92f, 0f),
+                            animationSpec = tween(150),
+                        ),
                     ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .widthIn(min = 190.dp, max = 300.dp)
+                                .shadow(11.dp, shape)
+                                .clip(shape)
+                                .background(MiuixTheme.colorScheme.surfaceContainer)
+                                .padding(vertical = 8.dp),
+                        ) {
                         entries.forEach { entry ->
                             val interaction = remember(entry) { MutableInteractionSource() }
                             val contentColor = when {
@@ -252,6 +286,7 @@ fun BondPopupMenu(
                         }
                     }
                 }
+            }
             }
         }
     }
@@ -482,6 +517,7 @@ fun BondAlertDialog(
     text: @Composable (() -> Unit)? = null,
     confirmButton: @Composable () -> Unit,
     dismissButton: @Composable (() -> Unit)? = null,
+    neutralButton: @Composable (() -> Unit)? = null,
     dismissButtonWeight: Float = 1f,
 ) {
     when (LocalUiStyle.current) {
@@ -490,7 +526,16 @@ fun BondAlertDialog(
             title = title,
             text = text,
             confirmButton = confirmButton,
-            dismissButton = dismissButton,
+            dismissButton = if (dismissButton != null || neutralButton != null) {
+                ({
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        dismissButton?.invoke()
+                        neutralButton?.invoke()
+                    }
+                })
+            } else {
+                null
+            },
         )
 
         UiStyle.MIUIX -> {
@@ -543,6 +588,13 @@ fun BondAlertDialog(
                                 Row(Modifier.weight(dismissButtonWeight)) {
                                     CompositionLocalProvider(LocalBondDialogAction provides true) {
                                         dismissButton()
+                                    }
+                                }
+                            }
+                            if (neutralButton != null) {
+                                Box(Modifier.weight(1f)) {
+                                    CompositionLocalProvider(LocalBondDialogAction provides true) {
+                                        neutralButton()
                                     }
                                 }
                             }

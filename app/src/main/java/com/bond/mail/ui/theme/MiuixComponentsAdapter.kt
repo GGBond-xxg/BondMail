@@ -1,5 +1,11 @@
 package com.bond.mail.ui.theme
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,6 +35,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -53,6 +60,7 @@ import top.yukonga.miuix.kmp.icon.icons.basic.Check
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.SmoothRoundedCornerShape
 import top.yukonga.miuix.kmp.utils.pressSink
+import kotlinx.coroutines.delay
 
 @Composable
 fun MiuixSettingsCard(content: @Composable ColumnScope.() -> Unit) {
@@ -83,9 +91,19 @@ fun MiuixDropdownSetting(
 
     val safeSelectedIndex = selectedIndex.coerceIn(labels.indices)
     var expanded by remember { mutableStateOf(false) }
+    var popupMounted by remember { mutableStateOf(false) }
     var anchorBounds by remember { mutableStateOf(Rect.Zero) }
     var pendingSelection by remember { mutableStateOf<Pair<Int, Offset>?>(null) }
     val hapticFeedback = LocalHapticFeedback.current
+
+    LaunchedEffect(expanded) {
+        if (expanded) {
+            popupMounted = true
+        } else if (popupMounted) {
+            delay(150L)
+            popupMounted = false
+        }
+    }
 
     LaunchedEffect(pendingSelection) {
         val (index, origin) = pendingSelection ?: return@LaunchedEffect
@@ -123,7 +141,7 @@ fun MiuixDropdownSetting(
         holdDownState = expanded,
     )
 
-    if (expanded) {
+    if (popupMounted) {
         val outsideInteraction = remember { MutableInteractionSource() }
         val popupShape = remember { SmoothRoundedCornerShape(16.dp) }
         Dialog(
@@ -159,14 +177,27 @@ fun MiuixDropdownSetting(
                     anchorBounds.top.toInt() - popupHeightPx - marginPx
                 }.coerceIn(marginPx, (screenHeightPx - popupHeightPx - marginPx).coerceAtLeast(marginPx))
 
-                Column(
-                    modifier = Modifier
-                        .offset { IntOffset(popupX, popupY) }
-                        .width(popupWidth)
-                        .shadow(11.dp, popupShape)
-                        .clip(popupShape)
-                        .background(MiuixTheme.colorScheme.surfaceContainer),
+                AnimatedVisibility(
+                    visible = expanded,
+                    modifier = Modifier.offset { IntOffset(popupX, popupY) },
+                    enter = fadeIn(tween(190)) + scaleIn(
+                        initialScale = 0.9f,
+                        transformOrigin = TransformOrigin(0.88f, 0f),
+                        animationSpec = tween(220),
+                    ),
+                    exit = fadeOut(tween(120)) + scaleOut(
+                        targetScale = 0.94f,
+                        transformOrigin = TransformOrigin(0.88f, 0f),
+                        animationSpec = tween(150),
+                    ),
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .width(popupWidth)
+                            .shadow(11.dp, popupShape)
+                            .clip(popupShape)
+                            .background(MiuixTheme.colorScheme.surfaceContainer),
+                    ) {
                     labels.forEachIndexed { index, label ->
                         val selected = index == safeSelectedIndex
                         val rowInteraction = remember(index) { MutableInteractionSource() }
@@ -222,6 +253,7 @@ fun MiuixDropdownSetting(
             }
         }
     }
+}
 }
 
 @Composable
@@ -283,18 +315,32 @@ fun MiuixActionSetting(
     icon: ImageVector,
     title: String,
     summary: String,
+    showDot: Boolean = false,
     onClick: () -> Unit,
 ) {
     SuperArrow(
         title = title,
         summary = summary,
         leftAction = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
+            androidx.compose.foundation.layout.Box(
                 modifier = Modifier.padding(end = 14.dp).size(24.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-            )
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                )
+                if (showDot) {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(7.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(androidx.compose.material3.MaterialTheme.colorScheme.error),
+                    )
+                }
+            }
         },
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
