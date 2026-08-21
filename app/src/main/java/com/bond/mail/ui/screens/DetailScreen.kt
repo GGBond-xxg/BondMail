@@ -29,6 +29,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -64,19 +67,12 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -128,6 +124,7 @@ import com.bond.mail.data.mail.MailAttachmentInfo
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.mail.MimeParser
 import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.data.settings.RemoteImagePolicy
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.components.ContactAvatar
@@ -146,6 +143,14 @@ import com.bond.mail.ui.motion.animateChromeOffset
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.theme.BondPrimaryButton
+import com.bond.mail.ui.theme.BondAlertDialog
+import com.bond.mail.ui.theme.BondIconButton
+import com.bond.mail.ui.theme.BondMenuEntry
+import com.bond.mail.ui.theme.BondPopupMenu
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.BondTopAppBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -248,17 +253,13 @@ fun DetailScreen(
         Scaffold(
             containerColor = MaterialTheme.bondSurfaces.page,
             topBar = {
-                TopAppBar(
-                    title = { Text(tr("loading")) },
+                BondTopAppBar(
+                    title = tr("loading"),
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
+                        BondIconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.bondSurfaces.page,
-                        scrolledContainerColor = MaterialTheme.bondSurfaces.chrome,
-                    ),
                 )
             },
         ) { padding -> Box(Modifier.fillMaxSize().padding(padding)) }
@@ -533,9 +534,10 @@ fun DetailScreen(
                                 fontSize = 13.sp,
                                 lineHeight = 18.sp,
                             )
-                            TextButton(onClick = { bodyRetryToken += 1 }) {
-                                Text(tr("retry"))
-                            }
+                            BondTextAction(
+                                text = tr("retry"),
+                                onClick = { bodyRetryToken += 1 },
+                            )
                         }
                     }
                 }
@@ -650,60 +652,48 @@ fun DetailScreen(
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
         ) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = owningAccount?.displayName
-                            ?.trim()
-                            ?.take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
-                            .orEmpty(),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
+            BondTopAppBar(
+                title = owningAccount?.displayName
+                    ?.trim()
+                    ?.take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
+                    .orEmpty(),
+                containerColor = Color.Transparent,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BondIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                     }
                 },
                 actions = {
-                    IconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
+                    BondIconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
                         Icon(
                             if (item.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
                             contentDescription = null,
                         )
                     }
-                    IconButton(onClick = { moreOpen = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
-                    }
-                    DropdownMenu(expanded = moreOpen, onDismissRequest = { moreOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text(if (item.unread) tr("mark_read") else tr("mark_unread")) },
-                            leadingIcon = {
-                                Icon(
-                                    if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,
-                                    null,
-                                )
-                            },
-                            onClick = {
-                                moreOpen = false
-                                scope.launch { container.repository.toggleUnread(item) }
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(tr("share")) },
-                            leadingIcon = { Icon(Icons.Default.Share, null) },
-                            onClick = { moreOpen = false; share() },
-                        )
+                    BondPopupMenu(
+                        expanded = moreOpen,
+                        onDismissRequest = { moreOpen = false },
+                        entries = listOf(
+                            BondMenuEntry(
+                                text = if (item.unread) tr("mark_read") else tr("mark_unread"),
+                                icon = if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,
+                                onClick = {
+                                    moreOpen = false
+                                    scope.launch { container.repository.toggleUnread(item) }
+                                },
+                            ),
+                            BondMenuEntry(
+                                text = tr("share"),
+                                icon = Icons.Default.Share,
+                                onClick = { moreOpen = false; share() },
+                            ),
+                        ),
+                    ) {
+                        BondIconButton(onClick = { moreOpen = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                        }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                ),
             )
         }
 
@@ -721,38 +711,44 @@ fun DetailScreen(
     }
 
     if (confirmDelete) {
-        AlertDialog(
+        BondAlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text(tr("confirm_delete_message_title")) },
             text = { Text(tr("confirm_delete_message_body")) },
             confirmButton = {
-                TextButton(
+                BondTextAction(
+                    text = tr("delete"),
+                    destructive = true,
                     onClick = {
                         confirmDelete = false
                         onDelete(item)
                     },
-                ) { Text(tr("delete"), color = MaterialTheme.colorScheme.error) }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text(tr("cancel")) }
+                BondTextAction(text = tr("cancel"), onClick = { confirmDelete = false })
             },
         )
     }
 
     externalUrl?.let { url ->
-        AlertDialog(
+        BondAlertDialog(
             onDismissRequest = { externalUrl = null },
             title = { Text(tr("open_external_link")) },
             text = { Text("${tr("external_link_desc")}\n\n$url") },
             confirmButton = {
-                TextButton(
+                BondTextAction(
+                    text = tr("open"),
+                    primary = true,
                     onClick = {
                         externalUrl = null
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     },
-                ) { Text(tr("open")) }
+                )
             },
-            dismissButton = { TextButton(onClick = { externalUrl = null }) { Text(tr("cancel")) } },
+            dismissButton = {
+                BondTextAction(text = tr("cancel"), onClick = { externalUrl = null })
+            },
         )
     }
 }
@@ -762,8 +758,8 @@ private fun RemoteImageFloatingButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick,
         modifier = modifier.size(46.dp),
         shape = CircleShape,
         color = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.90f),
@@ -775,7 +771,14 @@ private fun RemoteImageFloatingButton(
         tonalElevation = 0.dp,
         shadowElevation = 6.dp,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize().clickable(
+                interactionSource = interactionSource,
+                indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
+                onClick = onClick,
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 Icons.Default.Image,
                 contentDescription = tr("load_images_once"),
@@ -852,13 +855,20 @@ private fun MessageDockItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
-        onClick = onClick,
         modifier = modifier.height(48.dp),
         shape = CircleShape,
         color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize().clickable(
+                interactionSource = interactionSource,
+                indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
+                onClick = onClick,
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 icon,
                 contentDescription = label,

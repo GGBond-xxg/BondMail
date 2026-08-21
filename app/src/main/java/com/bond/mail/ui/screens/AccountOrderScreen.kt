@@ -19,13 +19,10 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,8 +37,9 @@ import com.bond.mail.data.model.visibleEmail
 import com.bond.mail.ui.SettingsViewModel
 import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.i18n.tr
+import com.bond.mail.ui.theme.BondIconButton
+import com.bond.mail.ui.theme.BondTopAppBar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountOrderScreen(
     viewModel: SettingsViewModel,
@@ -68,10 +66,10 @@ fun AccountOrderScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(tr("mailbox_order_title")) },
+            BondTopAppBar(
+                title = tr("mailbox_order_title"),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BondIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                     }
                 },
@@ -93,7 +91,7 @@ fun AccountOrderScreen(
             itemsIndexed(ordered, key = { _, account -> account.id }) { index, account ->
                 Card(
                     modifier = Modifier.fillMaxWidth().animateItem(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = MaterialTheme.shapes.large,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 ) {
@@ -113,13 +111,13 @@ fun AccountOrderScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(
+                        BondIconButton(
                             enabled = index > 0,
                             onClick = { move(index, index - 1) },
                         ) {
                             Icon(Icons.Default.ArrowUpward, contentDescription = tr("move_up"))
                         }
-                        IconButton(
+                        BondIconButton(
                             enabled = index < ordered.lastIndex,
                             onClick = { move(index, index + 1) },
                         ) {

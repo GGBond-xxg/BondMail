@@ -11,8 +11,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,22 +43,13 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -82,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bond.mail.data.model.AuthType
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.data.model.MailAuthMechanism
 import com.bond.mail.data.model.MailSecurity
 import com.bond.mail.data.db.ACCOUNT_DISPLAY_NAME_MAX_LENGTH
@@ -91,7 +85,15 @@ import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.ProviderAvatar
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondIconButton
+import com.bond.mail.ui.theme.BondMenuEntry
+import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondPrimaryButton
+import com.bond.mail.ui.theme.BondSecondaryButton
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.BondTextField
+import com.bond.mail.ui.theme.BondTopAppBar
+import com.bond.mail.ui.theme.LocalUiStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,17 +104,13 @@ fun ProviderPickerScreen(
     Scaffold(
         containerColor = MaterialTheme.bondSurfaces.page,
         topBar = {
-            TopAppBar(
-                title = { Text(tr("select_provider_title")) },
+            BondTopAppBar(
+                title = tr("select_provider_title"),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BondIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.bondSurfaces.page,
-                    scrolledContainerColor = MaterialTheme.bondSurfaces.chrome,
-                ),
             )
         },
     ) { padding ->
@@ -237,17 +235,13 @@ fun AccountCredentialsScreen(
     Scaffold(
         containerColor = MaterialTheme.bondSurfaces.page,
         topBar = {
-            TopAppBar(
-                title = { Text(providerLabel) },
+            BondTopAppBar(
+                title = providerLabel,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    BondIconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.bondSurfaces.page,
-                    scrolledContainerColor = MaterialTheme.bondSurfaces.chrome,
-                ),
             )
         },
     ) { padding ->
@@ -361,18 +355,15 @@ fun AccountCredentialsScreen(
                 }
 
                 item {
-                    TextButton(
+                    BondTextAction(
+                        text = if (apiConfigurationExpanded) {
+                            tr("oauth_api_hide")
+                        } else {
+                            tr("oauth_api_configure")
+                        },
                         onClick = { apiConfigurationExpanded = !apiConfigurationExpanded },
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            if (apiConfigurationExpanded) {
-                                tr("oauth_api_hide")
-                            } else {
-                                tr("oauth_api_configure")
-                            },
-                        )
-                    }
+                    )
                 }
 
                 if (apiConfigurationExpanded) {
@@ -404,27 +395,21 @@ fun AccountCredentialsScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }
-                            OutlinedTextField(
+                            BondTextField(
                                 value = apiJson,
                                 onValueChange = { apiJson = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text(tr("oauth_api_json")) },
-                                placeholder = { Text("{ … }") },
+                                label = tr("oauth_api_json"),
+                                placeholder = "{ … }",
                                 minLines = 4,
                                 maxLines = 9,
                                 enabled = !busy,
-                                shape = RoundedCornerShape(18.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                    unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                    disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                                ),
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                OutlinedButton(
+                                BondSecondaryButton(
                                     onClick = {
                                         oauthJsonPicker.launch(arrayOf("application/json", "text/json", "text/plain"))
                                     },
@@ -469,21 +454,15 @@ fun AccountCredentialsScreen(
 
                 if (provider.id == "custom") {
                     item {
-                        OutlinedTextField(
+                        BondTextField(
                             value = customLoginName,
                             onValueChange = { viewModel.customLoginName.value = it },
-                            label = { Text(tr("login_name")) },
-                            placeholder = { Text(tr("login_name_email_default")) },
-                            supportingText = { Text(tr("login_name_hint")) },
+                            label = tr("login_name"),
+                            placeholder = tr("login_name_email_default"),
+                            supportingText = tr("login_name_hint"),
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             enabled = !busy,
-                            shape = RoundedCornerShape(18.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                            ),
                         )
                     }
 
@@ -583,32 +562,22 @@ fun AccountCredentialsScreen(
                 }
 
                 item {
-                    OutlinedTextField(
+                    BondTextField(
                         value = displayName,
                         onValueChange = { viewModel.displayName.value = it.take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH) },
-                        label = { Text(tr("display_name")) },
-                        supportingText = { Text("${displayName.length}/$ACCOUNT_DISPLAY_NAME_MAX_LENGTH") },
+                        label = tr("display_name"),
+                        supportingText = "${displayName.length}/$ACCOUNT_DISPLAY_NAME_MAX_LENGTH",
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !busy,
-                        shape = RoundedCornerShape(18.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                            unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                            disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                        ),
                     )
                 }
 
                 item {
-                    OutlinedTextField(
+                    BondTextField(
                         value = secret,
                         onValueChange = { viewModel.secret.value = it },
-                        label = {
-                            Text(
-                                if (provider.id == "custom") tr("password") else tr("authorization_code"),
-                            )
-                        },
+                        label = if (provider.id == "custom") tr("password") else tr("authorization_code"),
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -623,12 +592,6 @@ fun AccountCredentialsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !busy,
-                        shape = RoundedCornerShape(18.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                            unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                            disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                        ),
                     )
                 }
 
@@ -714,35 +677,23 @@ private fun MailServerFields(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        OutlinedTextField(
+        BondTextField(
             value = host,
             onValueChange = onHostChange,
-            label = { Text(hostLabel) },
-            placeholder = { Text("mail.example.com") },
+            label = hostLabel,
+            placeholder = "mail.example.com",
             modifier = Modifier.weight(1f),
             singleLine = true,
             enabled = enabled,
-            shape = RoundedCornerShape(18.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-            ),
         )
-        OutlinedTextField(
+        BondTextField(
             value = port,
             onValueChange = onPortChange,
-            label = { Text(tr("port")) },
+            label = tr("port"),
             modifier = Modifier.width(104.dp),
             singleLine = true,
             enabled = enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = RoundedCornerShape(18.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-            ),
         )
     }
 }
@@ -777,7 +728,7 @@ private fun <T> MailOptionSelector(
                         Text(optionLabel(option), maxLines = 1, fontSize = 12.sp)
                     }
                 } else {
-                    OutlinedButton(
+                    BondSecondaryButton(
                         onClick = { onSelected(option) },
                         enabled = enabled,
                         modifier = Modifier.weight(1f),
@@ -805,6 +756,7 @@ private fun MailboxAddressField(
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
+    val suffixInteraction = remember { MutableInteractionSource() }
     val active = focused || expanded
     val borderColor by animateColorAsState(
         targetValue = if (active) {
@@ -823,7 +775,7 @@ private fun MailboxAddressField(
 
     Surface(
         modifier = modifier.height(64.dp),
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.bondSurfaces.input,
         border = BorderStroke(borderWidth, borderColor),
     ) {
@@ -873,75 +825,63 @@ private fun MailboxAddressField(
                         .widthIn(min = 88.dp, max = 210.dp)
                         .fillMaxHeight(),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .fillMaxHeight()
-                            .clickable(
-                                enabled = enabled && suffixes.size > 1,
-                                onClick = { onExpandedChange(!expanded) },
-                            )
-                            .padding(start = 6.dp, end = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(30.dp)
-                                .background(MaterialTheme.colorScheme.outlineVariant),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            text = "@$suffix",
-                            modifier = Modifier.widthIn(max = 158.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (suffixes.size > 1) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                Icons.Default.ExpandMore,
-                                contentDescription = tr("select_domain"),
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer { rotationZ = if (expanded) 180f else 0f },
-                            )
-                        }
-                    }
-
-                    DropdownMenu(
+                    BondPopupMenu(
                         expanded = expanded && suffixes.size > 1,
                         onDismissRequest = { onExpandedChange(false) },
-                        modifier = Modifier.widthIn(min = 150.dp, max = 240.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        containerColor = MaterialTheme.bondSurfaces.popup,
-                        shadowElevation = 8.dp,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    ) {
-                        suffixes.forEachIndexed { index, candidate ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "@$candidate",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Clip,
-                                    )
+                        entries = suffixes.map { candidate ->
+                            BondMenuEntry(
+                                text = "@$candidate",
+                                selected = candidate == suffix,
+                                onClick = {
+                                    onSuffixSelected(candidate)
+                                    onExpandedChange(false)
                                 },
-                                trailingIcon = {
-                                    if (candidate == suffix) {
-                                        Icon(
-                                            Icons.Default.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    }
-                                },
-                                onClick = { onSuffixSelected(candidate) },
                             )
-                            if (index != suffixes.lastIndex) {
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 10.dp))
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight(),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .clickable(
+                                    enabled = enabled && suffixes.size > 1,
+                                    interactionSource = suffixInteraction,
+                                    indication = if (LocalUiStyle.current == UiStyle.MIUIX) {
+                                        null
+                                    } else {
+                                        LocalIndication.current
+                                    },
+                                    onClick = { onExpandedChange(!expanded) },
+                                )
+                                .padding(start = 6.dp, end = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(30.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "@$suffix",
+                                modifier = Modifier.widthIn(max = 158.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (suffixes.size > 1) {
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    Icons.Default.ExpandMore,
+                                    contentDescription = tr("select_domain"),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer { rotationZ = if (expanded) 180f else 0f },
+                                )
                             }
                         }
                     }
