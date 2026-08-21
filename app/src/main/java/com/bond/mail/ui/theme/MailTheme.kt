@@ -96,27 +96,48 @@ val MaterialTheme.bondSurfaces: BondMailSurfacePalette
     @ReadOnlyComposable
     get() = LocalBondMailSurfaces.current
 
-private fun buildSurfacePalette(colors: ColorScheme): BondMailSurfacePalette {
+private fun buildSurfacePalette(colors: ColorScheme, style: UiStyle): BondMailSurfacePalette {
     val darkSurface = colors.surfaceContainerLowest.luminance() < 0.5f
     val unreadBlend = if (darkSurface) 0.18f else 0.11f
+    if (style == UiStyle.MIUIX) {
+        // MIUIX places cards on its background canvas. The previous Material-oriented mapping
+        // inverted those roles (black message cards on a raised page), which made Mail/Contacts
+        // look unrelated to Settings even though all three were under the same MIUIX theme.
+        // Native MIUIX Card uses the theme surface rather than a Material container token.
+        // Keeping the page on background and cards on surface reproduces the visible separation
+        // used by KernelSU in both light and dark mode.
+        val content = colors.surface
+        return BondMailSurfacePalette(
+            page = colors.background,
+            chrome = colors.background,
+            content = content,
+            contentUnread = lerp(content, colors.primaryContainer, unreadBlend),
+            dock = colors.surfaceContainer,
+            section = colors.surfaceContainer,
+            popup = colors.surfaceContainerHigh,
+            input = colors.surfaceContainerLow,
+            drawer = colors.background,
+            sheet = colors.background,
+        )
+    }
     return BondMailSurfacePalette(
-        // Gmail uses one tinted canvas for the status/title area and list background. The lowest
-        // surface then makes each grouped message/contact card readable without heavy shadows.
-        page = colors.surfaceContainerLow,
-        chrome = colors.surfaceContainerLow,
-        content = colors.surfaceContainerLowest,
-        // Unread rows need a second cue beyond font weight, especially in dynamic dark themes.
+        // KernelSU's expressive Material renderer uses surfaceContainer as the page canvas and a
+        // brighter tonal surface for independent cards. This keeps the Material hierarchy clear
+        // without borrowing MIUIX colors or components.
+        page = colors.surfaceContainer,
+        chrome = colors.surfaceContainer,
+        content = colors.surfaceBright,
         contentUnread = lerp(
-            colors.surfaceContainerLowest,
+            colors.surfaceBright,
             colors.primaryContainer,
             unreadBlend,
         ),
-        dock = colors.surfaceContainer,
-        section = colors.surfaceContainer,
+        dock = colors.surfaceContainerHigh,
+        section = colors.surfaceContainerHigh,
         popup = colors.surfaceContainerHigh,
-        input = colors.surfaceContainerLowest,
-        drawer = colors.surfaceContainerLow,
-        sheet = colors.surfaceContainerLow,
+        input = colors.surfaceContainerHighest,
+        drawer = colors.surfaceContainer,
+        sheet = colors.surfaceContainer,
     )
 }
 
@@ -188,7 +209,7 @@ internal fun BondMaterialTheme(
     typography: Typography = Typography(),
     content: @Composable () -> Unit,
 ) {
-    val surfaces = buildSurfacePalette(colors)
+    val surfaces = buildSurfacePalette(colors, style)
     CompositionLocalProvider(
         LocalBondMailSurfaces provides surfaces,
         LocalUiStyle provides style,

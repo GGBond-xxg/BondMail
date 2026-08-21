@@ -98,6 +98,20 @@ interface MessageDao {
     fun observeById(id: String): Flow<MessageEntity?>
 
     @Query("""
+        SELECT * FROM messages
+        WHERE accountId = :accountId
+          AND folderType = :folderType
+          AND deliveryState = 'REMOTE'
+          AND LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress))
+        ORDER BY receivedAt DESC
+    """)
+    suspend fun senderFolderSnapshot(
+        accountId: String,
+        folderType: String,
+        senderAddress: String,
+    ): List<MessageEntity>
+
+    @Query("""
         SELECT id, accountId, folderType, senderName, senderAddress, recipients, subject, preview, receivedAt, unread, starred, deliveryState, NULL AS localTaskId
         FROM messages
         WHERE (:accountId IS NULL OR accountId = :accountId) AND starred = 1
@@ -162,6 +176,9 @@ interface MessageDao {
 
     @Query("UPDATE messages SET unread = :unread WHERE id = :id")
     suspend fun setUnread(id: String, unread: Boolean)
+
+    @Query("UPDATE messages SET unread = :unread WHERE id IN (:ids)")
+    suspend fun setUnread(ids: List<String>, unread: Boolean)
 
     @Query("UPDATE messages SET starred = :starred WHERE id = :id")
     suspend fun setStarred(id: String, starred: Boolean)

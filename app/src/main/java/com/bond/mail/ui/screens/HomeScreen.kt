@@ -20,6 +20,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -79,10 +82,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -158,7 +159,6 @@ import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.BondPrimaryButton
 import com.bond.mail.ui.theme.BondSearchField
-import com.bond.mail.ui.theme.BondTextAction
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -178,6 +178,7 @@ fun HomeScreen(
     onAddAccount: () -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
     onReplyMessage: (MessageListRow) -> Unit,
+    onForwardMessage: (MessageListRow) -> Unit,
     onCompose: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -193,6 +194,7 @@ fun HomeScreen(
     val foregroundSession by viewModel.foregroundSession.collectAsState()
     val contentReady by viewModel.contentReady.collectAsState()
     val failure by viewModel.error.collectAsState()
+    val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
     val motionEnabled = bondMotionEnabled()
     var topNotice by remember { mutableStateOf<String?>(null) }
     val accountById = remember(accounts) { accounts.associateBy { it.id } }
@@ -476,7 +478,7 @@ fun HomeScreen(
                         top = topChromeHeight + 6.dp,
                         bottom = listBottomContentPadding,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
+                    verticalArrangement = Arrangement.spacedBy(if (miuixLayout) 12.dp else 13.dp),
                 ) {
                 item(key = "folder-strip") {
                     LazyRow(
@@ -537,39 +539,15 @@ fun HomeScreen(
                         contentType = { _, _ -> "mail-card" },
                     ) { index, message ->
                         val messageSelected = selectedIds.contains(message.id)
-                        val itemShape = MailContentDefaults.animatedItemShape(
-                            index = index,
-                            itemCount = messages.size,
-                            selected = messageSelected,
-                        )
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            positionalThreshold = { totalDistance -> totalDistance * 0.50f },
-                            confirmValueChange = { value ->
-                                if (inSelectionMode) return@rememberSwipeToDismissBoxState false
-                                when (currentFolder) {
-                                    "DRAFTS" -> when (value) {
-                                        SwipeToDismissBoxValue.StartToEnd -> onOpenMessage(message)
-                                        SwipeToDismissBoxValue.EndToStart -> viewModel.delete(message)
-                                        else -> Unit
-                                    }
-                                    "TRASH" -> when (value) {
-                                        SwipeToDismissBoxValue.StartToEnd -> onReplyMessage(message)
-                                        SwipeToDismissBoxValue.EndToStart ->
-                                            viewModel.permanentlyDelete(message)
-                                        else -> Unit
-                                    }
-                                    else -> when (value) {
-                                        // Inbox and Spam share read/star gestures.
-                                        SwipeToDismissBoxValue.StartToEnd ->
-                                            viewModel.toggleUnread(message)
-                                        SwipeToDismissBoxValue.EndToStart ->
-                                            viewModel.toggleStarred(message)
-                                        else -> Unit
-                                    }
-                                }
-                                false
-                            },
-                        )
+                        val itemShape = if (miuixLayout) {
+                            MaterialTheme.shapes.medium
+                        } else {
+                            MaterialTheme.shapes.large
+                        }
+                        val swipeEnabled = swipeGesturesReady &&
+                            !verticalPointerGesture &&
+                            !inSelectionMode &&
+                            (message.deliveryState == "REMOTE" || currentFolder == "DRAFTS")
                         val animateArrival = remember(message.id) {
                             revealedMessageIds.add(message.id)
                         }
@@ -579,24 +557,26 @@ fun HomeScreen(
                             staggerIndex = index.coerceAtMost(7),
                             modifier = Modifier.animateItem(),
                         ) {
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                modifier = Modifier.padding(horizontal = MailContentDefaults.HorizontalInset),
-                                gesturesEnabled = swipeGesturesReady &&
-                                    !verticalPointerGesture &&
-                                    !inSelectionMode &&
-                                    (
-                                        message.deliveryState == "REMOTE" ||
-                                            currentFolder == "DRAFTS"
-                                        ),
-                                backgroundContent = {
-                                    SwipeActionBackground(
-                                        message = message,
-                                        folderType = currentFolder,
-                                        direction = dismissState.dismissDirection,
-                                        progress = dismissState.progress,
-                                        shape = itemShape,
-                                    )
+                            RepeatableSwipeMailRow(
+                                message = message,
+                                folderType = currentFolder,
+                                enabled = swipeEnabled,
+                                shape = itemShape,
+                                horizontalInset = if (miuixLayout) 12.dp else 16.dp,
+                                onStartToEnd = {
+                                    when (currentFolder) {
+                                        "DRAFTS" -> onOpenMessage(message)
+                                        "TRASH" -> viewModel.moveToInbox(listOf(message))
+                                        "SENT" -> onForwardMessage(message)
+                                        else -> viewModel.toggleUnread(message)
+                                    }
+                                },
+                                onEndToStart = {
+                                    when (currentFolder) {
+                                        "DRAFTS", "SENT" -> viewModel.delete(message)
+                                        "TRASH" -> viewModel.permanentlyDelete(message)
+                                        else -> viewModel.toggleStarred(message)
+                                    }
                                 },
                             ) {
                                 MessageCard(
@@ -737,13 +717,25 @@ fun HomeScreen(
                                         if (currentFolder == "SPAM") {
                                             IconButton(
                                                 onClick = {
-                                                    viewModel.moveToInbox(selectedMessages.toList())
+                                                    viewModel.restoreSendersFromSpam(selectedMessages.toList())
                                                     clearSelection()
                                                 },
                                             ) {
                                                 Icon(
                                                     Icons.Default.Inbox,
                                                     contentDescription = tr("move_to_inbox"),
+                                                )
+                                            }
+                                        } else if (currentFolder !in setOf("DRAFTS", "SENT")) {
+                                            IconButton(
+                                                onClick = {
+                                                    viewModel.moveSendersToSpam(selectedMessages.toList())
+                                                    clearSelection()
+                                                },
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Report,
+                                                    contentDescription = tr("spam"),
                                                 )
                                             }
                                         }
@@ -1191,16 +1183,96 @@ private fun ElasticRefreshContainer(
 }
 
 @Composable
+private fun RepeatableSwipeMailRow(
+    message: MessageListRow,
+    folderType: String,
+    enabled: Boolean,
+    shape: Shape,
+    horizontalInset: Dp,
+    onStartToEnd: () -> Unit,
+    onEndToStart: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val density = LocalDensity.current
+    val releaseThresholdPx = with(density) { 52.dp.toPx() }
+    val maximumOffsetPx = with(density) { 132.dp.toPx() }
+    var offsetPx by remember(message.id) { mutableFloatStateOf(0f) }
+    val latestStartAction by rememberUpdatedState(onStartToEnd)
+    val latestEndAction by rememberUpdatedState(onEndToStart)
+    val draggableState = rememberDraggableState { delta ->
+        offsetPx = (offsetPx + delta).coerceIn(-maximumOffsetPx, maximumOffsetPx)
+    }
+
+    LaunchedEffect(enabled) {
+        if (!enabled) offsetPx = 0f
+    }
+
+    val direction = when {
+        offsetPx > 0f -> SwipeToDismissBoxValue.StartToEnd
+        offsetPx < 0f -> SwipeToDismissBoxValue.EndToStart
+        else -> SwipeToDismissBoxValue.Settled
+    }
+    val progress = (abs(offsetPx) / releaseThresholdPx).coerceIn(0f, 1f)
+
+    Box(
+        modifier = Modifier
+            .padding(horizontal = horizontalInset)
+            .fillMaxWidth()
+            .clip(shape)
+            .draggable(
+                state = draggableState,
+                orientation = Orientation.Horizontal,
+                enabled = enabled,
+                onDragStopped = {
+                    val releasedOffset = offsetPx
+                    val commit = abs(releasedOffset) >= releaseThresholdPx
+                    animate(
+                        initialValue = releasedOffset,
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = BondMotionDuration.EffectShort,
+                            easing = BondMotionEasing.Standard,
+                        ),
+                    ) { value, _ ->
+                        offsetPx = value
+                    }
+                    offsetPx = 0f
+                    if (commit) {
+                        if (releasedOffset > 0f) latestStartAction() else latestEndAction()
+                    }
+                },
+            ),
+    ) {
+        SwipeActionBackground(
+            message = message,
+            folderType = folderType,
+            direction = direction,
+            progress = progress,
+            shape = shape,
+            modifier = Modifier.matchParentSize(),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetPx.roundToInt(), 0) },
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
 private fun SwipeActionBackground(
     message: MessageListRow,
     folderType: String,
     direction: SwipeToDismissBoxValue,
     progress: Float,
     shape: Shape,
+    modifier: Modifier = Modifier,
 ) {
     val startAction = direction == SwipeToDismissBoxValue.StartToEnd
     val endAction = direction == SwipeToDismissBoxValue.EndToStart
-    val destructiveAction = endAction && folderType in setOf("DRAFTS", "TRASH")
+    val destructiveAction = endAction && folderType in setOf("DRAFTS", "SENT", "TRASH")
     val background = when {
         startAction -> MaterialTheme.colorScheme.secondaryContainer
         destructiveAction -> MaterialTheme.colorScheme.errorContainer
@@ -1216,8 +1288,10 @@ private fun SwipeActionBackground(
     val iconScale = 0.72f + progress.coerceIn(0f, 1f) * 0.28f
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        // The parent Box passes matchParentSize() after the mail card establishes the row height.
+        // fillMaxSize() inside an unconstrained LazyColumn item previously collapsed toward the
+        // icon's intrinsic height, leaving a thin action strip while swiping.
+        modifier = modifier
             .clip(shape)
             .background(background)
             .padding(horizontal = 24.dp),
@@ -1228,7 +1302,9 @@ private fun SwipeActionBackground(
                 imageVector = when {
                     folderType == "DRAFTS" && startAction -> Icons.Default.Edit
                     folderType == "DRAFTS" -> Icons.Default.Delete
-                    folderType == "TRASH" && startAction -> Icons.AutoMirrored.Filled.Reply
+                    folderType == "SENT" && startAction -> Icons.AutoMirrored.Filled.Reply
+                    folderType == "SENT" -> Icons.Default.Delete
+                    folderType == "TRASH" && startAction -> Icons.Default.RestoreFromTrash
                     folderType == "TRASH" -> Icons.Default.DeleteForever
                     startAction && message.unread -> Icons.Default.MarkEmailRead
                     startAction -> Icons.Default.MarkEmailUnread
@@ -1238,7 +1314,9 @@ private fun SwipeActionBackground(
                 contentDescription = when {
                     folderType == "DRAFTS" && startAction -> tr("continue_draft")
                     folderType == "DRAFTS" -> tr("discard_draft")
-                    folderType == "TRASH" && startAction -> tr("reply")
+                    folderType == "SENT" && startAction -> tr("forward")
+                    folderType == "SENT" -> tr("delete")
+                    folderType == "TRASH" && startAction -> tr("restore_mail")
                     folderType == "TRASH" -> tr("delete_permanently")
                     startAction && message.unread -> tr("mark_read")
                     startAction -> tr("mark_unread")
@@ -1307,7 +1385,7 @@ private fun FolderChip(
     onClick: () -> Unit,
 ) {
     val width by animateDpAsState(
-        targetValue = if (selected) 122.dp else 52.dp,
+        targetValue = if (selected) 156.dp else 52.dp,
         animationSpec = tween(220),
         label = "folder-chip-width",
     )
@@ -1371,6 +1449,7 @@ private fun SearchContainerOverlay(
     onTransformActivityChanged: (Boolean) -> Unit,
 ) {
     val motionEnabled = bondMotionEnabled()
+    val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -1527,11 +1606,13 @@ private fun SearchContainerOverlay(
                                 .fillMaxSize()
                                 .padding(top = 10.dp),
                             contentPadding = PaddingValues(
-                                start = MailContentDefaults.HorizontalInset,
-                                end = MailContentDefaults.HorizontalInset,
+                                start = if (miuixLayout) 12.dp else 16.dp,
+                                end = if (miuixLayout) 12.dp else 16.dp,
                                 bottom = 18.dp,
                             ),
-                            verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
+                            verticalArrangement = Arrangement.spacedBy(
+                                if (miuixLayout) 12.dp else 13.dp,
+                            ),
                         ) {
                             itemsIndexed(
                                 items = results,
@@ -1545,7 +1626,11 @@ private fun SearchContainerOverlay(
                                     ],
                                     density = settings.density,
                                     monetBrandIcons = settings.monetBrandIcons,
-                                    shape = MailContentDefaults.itemShape(index, results.size),
+                                    shape = if (miuixLayout) {
+                                        MaterialTheme.shapes.medium
+                                    } else {
+                                        MaterialTheme.shapes.large
+                                    },
                                     onOpen = { onOpenMessage(message) },
                                     onLongClick = {},
                                     onStar = {},

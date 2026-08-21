@@ -12,6 +12,11 @@ internal data class MailAttachmentInfo(
     val sizeBytes: Long = -1L,
 )
 
+internal data class MailAttachmentData(
+    val info: MailAttachmentInfo,
+    val bytes: ByteArray,
+)
+
 internal object MailAttachmentCodec {
     fun encode(values: List<MailAttachmentInfo>): String {
         val array = JSONArray()

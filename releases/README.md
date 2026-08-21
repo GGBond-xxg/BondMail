@@ -1,5 +1,18 @@
 # BondMail releases
 
+## v1.2.9
+
+- APK: `BondMail-v1.2.9.apk`
+- Package: `com.bond.mail`
+- Version code: `131`
+- Minimum Android version: Android 8.0 (API 26)
+- SHA-256: `7ED592519990352409566FB4BC2AC61A0F571E70B0050EB0F311C1F7F63A48F3`
+
+Adds attachment opening, richer MIME/forwarded-body handling, folder-specific repeatable swipe
+actions, sender-wide spam restore/block operations, and batched IMAP read/unread synchronization.
+It also aligns the MIUIX and Material 3 mail, contact, dialog, provider, and account-entry surfaces,
+including consistent card hierarchy, input fields, swipe backgrounds, and responsive action text.
+
 ## v1.2.8
 
 - APK: `BondMail-v1.2.8.apk`

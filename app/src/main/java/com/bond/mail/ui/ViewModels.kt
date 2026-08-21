@@ -392,9 +392,10 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun toggleUnread(message: MessageListRow) = viewModelScope.launch {
         if (message.deliveryState != "REMOTE") return@launch
-        if (message.unread) optimisticReadIds += message.id else optimisticReadIds -= message.id
+        val targetUnread = !message.unread
+        if (targetUnread) optimisticReadIds -= message.id else optimisticReadIds += message.id
         try {
-            runCatching { container.repository.toggleUnread(message.id) }
+            runCatching { container.repository.setUnread(message.id, targetUnread) }
                 .onFailure { error.value = container.repository.failure(it) }
         } finally {
             optimisticReadIds -= message.id
@@ -403,7 +404,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun toggleStarred(message: MessageListRow) = viewModelScope.launch {
         if (message.deliveryState != "REMOTE") return@launch
-        runCatching { container.repository.toggleStarred(message.id) }
+        runCatching { container.repository.setStarred(message.id, !message.starred) }
             .onFailure { error.value = container.repository.failure(it) }
     }
 
@@ -444,6 +445,40 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun moveSendersToSpam(messages: List<MessageListRow>) = viewModelScope.launch {
+        messages
+            .distinctBy { message ->
+                Triple(message.accountId, message.folderType, message.senderAddress.trim().lowercase())
+            }
+            .forEach { message ->
+                optimisticReadIds -= message.id
+                runCatching { container.repository.moveSenderMessages(message.id, "SPAM") }
+                    .onFailure { error.value = container.repository.failure(it) }
+            }
+    }
+
+    fun restoreSendersFromSpam(messages: List<MessageListRow>) = viewModelScope.launch {
+        messages
+            .distinctBy { message ->
+                Triple(message.accountId, message.folderType, message.senderAddress.trim().lowercase())
+            }
+            .forEach { message ->
+                optimisticReadIds -= message.id
+                runCatching { container.repository.moveSenderMessages(message.id, "INBOX") }
+                    .onFailure { error.value = container.repository.failure(it) }
+            }
+    }
+
+    fun moveSenderToSpamFromDetail(message: MessageEntity) = viewModelScope.launch {
+        runCatching { container.repository.moveSenderMessages(message.id, "SPAM") }
+            .onFailure { error.value = container.repository.failure(it) }
+    }
+
+    fun restoreSenderFromSpamFromDetail(message: MessageEntity) = viewModelScope.launch {
+        runCatching { container.repository.moveSenderMessages(message.id, "INBOX") }
+            .onFailure { error.value = container.repository.failure(it) }
+    }
+
     fun markRead(message: MessageListRow) = viewModelScope.launch {
         if (!message.unread) return@launch
         optimisticReadIds += message.id
@@ -456,22 +491,24 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun markAllRead(messages: List<MessageListRow>) = viewModelScope.launch {
-        messages.filter { it.unread }.forEach { message ->
-            optimisticReadIds += message.id
-            try {
-                runCatching { container.repository.toggleUnread(message.id) }
-                    .onFailure { error.value = container.repository.failure(it) }
-            } finally {
-                optimisticReadIds -= message.id
-            }
+        val targets = messages.filter { it.deliveryState == "REMOTE" && it.unread }
+        val ids = targets.map(MessageListRow::id)
+        optimisticReadIds += ids
+        try {
+            runCatching { container.repository.setUnreadBatch(ids, unread = false) }
+                .onFailure { error.value = container.repository.failure(it) }
+        } finally {
+            optimisticReadIds -= ids.toSet()
         }
     }
 
     fun markAllUnread(messages: List<MessageListRow>) = viewModelScope.launch {
-        messages.filterNot { it.unread }.forEach { message ->
-            runCatching { container.repository.toggleUnread(message.id) }
-                .onFailure { error.value = container.repository.failure(it) }
-        }
+        val ids = messages
+            .filter { it.deliveryState == "REMOTE" && !it.unread }
+            .map(MessageListRow::id)
+        optimisticReadIds -= ids.toSet()
+        runCatching { container.repository.setUnreadBatch(ids, unread = true) }
+            .onFailure { error.value = container.repository.failure(it) }
     }
 
     fun deleteMany(messages: List<MessageListRow>) = viewModelScope.launch {

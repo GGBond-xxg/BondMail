@@ -15,6 +15,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
@@ -61,9 +63,11 @@ import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -148,8 +152,8 @@ import com.bond.mail.ui.theme.BondIconButton
 import com.bond.mail.ui.theme.BondMenuEntry
 import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.bestForwardText
 import com.bond.mail.ui.theme.LocalUiStyle
-import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTopAppBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -160,6 +164,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.io.File
 
 private const val MAIL_OPEN_READY_TIMEOUT_MS = 450L
 
@@ -175,6 +180,8 @@ fun DetailScreen(
     onMessageSnapshot: (MessageEntity) -> Unit,
     onBack: () -> Unit,
     onDelete: (MessageEntity) -> Unit,
+    onMoveSenderToSpam: (MessageEntity) -> Unit,
+    onRestoreSenderFromSpam: (MessageEntity) -> Unit,
     onReply: (String, String, String) -> Unit,
     onForward: (String, String) -> Unit,
     modifier: Modifier = Modifier,
@@ -427,7 +434,7 @@ fun DetailScreen(
             putExtra(Intent.EXTRA_SUBJECT, item.subject)
             putExtra(
                 Intent.EXTRA_TEXT,
-                "${item.subject}\n\n${item.senderName} <${item.senderAddress}>\n\n${item.bodyText}",
+                "${item.subject}\n\n${item.senderName} <${item.senderAddress}>\n\n${item.bestForwardText()}",
             )
         }
         context.startActivity(Intent.createChooser(share, shareLabel))
@@ -437,15 +444,47 @@ fun DetailScreen(
         onReply(
             item.senderAddress,
             if (item.subject.startsWith("Re:", true)) item.subject else "Re: ${item.subject}",
-            "\n\n---\n${item.bodyText}",
+            "\n\n---\n${item.bestForwardText()}",
         )
     }
 
     fun forward() {
         onForward(
             if (item.subject.startsWith("Fwd:", true)) item.subject else "Fwd: ${item.subject}",
-            "\n\n--- Forwarded message ---\nFrom: ${item.senderAddress}\nSubject: ${item.subject}\n\n${item.bodyText}",
+            "\n\n--- Forwarded message ---\nFrom: ${item.senderAddress}\nSubject: ${item.subject}\n\n${item.bestForwardText()}",
         )
+    }
+
+    fun openAttachment(index: Int) {
+        scope.launch {
+            runCatching {
+                val attachment = container.repository.downloadAttachment(item.id, index)
+                val directory = File(context.cacheDir, "attachments").apply { mkdirs() }
+                val safeName = attachment.info.name
+                    .replace(Regex("[^\\p{L}\\p{N}._ -]+"), "_")
+                    .trim()
+                    .ifBlank { "attachment-${index + 1}" }
+                val target = File(directory, "${item.id.hashCode()}-$index-$safeName")
+                target.writeBytes(attachment.bytes)
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.files",
+                    target,
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, attachment.info.contentType.substringBefore(';'))
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(Intent.createChooser(intent, attachment.info.name))
+            }.onFailure { failure ->
+                Toast.makeText(
+                    context,
+                    failure.message ?: "Unable to open attachment",
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
     }
 
     val topChromeOffset = animateChromeOffset(
@@ -564,6 +603,7 @@ fun DetailScreen(
                     },
                     onRemoteImagesChanged = { hasRemoteImages = it },
                     onExternalLink = { externalUrl = it },
+                    onAttachmentClick = ::openAttachment,
                     onChromeVisibilityChanged = { visible -> bottomChromeVisible = visible },
                     onContentScrollChanged = { scrollY ->
                         mailContentScrollY.intValue = scrollY.coerceAtLeast(0)
@@ -683,9 +723,33 @@ fun DetailScreen(
                                 },
                             ),
                             BondMenuEntry(
+                                text = tr("forward"),
+                                icon = Icons.AutoMirrored.Filled.Forward,
+                                onClick = { moreOpen = false; forward() },
+                            ),
+                            BondMenuEntry(
                                 text = tr("share"),
                                 icon = Icons.Default.Share,
                                 onClick = { moreOpen = false; share() },
+                            ),
+                            BondMenuEntry(
+                                text = tr(if (item.folderType == "SPAM") "move_to_inbox" else "spam"),
+                                icon = if (item.folderType == "SPAM") Icons.Default.Inbox else Icons.Default.Report,
+                                onClick = {
+                                    moreOpen = false
+                                    if (item.folderType == "SPAM") {
+                                        onRestoreSenderFromSpam(item)
+                                    } else {
+                                        onMoveSenderToSpam(item)
+                                    }
+                                    onBack()
+                                },
+                            ),
+                            BondMenuEntry(
+                                text = tr("delete"),
+                                icon = Icons.Default.Delete,
+                                destructive = true,
+                                onClick = { moreOpen = false; confirmDelete = true },
                             ),
                         ),
                     ) {
@@ -892,6 +956,7 @@ private fun MailHtmlView(
     onWebViewChanged: (WebView?) -> Unit,
     onRemoteImagesChanged: (Boolean) -> Unit,
     onExternalLink: (String) -> Unit,
+    onAttachmentClick: (Int) -> Unit,
     onChromeVisibilityChanged: (Boolean) -> Unit,
     onContentScrollChanged: (Int) -> Unit,
     onRenderStarted: () -> Unit,
@@ -1066,6 +1131,7 @@ private fun MailHtmlView(
     }
     val latestOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
     val latestOnExternalLink by rememberUpdatedState(onExternalLink)
+    val latestOnAttachmentClick by rememberUpdatedState(onAttachmentClick)
     val latestOnRemoteImagesChanged by rememberUpdatedState(onRemoteImagesChanged)
     val latestOnChromeVisibilityChanged by rememberUpdatedState(onChromeVisibilityChanged)
     val latestOnContentScrollChanged by rememberUpdatedState(onContentScrollChanged)
@@ -1488,6 +1554,10 @@ private fun MailHtmlView(
 
                             private fun handleLink(url: String?): Boolean {
                                 url ?: return false
+                                if (url.startsWith("bondmail-attachment://", ignoreCase = true)) {
+                                    Uri.parse(url).lastPathSegment?.toIntOrNull()?.let(latestOnAttachmentClick)
+                                    return true
+                                }
                                 latestOnExternalLink(url)
                                 return true
                             }

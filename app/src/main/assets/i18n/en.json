@@ -171,6 +171,7 @@
   "edit": "Edit",
   "edit_display_name": "Edit mailbox name",
   "save": "Save",
+  "discard": "Discard",
   "edit_mailboxes": "Edit mailboxes",
   "mailbox_order_title": "Mailbox order",
   "mailbox_order_desc": "This order is used in the drawer, settings, and account pickers.",

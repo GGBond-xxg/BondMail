@@ -171,6 +171,7 @@
   "edit": "编辑",
   "edit_display_name": "编辑邮箱名称",
   "save": "保存",
+  "discard": "舍弃",
   "edit_mailboxes": "编辑邮箱",
   "mailbox_order_title": "邮箱排序",
   "mailbox_order_desc": "调整邮箱顺序后，抽屉、设置和写邮件账户列表都会使用新的顺序。",

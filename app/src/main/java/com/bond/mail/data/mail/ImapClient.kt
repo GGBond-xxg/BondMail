@@ -30,6 +30,8 @@ import javax.mail.Session
 import javax.mail.Store
 import javax.mail.UIDFolder
 import javax.mail.internet.MimeMessage
+import javax.mail.internet.InternetAddress
+import javax.mail.search.FromStringTerm
 import kotlin.math.max
 
 internal data class RemoteFlagState(
@@ -882,6 +884,72 @@ class ImapClient(context: Context) {
         }
     }
 
+    /** Submit one IMAP STORE operation per remote folder instead of reconnecting per row. */
+    suspend fun setSeenBatch(
+        account: AccountEntity,
+        provider: MailProvider,
+        secret: String,
+        messages: List<MessageEntity>,
+        seen: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        val remoteMessages = messages.filter { it.remoteUid > 0L }
+        if (remoteMessages.isEmpty()) return@withContext
+        withStore(
+            provider,
+            account.mailLoginName,
+            secret,
+            operation = "seen-batch",
+            poolLane = "interactive",
+        ) { store ->
+            remoteMessages.groupBy(MessageEntity::remoteFolder).forEach { (remoteFolder, locals) ->
+                val folder = store.getFolder(remoteFolder) as IMAPFolder
+                folder.open(Folder.READ_WRITE)
+                try {
+                    val targets = folder.getMessagesByUID(
+                        locals.map(MessageEntity::remoteUid).distinct().toLongArray(),
+                    ).filterNotNull().toTypedArray()
+                    if (targets.isNotEmpty()) {
+                        folder.setFlags(targets, Flags(Flags.Flag.SEEN), seen)
+                    }
+                    MailLog.d(
+                        MailLog.IMAP,
+                        "seen batch success provider=${provider.id} folder=$remoteFolder " +
+                            "requested=${locals.size} matched=${targets.size} seen=$seen",
+                    )
+                } finally {
+                    folder.close(false)
+                }
+            }
+        }
+    }
+
+    internal suspend fun downloadAttachment(
+        account: AccountEntity,
+        provider: MailProvider,
+        secret: String,
+        message: MessageEntity,
+        attachmentIndex: Int,
+    ): MailAttachmentData = withContext(Dispatchers.IO) {
+        withStore(
+            provider,
+            account.mailLoginName,
+            secret,
+            operation = "attachment",
+            poolLane = "interactive",
+        ) { store ->
+            val folder = store.getFolder(message.remoteFolder) as IMAPFolder
+            folder.open(Folder.READ_ONLY)
+            try {
+                val remote = folder.getMessageByUID(message.remoteUid)
+                    ?: error("Message no longer exists on the server")
+                MimeParser.readAttachment(remote, attachmentIndex)
+                    ?: error("Attachment is no longer available")
+            } finally {
+                folder.close(false)
+            }
+        }
+    }
+
     suspend fun setFlagged(
         account: AccountEntity,
         provider: MailProvider,
@@ -944,6 +1012,57 @@ class ImapClient(context: Context) {
                             "to=${target.fullName} uid=${source.getUID(remote).coerceAtLeast(0L)}",
                     )
                 }
+            } finally {
+                source.close(expungeSource)
+            }
+        }
+    }
+
+    /** Move every message from an exact sender address in one remote folder. */
+    suspend fun moveSenderMessages(
+        account: AccountEntity,
+        provider: MailProvider,
+        secret: String,
+        sourceRemoteFolder: String,
+        senderAddress: String,
+        targetCanonicalType: String,
+    ): Int = withContext(Dispatchers.IO) {
+        require(targetCanonicalType in setOf("INBOX", "SPAM", "TRASH"))
+        withStore(
+            provider,
+            account.mailLoginName,
+            secret,
+            operation = "move-sender",
+            poolLane = "interactive",
+        ) { store ->
+            val source = store.getFolder(sourceRemoteFolder) as IMAPFolder
+            val target = resolveCanonicalFolder(
+                store = store,
+                provider = provider,
+                canonicalType = targetCanonicalType,
+                createIfMissing = targetCanonicalType == "TRASH",
+            ) ?: error("Unable to resolve $targetCanonicalType folder")
+            source.open(Folder.READ_WRITE)
+            var expungeSource = false
+            try {
+                val normalizedSender = senderAddress.trim().lowercase(Locale.ROOT)
+                val matches = source.search(FromStringTerm(senderAddress)).filter { remote ->
+                    remote.from.orEmpty().any { address ->
+                        val value = (address as? InternetAddress)?.address ?: address.toString()
+                        value.trim().lowercase(Locale.ROOT) == normalizedSender
+                    }
+                }.toTypedArray()
+                if (matches.isNotEmpty()) {
+                    source.copyMessages(matches, target)
+                    matches.forEach { remote -> remote.setFlag(Flags.Flag.DELETED, true) }
+                    expungeSource = true
+                }
+                MailLog.d(
+                    MailLog.IMAP,
+                    "move sender success provider=${provider.id} from=${source.fullName} " +
+                        "to=${target.fullName} matches=${matches.size}",
+                )
+                matches.size
             } finally {
                 source.close(expungeSource)
             }

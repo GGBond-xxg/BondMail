@@ -17,6 +17,7 @@ import com.bond.mail.data.db.OutboxEntity
 import com.bond.mail.data.db.SavedContactEntity
 import com.bond.mail.data.mail.ImapClient
 import com.bond.mail.data.mail.MailAttachmentCodec
+import com.bond.mail.data.mail.MailAttachmentData
 import com.bond.mail.data.mail.MailLog
 import com.bond.mail.data.mail.MimeParser
 import com.bond.mail.data.mail.SmtpClient
@@ -1417,7 +1418,9 @@ class MailRepository(
     }
 
     suspend fun toggleUnread(messageId: String) {
-        database.messageDao().byId(messageId)?.let { toggleUnread(it) }
+        database.messageDao().byId(messageId)?.let { current ->
+            setUnread(current, unread = !current.unread)
+        }
     }
 
     /** Compatibility entry point for callers outside the detail flow. */
@@ -1426,7 +1429,9 @@ class MailRepository(
     }
 
     suspend fun toggleStarred(messageId: String) {
-        database.messageDao().byId(messageId)?.let { toggleStarred(it) }
+        database.messageDao().byId(messageId)?.let { current ->
+            setStarred(current, starred = !current.starred)
+        }
     }
 
     suspend fun deleteMessage(messageId: String) {
@@ -1439,12 +1444,76 @@ class MailRepository(
 
     suspend fun toggleUnread(message: MessageEntity) {
         val current = database.messageDao().byId(message.id) ?: return
+        setUnread(current, unread = !current.unread)
+    }
+
+    suspend fun setUnread(messageId: String, unread: Boolean) {
+        database.messageDao().byId(messageId)?.let { setUnread(it, unread) }
+    }
+
+    /**
+     * Apply a multi-selection read state as one local transaction, then synchronize grouped IMAP
+     * folders in the background lane. The list therefore changes in one frame instead of visibly
+     * walking down the selected rows while each network request finishes.
+     */
+    suspend fun setUnreadBatch(messageIds: List<String>, unread: Boolean) {
+        if (messageIds.isEmpty()) return
+        val targets = database.messageDao().byIds(messageIds.distinct())
+            .filter { it.deliveryState == "REMOTE" && it.unread != unread }
+        if (targets.isEmpty()) return
+
+        targets.forEach { clearPendingOpenSeen(it.id) }
+        val grouped = targets.groupBy(MessageEntity::accountId)
+        grouped.keys.forEach(::advanceFlagGeneration)
+        database.messageDao().setUnread(targets.map(MessageEntity::id), unread)
+        MailLog.d(
+            MailLog.APP,
+            "read flag batch optimistic count=${targets.size} unread=$unread accounts=${grouped.size}",
+        )
+
+        var firstFailure: Throwable? = null
+        grouped.forEach { (accountId, accountMessages) ->
+            try {
+                bodyAccountMutex(accountId, interactive = true).withLock {
+                    accountSyncMutex(accountId).withLock {
+                        val account = requireAccount(accountId)
+                        withMailboxCredential(account) { credential ->
+                            imap.setSeenBatch(
+                                account = account,
+                                provider = ProviderRegistry.forAccount(account),
+                                secret = credential,
+                                messages = accountMessages,
+                                seen = !unread,
+                            )
+                        }
+                    }
+                }
+                advanceFlagGeneration(accountId)
+            } catch (failure: Throwable) {
+                // Every target in this account had the opposite value before the batch.
+                database.messageDao().setUnread(accountMessages.map(MessageEntity::id), !unread)
+                advanceFlagGeneration(accountId)
+                if (firstFailure == null) firstFailure = failure
+                MailLog.e(
+                    MailLog.APP,
+                    "read flag batch rollback account=$accountId count=${accountMessages.size} " +
+                        "cause=${MailLog.causeSummary(failure)}",
+                    failure,
+                )
+            }
+        }
+        firstFailure?.let { throw it }
+    }
+
+    private suspend fun setUnread(message: MessageEntity, unread: Boolean) {
+        val current = database.messageDao().byId(message.id) ?: return
+        if (current.unread == unread) return
         // A manual flag action is newer than the automatic read intent from opening the detail.
         // Clearing it before the optimistic write makes mark-unread win even if the deferred
         // server \Seen job is already queued.
         clearPendingOpenSeen(current.id)
         val oldUnread = current.unread
-        val newUnread = !oldUnread
+        val newUnread = unread
         advanceFlagGeneration(current.accountId)
         database.messageDao().setUnread(current.id, newUnread)
         MailLog.d(
@@ -1488,8 +1557,18 @@ class MailRepository(
 
     suspend fun toggleStarred(message: MessageEntity) {
         val current = database.messageDao().byId(message.id) ?: return
+        setStarred(current, starred = !current.starred)
+    }
+
+    suspend fun setStarred(messageId: String, starred: Boolean) {
+        database.messageDao().byId(messageId)?.let { setStarred(it, starred) }
+    }
+
+    private suspend fun setStarred(message: MessageEntity, starred: Boolean) {
+        val current = database.messageDao().byId(message.id) ?: return
+        if (current.starred == starred) return
         val oldValue = current.starred
-        val newValue = !oldValue
+        val newValue = starred
         advanceFlagGeneration(current.accountId)
         database.messageDao().setStarred(current.id, newValue)
         try {
@@ -1519,6 +1598,23 @@ class MailRepository(
         database.messageDao().setRemoteImageAllowed(messageId, true)
     }
 
+    internal suspend fun downloadAttachment(messageId: String, attachmentIndex: Int): MailAttachmentData {
+        val message = database.messageDao().byId(messageId)
+            ?: error("Message no longer exists")
+        val account = requireAccount(message.accountId)
+        return bodyAccountMutex(message.accountId, interactive = true).withLock {
+            withMailboxCredential(account) { credential ->
+                imap.downloadAttachment(
+                    account = account,
+                    provider = ProviderRegistry.forAccount(account),
+                    secret = credential,
+                    message = message,
+                    attachmentIndex = attachmentIndex,
+                )
+            }
+        }
+    }
+
     suspend fun deleteMessage(message: MessageEntity) {
         if (
             message.deliveryState == "REMOTE" &&
@@ -1536,6 +1632,65 @@ class MailRepository(
     }
 
     suspend fun moveMessage(message: MessageEntity, targetFolderType: String) {
+        moveMessageInternal(message, targetFolderType)
+        // The copied message receives a new UID in the target folder. Refresh that folder after
+        // the IMAP move so Room immediately exposes it instead of making the user switch folders
+        // and pull to refresh before it appears.
+        runCatching { syncFolder(message.accountId, targetFolderType) }
+            .onFailure { error ->
+                MailLog.w(
+                    MailLog.APP,
+                    "target refresh after move failed accountId=${message.accountId} " +
+                        "folder=$targetFolderType cause=${MailLog.causeSummary(error)}",
+                    error,
+                )
+            }
+    }
+
+    /** Move every cached remote message from the same sender in the current folder. */
+    suspend fun moveSenderMessages(messageId: String, targetFolderType: String) {
+        val anchor = database.messageDao().byId(messageId) ?: return
+        val sender = anchor.senderAddress.trim()
+        if (sender.isBlank()) {
+            moveMessage(anchor, targetFolderType)
+            return
+        }
+        val matches = database.messageDao().senderFolderSnapshot(
+            accountId = anchor.accountId,
+            folderType = anchor.folderType,
+            senderAddress = sender,
+        ).ifEmpty { listOf(anchor) }
+        matches.forEach { message ->
+            clearPendingOpenSeen(message.id)
+            database.messageDao().deleteById(message.id)
+        }
+        try {
+            bodyAccountMutex(anchor.accountId, interactive = true).withLock {
+                accountSyncMutex(anchor.accountId).withLock {
+                    val account = requireAccount(anchor.accountId)
+                    withMailboxCredential(account) { credential ->
+                        imap.moveSenderMessages(
+                            account = account,
+                            provider = ProviderRegistry.forAccount(account),
+                            secret = credential,
+                            sourceRemoteFolder = anchor.remoteFolder,
+                            senderAddress = sender,
+                            targetCanonicalType = targetFolderType,
+                        )
+                    }
+                }
+            }
+        } catch (failure: Throwable) {
+            database.messageDao().upsertAll(matches)
+            throw failure
+        }
+        // Refresh both ends. The target gets new UIDs and the source may contain messages that
+        // were outside BondMail's local cache but matched the server-side sender search.
+        syncFolder(anchor.accountId, targetFolderType)
+        runCatching { syncFolder(anchor.accountId, anchor.folderType) }
+    }
+
+    private suspend fun moveMessageInternal(message: MessageEntity, targetFolderType: String) {
         require(targetFolderType in setOf("INBOX", "SPAM", "TRASH"))
         if (message.deliveryState != "REMOTE" || message.remoteUid <= 0L) return
         clearPendingOpenSeen(message.id)

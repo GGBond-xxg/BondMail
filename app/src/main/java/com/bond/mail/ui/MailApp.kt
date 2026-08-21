@@ -424,7 +424,38 @@ fun MailApp(
                 composeSubject == replySubject &&
                 composeBody == initialBody
             ) {
-                composeBody = "\n\n---\n${loaded.bodyText}"
+                composeBody = "\n\n---\n${loaded.bestForwardText()}"
+            }
+        }
+    }
+
+    fun forwardFromList(message: MessageListRow) {
+        val forwardSubject = if (message.subject.startsWith("Fwd:", true)) {
+            message.subject
+        } else {
+            "Fwd: ${message.subject}"
+        }
+        val initialBody = "\n\n--- Forwarded message ---\nFrom: ${message.senderAddress}\n" +
+            "Subject: ${message.subject}\n\n${message.preview}"
+        composeAccountId = message.accountId
+        composeTo = ""
+        composeCc = ""
+        composeBcc = ""
+        composeSubject = forwardSubject
+        composeBody = initialBody
+        composeAttachmentUris = emptyList()
+        composeDraftTaskId = null
+        composeSourceMessageId = null
+        composeVisible = true
+        appScope.launch {
+            val loaded = container.repository.ensureBodyLoaded(
+                messageId = message.id,
+                markSeen = false,
+                priority = true,
+            ) ?: return@launch
+            if (composeVisible && composeSubject == forwardSubject && composeBody == initialBody) {
+                composeBody = "\n\n--- Forwarded message ---\nFrom: ${loaded.senderAddress}\n" +
+                    "Subject: ${loaded.subject}\n\n${loaded.bestForwardText()}"
             }
         }
     }
@@ -681,6 +712,7 @@ fun MailApp(
                 onMainChromeVisibilityChanged = { mainChromeVisible = it },
                 onOpenMessage = ::openMailboxMessage,
                 onReplyMessage = ::replyFromList,
+                onForwardMessage = ::forwardFromList,
                 onCompose = ::prepareCompose,
             )
         }
@@ -917,6 +949,18 @@ fun MailApp(
                                         homeVm.deleteFromDetail(message)
                                         requestBack()
                                     },
+                                    onMoveSenderToSpam = { message ->
+                                        detailInitialSnapshots.remove(message.id)
+                                        detailOpenSeenRequests.remove(message.id)
+                                        if (selectedMessage?.id == message.id) selectedMessage = null
+                                        homeVm.moveSenderToSpamFromDetail(message)
+                                    },
+                                    onRestoreSenderFromSpam = { message ->
+                                        detailInitialSnapshots.remove(message.id)
+                                        detailOpenSeenRequests.remove(message.id)
+                                        if (selectedMessage?.id == message.id) selectedMessage = null
+                                        homeVm.restoreSenderFromSpamFromDetail(message)
+                                    },
                                     onReply = { to, subject, body ->
                                         composeAccountId = detailInitialSnapshots[messageId]?.accountId
                                             ?: selectedMessage
@@ -996,6 +1040,7 @@ private fun MainTabs(
     onMainChromeVisibilityChanged: (Boolean) -> Unit,
     onOpenMessage: (MessageListRow) -> Unit,
     onReplyMessage: (MessageListRow) -> Unit,
+    onForwardMessage: (MessageListRow) -> Unit,
     onCompose: (String) -> Unit,
 ) {
     val accounts by homeVm.accounts.collectAsState()
@@ -1128,6 +1173,7 @@ private fun MainTabs(
                             onAddAccount = onAddAccount,
                             onOpenMessage = onOpenMessage,
                             onReplyMessage = onReplyMessage,
+                            onForwardMessage = onForwardMessage,
                             onCompose = { onCompose("") },
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

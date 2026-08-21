@@ -171,6 +171,7 @@
   "edit": "編輯",
   "edit_display_name": "編輯郵箱名稱",
   "save": "保存",
+  "discard": "捨棄",
   "edit_mailboxes": "編輯郵箱",
   "mailbox_order_title": "郵箱排序",
   "mailbox_order_desc": "調整郵箱順序後，抽屜、設定和寫郵件帳戶列表都會使用新的順序。",

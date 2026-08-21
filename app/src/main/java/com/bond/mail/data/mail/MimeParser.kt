@@ -52,6 +52,7 @@ internal object MimeParser {
     private const val MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024
     private const val MAX_TEXT_PART_BYTES = 12 * 1024 * 1024
     private const val MAX_MIME_DEPTH = 32
+    private const val MAX_ATTACHMENT_DOWNLOAD_BYTES = 64 * 1024 * 1024
 
     fun parseHeader(message: Message): ParsedMailHeader {
         val from = message.from?.firstOrNull() as? InternetAddress
@@ -114,6 +115,90 @@ internal object MimeParser {
             receivedAt = header.receivedAt,
             internetMessageId = header.internetMessageId,
         )
+    }
+
+    /** Resolve an attachment using the same MIME ordering shown in the reader. */
+    fun readAttachment(root: Part, requestedIndex: Int): MailAttachmentData? {
+        if (requestedIndex < 0) return null
+        var remaining = requestedIndex
+
+        fun materialize(part: Part, name: String, contentType: String): MailAttachmentData? {
+            if (remaining-- != 0) return null
+            val output = ByteArrayOutputStream()
+            part.inputStream.use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var total = 0
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    require(total <= MAX_ATTACHMENT_DOWNLOAD_BYTES) { "Attachment is larger than 64 MB" }
+                    output.write(buffer, 0, read)
+                }
+            }
+            return MailAttachmentData(
+                info = MailAttachmentInfo(
+                    name = name.ifBlank { defaultAttachmentName(contentType, requestedIndex + 1) },
+                    contentType = contentType,
+                    sizeBytes = output.size().toLong(),
+                ),
+                bytes = output.toByteArray(),
+            )
+        }
+
+        fun visit(part: Part, depth: Int): MailAttachmentData? {
+            if (depth > MAX_MIME_DEPTH) return null
+            val disposition = runCatching { part.disposition }.getOrNull()
+            val fileName = runCatching { decodeText(part.fileName) }.getOrNull()
+            val contentId = header(part, "Content-ID")?.trim()?.trim('<', '>')?.takeIf(String::isNotBlank)
+            val contentLocation = header(part, "Content-Location")?.trim()?.takeIf(String::isNotBlank)
+            val isInline = Part.INLINE.equals(disposition, ignoreCase = true)
+            val hasInlineReference = contentId != null || contentLocation != null
+            val contentType = safeContentType(part)
+            val isTextBody = part.matches("text/*") || part.matches("application/xhtml+xml")
+            val isAttachment =
+                (Part.ATTACHMENT.equals(disposition, ignoreCase = true) && !hasInlineReference) ||
+                    (!fileName.isNullOrBlank() && !isInline && !hasInlineReference && !isTextBody)
+
+            if (part.matches("multipart/*")) {
+                val multipart = runCatching { part.content as? Multipart }.getOrNull() ?: return null
+                for (index in 0 until multipart.count) {
+                    visit(multipart.getBodyPart(index), depth + 1)?.let { return it }
+                }
+                return null
+            }
+            if (part.matches("message/rfc822")) {
+                if (isAttachment) {
+                    return materialize(part, fileName ?: "Forwarded message.eml", contentType)
+                }
+                return when (val nested = runCatching { part.content }.getOrNull()) {
+                    is Part -> visit(nested, depth + 1)
+                    is Multipart -> {
+                        var found: MailAttachmentData? = null
+                        for (index in 0 until nested.count) {
+                            found = visit(nested.getBodyPart(index), depth + 1)
+                            if (found != null) break
+                        }
+                        found
+                    }
+                    else -> null
+                }
+            }
+            if (part.matches("image/*") && !isAttachment) {
+                if (contentId != null || contentLocation != null || isInline || fileName.isNullOrBlank()) return null
+                return materialize(part, fileName, contentType)
+            }
+            if (isAttachment || !fileName.isNullOrBlank()) {
+                return materialize(
+                    part,
+                    fileName ?: defaultAttachmentName(contentType, requestedIndex + 1),
+                    contentType,
+                )
+            }
+            return null
+        }
+
+        return visit(root, 0)
     }
 
     /**

@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import com.bond.mail.AppContainer
 import com.bond.mail.data.db.SavedContactEntity
 import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.components.ContactAvatar
 import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.FloatingCircleAction
@@ -85,6 +86,7 @@ import com.bond.mail.ui.theme.BondIconButton
 import com.bond.mail.ui.theme.BondSearchField
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
+import com.bond.mail.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 
 @Composable
@@ -136,6 +138,7 @@ fun ContactsScreen(
             }
             .toList()
     }
+    val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
 
 
     val listState = rememberLazyListState()
@@ -191,12 +194,12 @@ fun ContactsScreen(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = MailContentDefaults.HorizontalInset,
-                end = MailContentDefaults.HorizontalInset,
+                start = if (miuixLayout) 12.dp else 16.dp,
+                end = if (miuixLayout) 12.dp else 16.dp,
                 top = topChromeHeight + 2.dp,
                 bottom = listBottomContentPadding,
             ),
-            verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
+            verticalArrangement = Arrangement.spacedBy(if (miuixLayout) 12.dp else 13.dp),
         ) {
             item(key = "contacts-title") {
                 Text(
@@ -219,7 +222,11 @@ fun ContactsScreen(
                         email = contact.email,
                         customAvatarText = contact.avatarText,
                         settings = settings,
-                        shape = MailContentDefaults.itemShape(index, frequentContacts.size),
+                        shape = if (miuixLayout) {
+                            MaterialTheme.shapes.medium
+                        } else {
+                            MaterialTheme.shapes.large
+                        },
                         onCompose = onCompose,
                         onEdit = {
                             editingContactId = contact.id
@@ -269,7 +276,11 @@ fun ContactsScreen(
                         email = contact.senderAddress,
                         customAvatarText = null,
                         settings = settings,
-                        shape = MailContentDefaults.itemShape(index, filteredContacts.size),
+                        shape = if (miuixLayout) {
+                            MaterialTheme.shapes.medium
+                        } else {
+                            MaterialTheme.shapes.large
+                        },
                         onCompose = onCompose,
                     )
                 }

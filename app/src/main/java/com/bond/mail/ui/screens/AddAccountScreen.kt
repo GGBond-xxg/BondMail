@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -94,6 +95,8 @@ import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
 import com.bond.mail.ui.theme.BondTopAppBar
 import com.bond.mail.ui.theme.LocalUiStyle
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.SmoothRoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,6 +104,10 @@ fun ProviderPickerScreen(
     onBack: () -> Unit,
     onProviderSelected: (String) -> Unit,
 ) {
+    val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
+    val horizontalInset = if (miuixLayout) 12.dp else 16.dp
+    val itemSpacing = if (miuixLayout) 12.dp else 13.dp
+    val itemShape = if (miuixLayout) MaterialTheme.shapes.medium else MaterialTheme.shapes.large
     Scaffold(
         containerColor = MaterialTheme.bondSurfaces.page,
         topBar = {
@@ -118,18 +125,16 @@ fun ProviderPickerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = horizontalInset),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             items(ProviderRegistry.providers.filter { it.visibleInPicker }, key = { it.id }) { provider ->
                 val providerLabel = if (provider.id == "custom") tr("provider_other") else provider.label
-                val itemShape = RoundedCornerShape(22.dp)
                 GroupedListSurface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = itemShape,
                     containerColor = MaterialTheme.bondSurfaces.content,
                     onClick = { onProviderSelected(provider.id) },
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 ) {
                     Row(
                         modifier = Modifier
@@ -231,6 +236,10 @@ fun AccountCredentialsScreen(
     }
 
     val providerLabel = if (provider.id == "custom") tr("provider_other") else provider.label
+    val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
+    val horizontalInset = if (miuixLayout) 12.dp else 16.dp
+    val itemSpacing = if (miuixLayout) 12.dp else 13.dp
+    val itemShape = if (miuixLayout) MaterialTheme.shapes.medium else MaterialTheme.shapes.large
 
     Scaffold(
         containerColor = MaterialTheme.bondSurfaces.page,
@@ -249,28 +258,35 @@ fun AccountCredentialsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = horizontalInset),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
             item {
-                Row(
+                Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .fillMaxWidth(),
+                    shape = itemShape,
+                    color = MaterialTheme.bondSurfaces.content,
                 ) {
-                    ProviderAvatar(provider, 52.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(providerLabel, style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            if (provider.authType == AuthType.OAUTH2) {
-                                tr("provider_oauth")
-                            } else {
-                                tr("provider_imap_smtp")
-                            },
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ProviderAvatar(provider, 52.dp)
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text(providerLabel, style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                if (provider.authType == AuthType.OAUTH2) {
+                                    tr("provider_oauth")
+                                } else {
+                                    tr("provider_imap_smtp")
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -757,10 +773,13 @@ private fun MailboxAddressField(
 ) {
     var focused by remember { mutableStateOf(false) }
     val suffixInteraction = remember { MutableInteractionSource() }
+    val uiStyle = LocalUiStyle.current
     val active = focused || expanded
     val borderColor by animateColorAsState(
         targetValue = if (active) {
             MaterialTheme.colorScheme.primary
+        } else if (uiStyle == UiStyle.MIUIX) {
+            Color.Transparent
         } else {
             MaterialTheme.colorScheme.outlineVariant
         },
@@ -775,8 +794,12 @@ private fun MailboxAddressField(
 
     Surface(
         modifier = modifier.height(64.dp),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.bondSurfaces.input,
+        shape = SmoothRoundedCornerShape(18.dp),
+        color = if (uiStyle == UiStyle.MIUIX) {
+            MiuixTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
+        },
         border = BorderStroke(borderWidth, borderColor),
     ) {
         Row(

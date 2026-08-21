@@ -537,6 +537,19 @@ internal object MailWebViewCache {
               #bondmail-message-body > .bondmail-root-content blockquote{
                 white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word
               }
+              /* Receipts and travel confirmations commonly place prices in a narrow right-aligned
+                 table cell. Never split currency/amounts character by character; let that column
+                 keep its intrinsic width and let the descriptive column wrap instead. */
+              #bondmail-message-body td[align="right"],
+              #bondmail-message-body th[align="right"],
+              #bondmail-message-body td[style*="text-align: right" i],
+              #bondmail-message-body th[style*="text-align: right" i],
+              #bondmail-message-body [class*="price" i],
+              #bondmail-message-body [class*="amount" i],
+              #bondmail-message-body [class*="total" i]{
+                min-width:max-content!important;max-width:none!important;
+                white-space:nowrap!important;overflow-wrap:normal!important;word-break:normal!important
+              }
               #bondmail-message-body > .bondmail-root-content h1,
               #bondmail-message-body > .bondmail-root-content h2,
               #bondmail-message-body > .bondmail-root-content h3,
@@ -799,7 +812,8 @@ internal object MailWebViewCache {
                 box-sizing:border-box!important;border-radius:14px!important;
                 border:1px solid color-mix(in srgb,$mutedCss 18%,transparent)!important;
                 background:color-mix(in srgb,$mutedCss 7%,$headerSurfaceCss)!important;
-                color:$foregroundCss!important;font-family:sans-serif!important
+                color:$foregroundCss!important;font-family:sans-serif!important;
+                text-decoration:none!important;cursor:pointer!important
               }
               #bondmail-attachments .bondmail-paperclip{
                 flex:0 0 auto!important;font-size:20px!important;line-height:1!important
@@ -2295,11 +2309,12 @@ internal object MailWebViewCache {
     private fun createAttachments(header: MailWebHeader): Element? {
         if (header.attachments.isEmpty()) return null
         val section = Element("section").attr("id", "bondmail-attachments")
-        header.attachments.forEach { attachment ->
+        header.attachments.forEachIndexed { index, attachment ->
             val meta = MailAttachmentCodec.formatSize(attachment.sizeBytes)
             section.appendChild(
-                Element("div")
+                Element("a")
                     .addClass("bondmail-attachment")
+                    .attr("href", "bondmail-attachment://open/$index")
                     .appendChild(Element("span").addClass("bondmail-paperclip").attr("aria-hidden", "true").text("📎"))
                     .appendChild(
                         Element("span")

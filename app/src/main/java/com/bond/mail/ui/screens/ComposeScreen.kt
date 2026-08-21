@@ -667,7 +667,14 @@ fun ComposeScreen(
                         BondTextField(
                             value = body,
                             onValueChange = { body = it },
-                            label = tr("body"),
+                            // MIUIX keeps its label inside the field instead of floating it like
+                            // Material. Hiding the label once a forwarded body exists prevents the
+                            // first quoted line from being painted through the word "Body".
+                            label = if (LocalUiStyle.current == UiStyle.MIUIX && body.isNotBlank()) {
+                                ""
+                            } else {
+                                tr("body")
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { if (it.isFocused) expandForInput() }
@@ -708,11 +715,12 @@ fun ComposeScreen(
         if (showDraftDecision) {
             BondAlertDialog(
                 onDismissRequest = { showDraftDecision = false },
+                dismissButtonWeight = 2f,
                 title = { Text(tr("save_draft_title")) },
                 text = { Text(tr("save_draft_message")) },
                 confirmButton = {
                     BondTextAction(
-                        text = tr("save_draft"),
+                        text = tr("save"),
                         primary = true,
                         enabled = !sending && accountId.isNotBlank(),
                         onClick = {
@@ -735,13 +743,15 @@ fun ComposeScreen(
                     )
                 },
                 dismissButton = {
-                    Row {
+                    Row(Modifier.fillMaxWidth()) {
                         BondTextAction(
                             text = tr("cancel"),
+                            modifier = Modifier.weight(1f),
                             onClick = { showDraftDecision = false },
                         )
                         BondTextAction(
-                            text = tr("discard_draft"),
+                            text = tr("discard"),
+                            modifier = Modifier.weight(1f),
                             destructive = true,
                             enabled = !sending,
                             onClick = {
