@@ -1997,10 +1997,14 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
         )
         val measuredTextHeight = with(density) { finalMeasure.size.height.toDp() }
         val blockHeight = (measuredTextHeight + 28.dp).coerceAtLeast(52.dp)
-        // Three metadata lines use 20sp + 16sp + 16sp line heights. Grow the fixed spacer with
-        // Android's accessibility font scale so the visible Compose header and the hidden HTML
-        // header remain exactly aligned instead of clipping or overlapping at larger text sizes.
-        val senderBlockHeight = ((52f * fontScale).dp + 26.dp).coerceIn(80.dp, 170.dp)
+        // The first metadata row also contains the reserved 32 dp attachment button, so its real
+        // height is max(20sp, 32dp), not merely the sender-name line height. Account for that row,
+        // both 16sp address rows, the two 1dp gaps and 24dp vertical padding. The previous 80dp
+        // minimum cropped the recipient line by roughly 10dp at the default font scale.
+        val senderContentHeight = maxOf(32f, 20f * fontScale) +
+            (16f * fontScale * 2f) +
+            2f
+        val senderBlockHeight = (senderContentHeight.dp + 24.dp).coerceIn(90.dp, 190.dp)
 
         MailHeaderLayout(
             subjectFontSize = chosen.fontSize,
