@@ -41,6 +41,16 @@ class BrandMatcherTest {
             Triple("Indonesian Immigration", "notification@evisa.imigrasi.go.id", "imigrasi"),
             Triple("网易邮箱账号安全", "safe@service.netease.com", "163.com"),
             Triple("Moovit", "notice@moovit.com", "moovit"),
+            Triple("和风天气", "support@qweather.com", "weather"),
+            Triple("彩云天气", "ai@caiyunapp.com", "weather"),
+            Triple("彩云天气开发者", "developer.sg@caiyunapp.com", "weather"),
+            Triple("OpenWeather", "info@openweathermap.org", "weather"),
+            Triple("华风爱科", "ad-hfaw@weathercn.com", "weather"),
+            Triple("华风爱科客服", "service@weathercn.com", "weather"),
+            Triple("华风爱科商务", "business@weathercn.com", "weather"),
+            Triple("墨迹天气", "AS@moji.com", "weather"),
+            Triple("墨迹天气广告合作", "weihua.yang@moji.com", "weather"),
+            Triple("墨迹天气 Android 商务", "yuejiao.bai@moji.com", "weather"),
         )
 
         cases.forEach { (name, address, expectedKey) ->

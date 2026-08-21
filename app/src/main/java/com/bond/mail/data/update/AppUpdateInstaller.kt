@@ -16,16 +16,19 @@ class AppUpdateInstaller(private val context: Context) {
 
     fun start(update: AppUpdateInfo): Boolean {
         if (!update.downloadUrl.substringBefore('?').endsWith(".apk", ignoreCase = true)) return false
+        val fileName = "BondMail-v${update.version}-${System.currentTimeMillis()}.apk"
         val request = DownloadManager.Request(Uri.parse(update.downloadUrl))
             .setTitle("BondMail v${update.version}")
             .setDescription("Downloading update")
             .setMimeType(APK_MIME_TYPE)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(
-                context,
-                Environment.DIRECTORY_DOWNLOADS,
-                "BondMail-v${update.version}-${System.currentTimeMillis()}.apk",
-            )
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                } else {
+                    setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+                }
+            }
         val id = runCatching { manager.enqueue(request) }.getOrNull() ?: return false
         preferences.edit()
             .putLong(KEY_DOWNLOAD_ID, id)

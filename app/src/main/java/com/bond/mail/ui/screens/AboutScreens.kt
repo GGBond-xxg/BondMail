@@ -113,18 +113,6 @@ fun AboutScreen(
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
                 AboutActionRow(
-                    icon = Icons.Default.SystemUpdate,
-                    title = tr("software_version"),
-                    subtitle = if (updateChecking) {
-                        tr("checking_for_updates")
-                    } else {
-                        "V${BuildConfig.VERSION_NAME} · ${tr("check_for_updates")}"
-                    },
-                    showDot = updateAvailable,
-                    onClick = onCheckForUpdates,
-                )
-                AboutDivider()
-                AboutActionRow(
                     icon = Icons.Default.OpenInNew,
                     title = tr("go_to_github"),
                     subtitle = tr("go_to_github_desc"),
@@ -157,6 +145,18 @@ fun AboutScreen(
                     title = tr("privacy_policy"),
                     subtitle = tr("privacy_policy_desc"),
                     onClick = onOpenPrivacyPolicy,
+                )
+                AboutDivider()
+                AboutActionRow(
+                    icon = Icons.Default.SystemUpdate,
+                    title = tr("software_version"),
+                    subtitle = if (updateChecking) {
+                        tr("checking_for_updates")
+                    } else {
+                        "V${BuildConfig.VERSION_NAME} · ${tr("check_for_updates")}"
+                    },
+                    showDot = updateAvailable,
+                    onClick = onCheckForUpdates,
                 )
             }
         }
