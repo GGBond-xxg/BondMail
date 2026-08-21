@@ -34,7 +34,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,13 +41,10 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -84,6 +80,11 @@ import com.bond.mail.ui.motion.animateChromeOffset
 import com.bond.mail.ui.motion.animateToTopWithMomentum
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondAlertDialog
+import com.bond.mail.ui.theme.BondIconButton
+import com.bond.mail.ui.theme.BondSearchField
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.BondTextField
 import kotlinx.coroutines.launch
 
 @Composable
@@ -292,7 +293,7 @@ fun ContactsScreen(
             ) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(30.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.bondSurfaces.input,
                     tonalElevation = 1.dp,
                     shadowElevation = 1.dp,
@@ -304,35 +305,21 @@ fun ContactsScreen(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        BasicTextField(
+                        BondSearchField(
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                            ),
-                            decorationBox = { inner ->
-                                Box(contentAlignment = Alignment.CenterStart) {
-                                    if (query.isBlank()) {
-                                        Text(
-                                            tr("search_contacts"),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                        )
-                                    }
-                                    inner()
-                                }
+                            placeholder = tr("search_contacts"),
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             },
                         )
-                        IconButton(
+                        BondIconButton(
                             onClick = {
                                 editingContactId = null
                                 contactName = ""
@@ -385,7 +372,7 @@ fun ContactsScreen(
         }
 
         if (showAddContact) {
-            AlertDialog(
+            BondAlertDialog(
                 onDismissRequest = { showAddContact = false },
                 title = {
                     Text(
@@ -409,16 +396,16 @@ fun ContactsScreen(
                                 size = 52.dp,
                                 monet = settings.monetBrandIcons,
                             )
-                            OutlinedTextField(
+                            BondTextField(
                                 value = contactAvatar,
                                 onValueChange = {
                                     contactAvatar = it.take(32)
                                     contactError = null
                                 },
                                 modifier = Modifier.weight(1f),
-                                label = { Text(tr("contact_avatar")) },
-                                placeholder = { Text(tr("avatar_placeholder")) },
-                                supportingText = { Text(tr("contact_avatar_hint")) },
+                                label = tr("contact_avatar"),
+                                placeholder = tr("avatar_placeholder"),
+                                supportingText = tr("contact_avatar_hint"),
                                 singleLine = true,
                             )
                         }
@@ -426,42 +413,40 @@ fun ContactsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
                         ) {
-                            TextButton(
+                            BondTextAction(
+                                text = tr("avatar_auto"),
                                 onClick = {
                                     contactAvatar = ""
                                     contactError = null
                                 },
-                            ) {
-                                Text(tr("avatar_auto"))
-                            }
+                            )
                             listOf("😀", "📮", "✉️", "⭐").forEach { emoji ->
-                                TextButton(
+                                BondTextAction(
+                                    text = emoji,
                                     onClick = {
                                         contactAvatar = emoji
                                         contactError = null
                                     },
-                                ) {
-                                    Text(emoji)
-                                }
+                                )
                             }
                         }
-                        OutlinedTextField(
+                        BondTextField(
                             value = contactName,
                             onValueChange = {
                                 contactName = it
                                 contactError = null
                             },
-                            label = { Text(tr("contact_name")) },
+                            label = tr("contact_name"),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         )
-                        OutlinedTextField(
+                        BondTextField(
                             value = contactEmail,
                             onValueChange = {
                                 contactEmail = it
                                 contactError = null
                             },
-                            label = { Text(tr("email_address")) },
+                            label = tr("email_address"),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Email,
@@ -474,7 +459,9 @@ fun ContactsScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(
+                    BondTextAction(
+                        text = tr("save"),
+                        primary = true,
                         enabled = !contactSaving,
                         onClick = {
                             scrollScope.launch {
@@ -500,12 +487,14 @@ fun ContactsScreen(
                                 contactSaving = false
                             }
                         },
-                    ) { Text(tr("save")) }
+                    )
                 },
                 dismissButton = {
                     Row {
                         if (editingContactId != null) {
-                            TextButton(
+                            BondTextAction(
+                                text = tr("delete_contact"),
+                                destructive = true,
                                 enabled = !contactSaving,
                                 onClick = {
                                     deleteContactTarget = savedContacts.firstOrNull {
@@ -514,26 +503,20 @@ fun ContactsScreen(
                                     deleteContactError = null
                                     showAddContact = false
                                 },
-                            ) {
-                                Text(
-                                    tr("delete_contact"),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            }
+                            )
                         }
-                        TextButton(
+                        BondTextAction(
+                            text = tr("cancel"),
                             enabled = !contactSaving,
                             onClick = { showAddContact = false },
-                        ) {
-                            Text(tr("cancel"))
-                        }
+                        )
                     }
                 },
             )
         }
 
         deleteContactTarget?.let { contact ->
-            AlertDialog(
+            BondAlertDialog(
                 onDismissRequest = {
                     if (!contactDeleting) deleteContactTarget = null
                 },
@@ -550,7 +533,9 @@ fun ContactsScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(
+                    BondTextAction(
+                        text = tr("delete"),
+                        destructive = true,
                         enabled = !contactDeleting,
                         onClick = {
                             scrollScope.launch {
@@ -566,20 +551,14 @@ fun ContactsScreen(
                                 contactDeleting = false
                             }
                         },
-                    ) {
-                        Text(
-                            tr("delete"),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                    )
                 },
                 dismissButton = {
-                    TextButton(
+                    BondTextAction(
+                        text = tr("cancel"),
                         enabled = !contactDeleting,
                         onClick = { deleteContactTarget = null },
-                    ) {
-                        Text(tr("cancel"))
-                    }
+                    )
                 },
             )
         }
@@ -633,7 +612,7 @@ private fun ContactItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(
+            BondIconButton(
                 onClick = onEdit ?: { onCompose(email) },
                 modifier = Modifier.size(40.dp).clip(CircleShape),
             ) {

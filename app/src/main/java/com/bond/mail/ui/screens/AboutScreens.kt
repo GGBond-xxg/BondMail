@@ -37,7 +37,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +60,7 @@ import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.ui.theme.BondIconButton as IconButton
 import com.bond.mail.ui.theme.MiuixActionSetting
 import com.bond.mail.ui.theme.MiuixSettingsDivider
 import com.bond.mail.ui.theme.bondSurfaces

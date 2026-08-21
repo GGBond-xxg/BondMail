@@ -64,22 +64,16 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -156,6 +150,14 @@ import com.bond.mail.ui.motion.bondTopLevelFade
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
+import com.bond.mail.ui.theme.BondIconButton as IconButton
+import com.bond.mail.ui.theme.BondMenuEntry
+import com.bond.mail.ui.theme.BondPopupMenu
+import com.bond.mail.ui.theme.BondPrimaryButton
+import com.bond.mail.ui.theme.BondSecondaryButton
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.BondTextField
 import com.bond.mail.ui.screens.AccountCredentialsScreen
 import com.bond.mail.ui.screens.AboutScreen
 import com.bond.mail.ui.screens.AppLicenseScreen
@@ -1553,7 +1555,7 @@ private fun MailDrawerContent(
                             ),
                             size = 48.dp,
                         )
-                        OutlinedTextField(
+                        BondTextField(
                             modifier = Modifier.weight(1f),
                             value = editAvatarText,
                             onValueChange = {
@@ -1562,9 +1564,9 @@ private fun MailDrawerContent(
                             },
                             enabled = !editBusy,
                             singleLine = true,
-                            label = { Text(tr("account_avatar")) },
-                            placeholder = { Text(tr("avatar_placeholder")) },
-                            supportingText = { Text(tr("avatar_single_glyph_hint")) },
+                            label = tr("account_avatar"),
+                            placeholder = tr("avatar_placeholder"),
+                            supportingText = tr("avatar_single_glyph_hint"),
                         )
                     }
                     Row(
@@ -1572,7 +1574,7 @@ private fun MailDrawerContent(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         listOf("😀", "📮", "✉️", "⭐").forEach { emoji ->
-                            TextButton(
+                            IconButton(
                                 onClick = {
                                     editAvatarText = emoji
                                     editFailure = null
@@ -1583,7 +1585,7 @@ private fun MailDrawerContent(
                             }
                         }
                     }
-                    OutlinedTextField(
+                    BondTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = editDisplayEmail,
                         onValueChange = {
@@ -1592,19 +1594,15 @@ private fun MailDrawerContent(
                         },
                         enabled = !editBusy,
                         singleLine = true,
-                        label = { Text(tr("display_email")) },
+                        label = tr("display_email"),
                         isError = editDisplayEmail.isNotBlank() && !displayEmailValid,
-                        supportingText = {
-                            Text(
-                                if (displayEmailValid) {
-                                    tr("display_email_case_hint")
-                                } else {
-                                    tr("error_display_email_case_only")
-                                },
-                            )
+                        supportingText = if (displayEmailValid) {
+                            tr("display_email_case_hint")
+                        } else {
+                            tr("error_display_email_case_only")
                         },
                     )
-                    OutlinedTextField(
+                    BondTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = editDisplayName,
                         onValueChange = {
@@ -1613,11 +1611,11 @@ private fun MailDrawerContent(
                         },
                         enabled = !editBusy,
                         singleLine = true,
-                        label = { Text(tr("display_name")) },
-                        supportingText = { Text("${editDisplayName.length}/$ACCOUNT_DISPLAY_NAME_MAX_LENGTH") },
+                        label = tr("display_name"),
+                        supportingText = "${editDisplayName.length}/$ACCOUNT_DISPLAY_NAME_MAX_LENGTH",
                     )
                     if (usesAppPassword) {
-                        OutlinedTextField(
+                        BondTextField(
                             modifier = Modifier.fillMaxWidth(),
                             value = replacementSecret,
                             onValueChange = {
@@ -1626,9 +1624,9 @@ private fun MailDrawerContent(
                             },
                             enabled = !editBusy,
                             singleLine = true,
-                            label = { Text(tr("replace_authorization_code")) },
-                            placeholder = { Text(tr("leave_blank_keep_current")) },
-                            supportingText = { Text(tr("authorization_code_update_note")) },
+                            label = tr("replace_authorization_code"),
+                            placeholder = tr("leave_blank_keep_current"),
+                            supportingText = tr("authorization_code_update_note"),
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
@@ -1647,13 +1645,13 @@ private fun MailDrawerContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        TextButton(
+                        BondSecondaryButton(
                             enabled = !editBusy && editDisplayName.isNotBlank(),
                             onClick = {
                                 val host = activity
                                 if (host == null) {
                                     editFailure = UiFailure("error_oauth_failed")
-                                    return@TextButton
+                                    return@BondSecondaryButton
                                 }
                                 editBusy = true
                                 editFailure = null
@@ -1699,7 +1697,7 @@ private fun MailDrawerContent(
                 }
             },
             confirmButton = {
-                TextButton(
+                BondPrimaryButton(
                     enabled = !editBusy && editDisplayName.isNotBlank() && displayEmailValid,
                     onClick = {
                         editBusy = true
@@ -1728,10 +1726,11 @@ private fun MailDrawerContent(
                 }
             },
             dismissButton = {
-                TextButton(
+                BondTextAction(
+                    text = tr("cancel"),
                     enabled = !editBusy,
                     onClick = { editTarget = null },
-                ) { Text(tr("cancel")) }
+                )
             },
         )
     }
@@ -1742,15 +1741,17 @@ private fun MailDrawerContent(
             title = { Text(tr("confirm_delete_account_title")) },
             text = { Text("${account.displayName}\n${tr("delete_account_local_only")}") },
             confirmButton = {
-                TextButton(
+                BondTextAction(
+                    text = tr("delete"),
+                    destructive = true,
                     onClick = {
                         onDeleteAccount(account.id)
                         deleteTarget = null
                     },
-                ) { Text(tr("delete"), color = MaterialTheme.colorScheme.error) }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { deleteTarget = null }) { Text(tr("cancel")) }
+                BondTextAction(text = tr("cancel"), onClick = { deleteTarget = null })
             },
         )
     }
@@ -1944,7 +1945,29 @@ private fun DraggableAccountRow(
                     )
                 }
             }
-            Box {
+            BondPopupMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                entries = listOf(
+                    BondMenuEntry(
+                        text = tr("edit_mail_account"),
+                        icon = Icons.Default.Edit,
+                        onClick = {
+                            menuExpanded = false
+                            onEdit()
+                        },
+                    ),
+                    BondMenuEntry(
+                        text = tr("delete"),
+                        icon = Icons.Default.Delete,
+                        destructive = true,
+                        onClick = {
+                            menuExpanded = false
+                            onDelete()
+                        },
+                    ),
+                ),
+            ) {
                 IconButton(
                     onClick = { menuExpanded = true },
                     modifier = Modifier.size(40.dp),
@@ -1953,35 +1976,6 @@ private fun DraggableAccountRow(
                         Icons.Default.MoreVert,
                         contentDescription = tr("more"),
                         modifier = Modifier.size(21.dp),
-                    )
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(tr("edit_mail_account")) },
-                        leadingIcon = {
-                            Icon(Icons.Default.Edit, contentDescription = null)
-                        },
-                        onClick = {
-                            menuExpanded = false
-                            onEdit()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(tr("delete")) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                        },
-                        onClick = {
-                            menuExpanded = false
-                            onDelete()
-                        },
                     )
                 }
             }

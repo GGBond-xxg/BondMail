@@ -1,8 +1,11 @@
 package com.bond.mail.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,6 +20,8 @@ import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.ui.theme.LocalUiStyle
 
 /** Shared raised circular action used by Compose and destructive detail actions. */
 @Composable
@@ -36,7 +41,6 @@ fun FloatingCircleAction(
     )
 
     Surface(
-        onClick = onClick,
         modifier = modifier
             .bondPressTransform(pressScale)
             .shadow(
@@ -56,8 +60,15 @@ fun FloatingCircleAction(
         ),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
-        interactionSource = interactionSource,
     ) {
-        Box(contentAlignment = Alignment.Center, content = content)
+        Box(
+            modifier = Modifier.fillMaxSize().clickable(
+                interactionSource = interactionSource,
+                indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
+                onClick = onClick,
+            ),
+            contentAlignment = Alignment.Center,
+            content = content,
+        )
     }
 }

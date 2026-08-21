@@ -26,6 +26,8 @@ import com.bond.mail.ui.motion.bondPressTransform
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.ui.theme.LocalUiStyle
 
 /**
  * Shared interactive surface for grouped mail/contact rows.
@@ -47,6 +49,7 @@ internal fun GroupedListSurface(
     val pressResetter = rememberBondPressResetter()
     key(pressResetter.epoch) {
         val motionEnabled = bondMotionEnabled()
+        val indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current
         val interactionSource = rememberBondPressInteraction()
         val pressed by interactionSource.collectIsPressedAsState()
         val pressedScale by rememberBondPressScale(
@@ -79,7 +82,7 @@ internal fun GroupedListSurface(
             val clickableModifier = if (onLongClick != null) {
                 Modifier.combinedClickable(
                     interactionSource = interactionSource,
-                    indication = LocalIndication.current,
+                    indication = indication,
                     role = Role.Button,
                     onClick = { pressResetter.resetThen(onClick) },
                     onLongClick = { pressResetter.resetThen(onLongClick) },
@@ -87,7 +90,7 @@ internal fun GroupedListSurface(
             } else {
                 Modifier.clickable(
                     interactionSource = interactionSource,
-                    indication = LocalIndication.current,
+                    indication = indication,
                     role = Role.Button,
                     onClick = { pressResetter.resetThen(onClick) },
                 )

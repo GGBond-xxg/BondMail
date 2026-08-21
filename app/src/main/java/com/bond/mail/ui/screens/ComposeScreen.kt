@@ -14,8 +14,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -51,17 +53,11 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
@@ -90,12 +86,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bond.mail.data.model.visibleEmail
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.ComposeViewModel
 import com.bond.mail.ui.components.AccountAvatar
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondAlertDialog
+import com.bond.mail.ui.theme.BondIconButton
+import com.bond.mail.ui.theme.BondMenuEntry
+import com.bond.mail.ui.theme.BondPopupMenu
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.BondTextField
+import com.bond.mail.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 
 private data class SelectedAttachment(
@@ -328,7 +332,7 @@ fun ComposeScreen(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconButton(onClick = ::requestClose) {
+                        BondIconButton(onClick = ::requestClose) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = tr("back"),
@@ -340,7 +344,7 @@ fun ComposeScreen(
                             modifier = Modifier.weight(1f),
                         )
                         Box {
-                            IconButton(
+                            BondIconButton(
                                 enabled = !sending && attachments.size < 10,
                                 onClick = { attachmentPicker.launch(arrayOf("*/*")) },
                             ) {
@@ -368,7 +372,7 @@ fun ComposeScreen(
                                 }
                             }
                         }
-                        IconButton(
+                        BondIconButton(
                             enabled = !sending && accountId.isNotBlank() && to.isNotBlank(),
                             onClick = ::queueCurrentMessage,
                         ) {
@@ -388,11 +392,26 @@ fun ComposeScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Box {
+                        BondPopupMenu(
+                            expanded = accountMenu,
+                            onDismissRequest = { accountMenu = false },
+                            entries = accounts.map { account ->
+                                BondMenuEntry(
+                                    text = "${account.displayName} · ${account.visibleEmail}",
+                                    selected = account.id == accountId,
+                                    leadingContent = { AccountAvatar(account, 30.dp) },
+                                    onClick = {
+                                        accountId = account.id
+                                        accountMenu = false
+                                    },
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            val accountInteraction = remember { MutableInteractionSource() }
                             Surface(
-                                onClick = { accountMenu = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
+                                shape = MaterialTheme.shapes.large,
                                 color = MaterialTheme.bondSurfaces.input,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 border = BorderStroke(
@@ -403,6 +422,15 @@ fun ComposeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = accountInteraction,
+                                            indication = if (LocalUiStyle.current == UiStyle.MIUIX) {
+                                                null
+                                            } else {
+                                                LocalIndication.current
+                                            },
+                                            onClick = { accountMenu = true },
+                                        )
                                         .padding(horizontal = 16.dp, vertical = 13.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
@@ -424,27 +452,12 @@ fun ComposeScreen(
                                     )
                                 }
                             }
-                            DropdownMenu(
-                                expanded = accountMenu,
-                                onDismissRequest = { accountMenu = false },
-                            ) {
-                                accounts.forEach { account ->
-                                    DropdownMenuItem(
-                                        text = { Text("${account.displayName} · ${account.visibleEmail}") },
-                                        leadingIcon = { AccountAvatar(account, 30.dp) },
-                                        onClick = {
-                                            accountId = account.id
-                                            accountMenu = false
-                                        },
-                                    )
-                                }
-                            }
                         }
 
-                        OutlinedTextField(
+                        BondTextField(
                             value = to,
                             onValueChange = { to = it },
-                            label = { Text(tr("to")) },
+                            label = tr("to"),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged {
@@ -453,7 +466,7 @@ fun ComposeScreen(
                                 },
                             singleLine = true,
                             trailingIcon = {
-                                IconButton(
+                                BondIconButton(
                                     onClick = {
                                         recipientExtrasExpanded = !recipientExtrasExpanded
                                     },
@@ -472,12 +485,6 @@ fun ComposeScreen(
                                     )
                                 }
                             },
-                            shape = RoundedCornerShape(18.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                            ),
                         )
 
                         AnimatedVisibility(
@@ -500,35 +507,23 @@ fun ComposeScreen(
                             ),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedTextField(
+                                BondTextField(
                                     value = cc,
                                     onValueChange = { cc = it },
-                                    label = { Text(tr("cc")) },
+                                    label = tr("cc"),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .onFocusChanged { if (it.isFocused) expandForInput() },
                                     singleLine = true,
-                                    shape = RoundedCornerShape(18.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                        unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                        disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                                    ),
                                 )
-                                OutlinedTextField(
+                                BondTextField(
                                     value = bcc,
                                     onValueChange = { bcc = it },
-                                    label = { Text(tr("bcc")) },
+                                    label = tr("bcc"),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .onFocusChanged { if (it.isFocused) expandForInput() },
                                     singleLine = true,
-                                    shape = RoundedCornerShape(18.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                        unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                        disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                                    ),
                                 )
                             }
                         }
@@ -644,7 +639,7 @@ fun ComposeScreen(
                                             }
                                         },
                                         trailingIcon = {
-                                            IconButton(
+                                            BondIconButton(
                                                 onClick = { attachments.remove(attachment) },
                                                 modifier = Modifier.size(28.dp),
                                             ) {
@@ -660,25 +655,19 @@ fun ComposeScreen(
                             }
                         }
 
-                        OutlinedTextField(
+                        BondTextField(
                             value = subject,
                             onValueChange = { subject = it },
-                            label = { Text(tr("subject")) },
+                            label = tr("subject"),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { if (it.isFocused) expandForInput() },
                             singleLine = true,
-                            shape = RoundedCornerShape(18.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                            ),
                         )
-                        OutlinedTextField(
+                        BondTextField(
                             value = body,
                             onValueChange = { body = it },
-                            label = { Text(tr("body")) },
+                            label = tr("body"),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .onFocusChanged { if (it.isFocused) expandForInput() }
@@ -687,12 +676,6 @@ fun ComposeScreen(
                                 // Bound the editor and let OutlinedTextField scroll long bodies
                                 // internally while keeping its complete outline visible.
                                 .heightIn(min = 140.dp, max = 220.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                unfocusedContainerColor = MaterialTheme.bondSurfaces.input,
-                                disabledContainerColor = MaterialTheme.bondSurfaces.input,
-                            ),
                         )
                         error?.let {
                             Text(
@@ -723,12 +706,14 @@ fun ComposeScreen(
         }
 
         if (showDraftDecision) {
-            AlertDialog(
+            BondAlertDialog(
                 onDismissRequest = { showDraftDecision = false },
                 title = { Text(tr("save_draft_title")) },
                 text = { Text(tr("save_draft_message")) },
                 confirmButton = {
-                    TextButton(
+                    BondTextAction(
+                        text = tr("save_draft"),
+                        primary = true,
                         enabled = !sending && accountId.isNotBlank(),
                         onClick = {
                             viewModel.saveDraft(
@@ -747,14 +732,17 @@ fun ComposeScreen(
                                 scope.launch { sheetState.hide() }
                             }
                         },
-                    ) { Text(tr("save_draft")) }
+                    )
                 },
                 dismissButton = {
                     Row {
-                        TextButton(onClick = { showDraftDecision = false }) {
-                            Text(tr("cancel"))
-                        }
-                        TextButton(
+                        BondTextAction(
+                            text = tr("cancel"),
+                            onClick = { showDraftDecision = false },
+                        )
+                        BondTextAction(
+                            text = tr("discard_draft"),
+                            destructive = true,
                             enabled = !sending,
                             onClick = {
                                 showDraftDecision = false
@@ -762,9 +750,7 @@ fun ComposeScreen(
                                 scope.launch { sheetState.hide() }
                                 viewModel.discardDraft(draftTaskId, sourceMessageId)
                             },
-                        ) {
-                            Text(tr("discard_draft"), color = MaterialTheme.colorScheme.error)
-                        }
+                        )
                     }
                 },
             )

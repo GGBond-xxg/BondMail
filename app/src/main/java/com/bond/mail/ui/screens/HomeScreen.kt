@@ -17,6 +17,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.background
@@ -70,14 +71,10 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -85,9 +82,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -137,6 +131,7 @@ import com.bond.mail.data.db.AccountEntity
 import com.bond.mail.data.db.MessageListRow
 import com.bond.mail.data.performance.UiPerformanceGate
 import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.HomeViewModel
 import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.components.MessageCard
@@ -155,7 +150,15 @@ import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondAlertDialog
+import com.bond.mail.ui.theme.BondIconButton as IconButton
+import com.bond.mail.ui.theme.BondMenuEntry
+import com.bond.mail.ui.theme.BondPopupMenu
+import com.bond.mail.ui.theme.BondTextAction
+import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.BondPrimaryButton
+import com.bond.mail.ui.theme.BondSearchField
+import com.bond.mail.ui.theme.BondTextAction
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -845,31 +848,31 @@ fun HomeScreen(
                                             contentDescription = tr("add_mailbox"),
                                         )
                                     }
-                                    Box {
-                                        TopActionButton(onClick = { topMenu = true }) {
-                                            Icon(
-                                                Icons.Default.MoreVert,
-                                                contentDescription = tr("more"),
-                                            )
-                                        }
-                                        DropdownMenu(
-                                            expanded = topMenu,
-                                            onDismissRequest = { topMenu = false },
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text(tr("select_all")) },
+                                    BondPopupMenu(
+                                        expanded = topMenu,
+                                        onDismissRequest = { topMenu = false },
+                                        entries = listOf(
+                                            BondMenuEntry(
+                                                text = tr("select_all"),
                                                 onClick = {
                                                     selectedIds.clear()
                                                     selectedIds.addAll(messages.map { it.id })
                                                     topMenu = false
                                                 },
-                                            )
-                                            DropdownMenuItem(
-                                                text = { Text(tr("mark_all_read")) },
+                                            ),
+                                            BondMenuEntry(
+                                                text = tr("mark_all_read"),
                                                 onClick = {
                                                     viewModel.markAllRead(messages)
                                                     topMenu = false
                                                 },
+                                            ),
+                                        ),
+                                    ) {
+                                        TopActionButton(onClick = { topMenu = true }) {
+                                            Icon(
+                                                Icons.Default.MoreVert,
+                                                contentDescription = tr("more"),
                                             )
                                         }
                                     }
@@ -957,7 +960,7 @@ fun HomeScreen(
         }
 
         if (confirmDeleteSelection) {
-            AlertDialog(
+            BondAlertDialog(
                 onDismissRequest = { confirmDeleteSelection = false },
                 title = {
                     Text(
@@ -989,7 +992,15 @@ fun HomeScreen(
                     )
                 },
                 confirmButton = {
-                    TextButton(
+                    BondTextAction(
+                        text = tr(
+                            if (currentFolder == "TRASH") {
+                                "delete_permanently"
+                            } else {
+                                "delete"
+                            },
+                        ),
+                        destructive = true,
                         onClick = {
                             val target = messages.filter { it.id in selectedIds }
                             if (currentFolder == "TRASH") {
@@ -1000,21 +1011,13 @@ fun HomeScreen(
                             clearSelection()
                             confirmDeleteSelection = false
                         },
-                    ) {
-                        Text(
-                            tr(
-                                if (currentFolder == "TRASH") {
-                                    "delete_permanently"
-                                } else {
-                                    "delete"
-                                },
-                            ),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = { confirmDeleteSelection = false }) { Text(tr("cancel")) }
+                    BondTextAction(
+                        text = tr("cancel"),
+                        onClick = { confirmDeleteSelection = false },
+                    )
                 },
             )
         }
@@ -1270,7 +1273,6 @@ private fun TopActionButton(
             enabled = motionEnabled,
         )
         Surface(
-            onClick = { pressResetter.resetThen(onClick) },
             modifier = modifier
                 .size(44.dp)
                 .bondPressTransform(pressScale),
@@ -1278,9 +1280,15 @@ private fun TopActionButton(
             color = containerColor,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             tonalElevation = 0.dp,
-            interactionSource = interactionSource,
         ) {
-            Box(contentAlignment = Alignment.Center) { content() }
+            Box(
+                modifier = Modifier.fillMaxSize().clickable(
+                    interactionSource = interactionSource,
+                    indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
+                    onClick = { pressResetter.resetThen(onClick) },
+                ),
+                contentAlignment = Alignment.Center,
+            ) { content() }
         }
     }
 }
@@ -1309,8 +1317,8 @@ private fun FolderChip(
         label = "folder-chip-label",
     )
 
+    val interactionSource = rememberBondPressInteraction()
     Surface(
-        onClick = onClick,
         modifier = Modifier.width(width).height(52.dp),
         shape = RoundedCornerShape(26.dp),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer
@@ -1323,6 +1331,11 @@ private fun FolderChip(
         Row(
             modifier = Modifier
                 .fillMaxSize()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
+                    onClick = onClick,
+                )
                 .padding(horizontal = if (selected) 12.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -1567,15 +1580,14 @@ private fun SearchContainerOverlay(
                             .size(24.dp),
                     )
                     if (transformActive && fieldAlpha > 0.001f) {
-                        TextField(
+                        BondSearchField(
                             value = query,
                             onValueChange = onQueryChange,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .focusRequester(focusRequester)
                                 .graphicsLayer { alpha = fieldAlpha },
-                            singleLine = true,
-                            placeholder = { Text(tr("search")) },
+                            placeholder = tr("search"),
                             leadingIcon = { Spacer(Modifier.size(24.dp)) },
                             trailingIcon = {
                                 IconButton(
@@ -1586,15 +1598,6 @@ private fun SearchContainerOverlay(
                                     Icon(Icons.Default.Close, contentDescription = tr("cancel"))
                                 }
                             },
-                            shape = RoundedCornerShape(28.dp),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent,
-                            ),
                         )
                     }
                 }
@@ -1623,9 +1626,10 @@ private fun NotificationPermissionCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.align(Alignment.End),
             ) {
-                TextButton(onClick = onReject) {
-                    Text(tr("notification_permission_reject"), maxLines = 1)
-                }
+                BondTextAction(
+                    text = tr("notification_permission_reject"),
+                    onClick = onReject,
+                )
                 BondPrimaryButton(onClick = onAllow) {
                     Text(tr("notification_permission_allow"), maxLines = 1)
                 }

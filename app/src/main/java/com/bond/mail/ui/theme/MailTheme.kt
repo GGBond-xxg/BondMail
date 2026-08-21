@@ -5,6 +5,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -184,6 +185,7 @@ internal fun BondMaterialTheme(
     style: UiStyle,
     colors: ColorScheme,
     shapes: Shapes = Shapes(),
+    typography: Typography = Typography(),
     content: @Composable () -> Unit,
 ) {
     val surfaces = buildSurfacePalette(colors)
@@ -194,7 +196,7 @@ internal fun BondMaterialTheme(
         MaterialTheme(
             colorScheme = colors,
             shapes = shapes,
-            typography = MaterialTheme.typography,
+            typography = typography,
             content = content,
         )
     }

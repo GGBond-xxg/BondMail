@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,6 +50,7 @@ import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondIconButton as IconButton
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

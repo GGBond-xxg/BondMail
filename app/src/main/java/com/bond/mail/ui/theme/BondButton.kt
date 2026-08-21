@@ -46,3 +46,37 @@ fun BondPrimaryButton(
         }
     }
 }
+
+/** Secondary/outlined action facade with MIUIX's native sink response. */
+@Composable
+fun BondSecondaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    shape: Shape? = null,
+    contentPadding: PaddingValues? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    when (LocalUiStyle.current) {
+        UiStyle.MATERIAL3 -> androidx.compose.material3.OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            shape = shape ?: MaterialButtonDefaults.outlinedShape,
+            contentPadding = contentPadding ?: MaterialButtonDefaults.ContentPadding,
+            content = content,
+        )
+        UiStyle.MIUIX -> CompositionLocalProvider(
+            LocalContentColor provides MiuixTheme.colorScheme.onSurface,
+        ) {
+            MiuixButton(
+                onClick = onClick,
+                modifier = modifier,
+                enabled = enabled,
+                colors = MiuixButtonDefaults.buttonColors(),
+                insideMargin = contentPadding ?: MiuixButtonDefaults.InsideMargin,
+                content = content,
+            )
+        }
+    }
+}

@@ -29,9 +29,11 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -83,10 +85,11 @@ fun MiuixDropdownSetting(
     var expanded by remember { mutableStateOf(false) }
     var anchorBounds by remember { mutableStateOf(Rect.Zero) }
     var pendingSelection by remember { mutableStateOf<Pair<Int, Offset>?>(null) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     LaunchedEffect(pendingSelection) {
         val (index, origin) = pendingSelection ?: return@LaunchedEffect
-        // Let the anchored dialog leave composition before replacing the root theme renderer.
+        // Let the popup leave composition before replacing the root theme renderer.
         withFrameNanos { }
         pendingSelection = null
         onSelectedIndexChange(index, origin)
@@ -113,7 +116,10 @@ fun MiuixDropdownSetting(
             .onGloballyPositioned { coordinates ->
                 anchorBounds = coordinates.boundsInWindow()
             },
-        onClick = { expanded = true },
+        onClick = {
+            expanded = true
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
+        },
         holdDownState = expanded,
     )
 
@@ -137,7 +143,7 @@ fun MiuixDropdownSetting(
                     ),
             ) {
                 val density = LocalDensity.current
-                val popupWidth = 220.dp
+                val popupWidth = 248.dp
                 val popupHeight = (labels.size * 56 + 16).dp
                 val popupWidthPx = with(density) { popupWidth.roundToPx() }
                 val popupHeightPx = with(density) { popupHeight.roundToPx() }
@@ -159,22 +165,26 @@ fun MiuixDropdownSetting(
                         .width(popupWidth)
                         .shadow(11.dp, popupShape)
                         .clip(popupShape)
-                        .background(MiuixTheme.colorScheme.surface),
+                        .background(MiuixTheme.colorScheme.surfaceContainer),
                 ) {
                     labels.forEachIndexed { index, label ->
                         val selected = index == safeSelectedIndex
                         val rowInteraction = remember(index) { MutableInteractionSource() }
+                        val contentColor = if (selected) {
+                            MiuixTheme.colorScheme.primary
+                        } else {
+                            MiuixTheme.colorScheme.onSurface
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                // MIUIX uses an elastic sink response, not Material's expanding
-                                // ripple. Share the source so the native press modifier receives
-                                // the exact press/release lifecycle from clickable.
+                                .background(MiuixTheme.colorScheme.surfaceContainer)
                                 .pressSink(rowInteraction)
                                 .clickable(
                                     interactionSource = rowInteraction,
                                     indication = null,
                                     onClick = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
                                         expanded = false
                                         if (!selected) {
                                             pendingSelection = index to anchorBounds.center
@@ -192,11 +202,7 @@ fun MiuixDropdownSetting(
                             Text(
                                 text = label,
                                 modifier = Modifier.weight(1f),
-                                color = if (selected) {
-                                    MiuixTheme.colorScheme.primary
-                                } else {
-                                    MiuixTheme.colorScheme.onSurface
-                                },
+                                color = contentColor,
                                 fontSize = MiuixTheme.textStyles.body1.fontSize,
                                 fontWeight = FontWeight.Medium,
                             )
@@ -205,7 +211,7 @@ fun MiuixDropdownSetting(
                                     imageVector = MiuixIcons.Basic.Check,
                                     contentDescription = null,
                                     modifier = Modifier.padding(start = 12.dp).size(20.dp),
-                                    tint = MiuixTheme.colorScheme.primary,
+                                    tint = contentColor,
                                 )
                             } else {
                                 Spacer(Modifier.padding(start = 12.dp).size(20.dp))

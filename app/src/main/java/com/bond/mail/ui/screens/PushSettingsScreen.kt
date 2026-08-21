@@ -19,9 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -41,7 +39,10 @@ import com.bond.mail.data.settings.PushAccessState
 import com.bond.mail.ui.SettingsViewModel
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.bondSurfaces
+import com.bond.mail.ui.theme.BondIconButton
 import com.bond.mail.ui.theme.BondPrimaryButton
+import com.bond.mail.ui.theme.BondTextField
+import com.bond.mail.ui.theme.BondTopAppBar
 
 @Composable
 fun PushSettingsScreen(
@@ -67,23 +68,17 @@ fun PushSettingsScreen(
             .background(MaterialTheme.bondSurfaces.page)
             .statusBarsPadding(),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
+        BondTopAppBar(
+            title = tr("push_settings_title"),
+            navigationIcon = {
+                BondIconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = tr("back"),
                 )
             }
-            Text(
-                text = tr("push_settings_title"),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 6.dp),
-            )
-        }
+            },
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().navigationBarsPadding(),
@@ -98,7 +93,7 @@ fun PushSettingsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(26.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
                     border = BorderStroke(
                         1.dp,
                         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
@@ -116,20 +111,16 @@ fun PushSettingsScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedTextField(
+                        BondTextField(
                             value = serviceOrigin,
                             onValueChange = { value ->
                                 serviceOrigin = value.take(512)
                                 domainInvalid = false
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(tr("push_service_domain")) },
-                            placeholder = { Text("push.example.com") },
-                            supportingText = if (domainInvalid) {
-                                { Text(tr("push_domain_invalid")) }
-                            } else {
-                                null
-                            },
+                            label = tr("push_service_domain"),
+                            placeholder = "push.example.com",
+                            supportingText = if (domainInvalid) tr("push_domain_invalid") else null,
                             isError = domainInvalid,
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
@@ -137,19 +128,15 @@ fun PushSettingsScreen(
                                 imeAction = ImeAction.Next,
                             ),
                         )
-                        OutlinedTextField(
+                        BondTextField(
                             value = accessKey,
                             onValueChange = { value -> accessKey = value.take(256) },
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(tr("push_access_key")) },
-                            placeholder = {
-                                Text(
-                                    if (hasSavedAccessKey) {
-                                        tr("push_access_key_saved_hint")
-                                    } else {
-                                        "pwd"
-                                    },
-                                )
+                            label = tr("push_access_key"),
+                            placeholder = if (hasSavedAccessKey) {
+                                tr("push_access_key_saved_hint")
+                            } else {
+                                "pwd"
                             },
                             singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
