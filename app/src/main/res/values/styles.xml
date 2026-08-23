@@ -11,8 +11,8 @@
 
     <style name="Theme.BondMail.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/app_window_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_bondmail</item>
-        <item name="windowSplashScreenAnimationDuration">140</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_transparent</item>
+        <item name="windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="postSplashScreenTheme">@style/Theme.BondMail</item>
     </style>

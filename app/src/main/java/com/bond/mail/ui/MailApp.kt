@@ -37,11 +37,13 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1332,9 +1334,16 @@ private fun MainTabs(
                 }
             }
 
+            // The dock applies navigationBarsPadding inside itself. A fixed translation only hides
+            // it completely in gesture mode; Xiaomi's taller three-button navigation inset leaves
+            // the rounded top edge visible. Include the live inset in the off-screen distance.
+            val density = LocalDensity.current
+            val navigationBarHeight = with(density) {
+                WindowInsets.navigationBars.getBottom(this).toDp()
+            }
             val dockOffset = animateChromeOffset(
                 visible = mainChromeVisible,
-                hiddenOffset = 112.dp,
+                hiddenOffset = 112.dp + navigationBarHeight,
                 label = "bottom-dock-slide",
             )
             FloatingBottomDock(

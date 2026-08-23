@@ -1,12 +1,9 @@
 package com.bond.mail
 
-import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
-import android.view.animation.PathInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -18,7 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import androidx.core.animation.addListener
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -43,10 +39,6 @@ class MainActivity : ComponentActivity() {
     private var externalComposeRequestSequence = 0L
     private var contentInstalled = false
     private var themeRevealController: ThemeRevealController? = null
-
-    @Volatile
-    private var firstComposeFrameReady = false
-
     @Volatile
     private var systemBarsDarkTheme: Boolean? = null
 
@@ -54,45 +46,11 @@ class MainActivity : ComponentActivity() {
         val container = (application as MailApplication).container
         val startupThemeHint = container.settings.startupThemeHint()
         val splash = installSplashScreen()
-        splash.setKeepOnScreenCondition { !firstComposeFrameReady }
         splash.setOnExitAnimationListener { splashView ->
-            // A successful Compose SideEffect means the hierarchy exists, but its buffer may not
-            // have reached SurfaceFlinger yet. This is observable during a recorded cold start as
-            // one frame containing only windowBackground. Keep the splash overlay for one more
-            // display frame so the first app buffer is already underneath before removing it.
-            splashView.view.postOnAnimation {
-                val splashContent = splashView.view
-                val width = splashContent.width
-                val height = splashContent.height
-                if (width <= 0 || height <= 0 || isFinishing || isDestroyed) {
-                    splashView.remove()
-                    applyLastSystemBarAppearance()
-                    return@postOnAnimation
-                }
-
-                // Reveal the already-rendered app with one continuous top-to-bottom wipe. Keeping
-                // the splash pixels stationary while its visible rectangle shrinks avoids the
-                // artificial per-control fade that previously made cold starts feel delayed.
-                ValueAnimator.ofInt(0, height).apply {
-                    duration = SPLASH_EXIT_DURATION_MS
-                    interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-                    addUpdateListener { animator ->
-                        val revealedHeight = animator.animatedValue as Int
-                        splashContent.clipBounds = Rect(0, revealedHeight, width, height)
-                    }
-                    addListener(
-                        onEnd = {
-                            splashView.remove()
-                            // Some OEM splash implementations restore the starting theme's
-                            // system-bar flags while removing their overlay. Re-apply them after
-                            // that hand-off and once more on the following display frame.
-                            applyLastSystemBarAppearance()
-                            window.decorView.postOnAnimation(::applyLastSystemBarAppearance)
-                        },
-                    )
-                    start()
-                }
-            }
+            // Android 12+ always creates a starting window. Keep it icon-free and remove it as soon
+            // as the first Compose frame is ready; BondMail intentionally has no launch animation.
+            splashView.remove()
+            applyLastSystemBarAppearance()
         }
 
         super.onCreate(savedInstanceState)
@@ -125,9 +83,6 @@ class MainActivity : ComponentActivity() {
             applySystemBarAppearance(resolveDarkTheme(settings))
             installContent(container, settings)
         }
-
-        // Safety valve: a rendering problem must never leave the system splash on screen forever.
-        window.decorView.postDelayed({ firstComposeFrameReady = true }, 2_500L)
     }
 
     override fun onResume() {
@@ -198,7 +153,7 @@ class MainActivity : ComponentActivity() {
                                         externalComposeRequest = null
                                     }
                                 },
-                                onFirstContentReady = { firstComposeFrameReady = true },
+                                onFirstContentReady = {},
                             )
                         }
                     }
@@ -235,10 +190,6 @@ class MainActivity : ComponentActivity() {
 
     private fun applyLastSystemBarAppearance() {
         systemBarsDarkTheme?.let(::applySystemBarAppearance)
-    }
-
-    private companion object {
-        const val SPLASH_EXIT_DURATION_MS = 520L
     }
 
     override fun onDestroy() {
