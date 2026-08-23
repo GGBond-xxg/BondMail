@@ -1,9 +1,12 @@
 package com.bond.mail
 
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.view.animation.PathInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -15,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.core.animation.addListener
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -56,12 +60,38 @@ class MainActivity : ComponentActivity() {
             // have reached SurfaceFlinger yet. This is observable during a recorded cold start as
             // one frame containing only windowBackground. Keep the splash overlay for one more
             // display frame so the first app buffer is already underneath before removing it.
-            window.decorView.postOnAnimation {
-                splashView.remove()
-                // Some OEM splash implementations restore the starting theme's system-bar flags
-                // while removing their overlay. Re-apply the setting after that hand-off.
-                applyLastSystemBarAppearance()
-                window.decorView.postOnAnimation(::applyLastSystemBarAppearance)
+            splashView.view.postOnAnimation {
+                val splashContent = splashView.view
+                val width = splashContent.width
+                val height = splashContent.height
+                if (width <= 0 || height <= 0 || isFinishing || isDestroyed) {
+                    splashView.remove()
+                    applyLastSystemBarAppearance()
+                    return@postOnAnimation
+                }
+
+                // Reveal the already-rendered app with one continuous top-to-bottom wipe. Keeping
+                // the splash pixels stationary while its visible rectangle shrinks avoids the
+                // artificial per-control fade that previously made cold starts feel delayed.
+                ValueAnimator.ofInt(0, height).apply {
+                    duration = SPLASH_EXIT_DURATION_MS
+                    interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+                    addUpdateListener { animator ->
+                        val revealedHeight = animator.animatedValue as Int
+                        splashContent.clipBounds = Rect(0, revealedHeight, width, height)
+                    }
+                    addListener(
+                        onEnd = {
+                            splashView.remove()
+                            // Some OEM splash implementations restore the starting theme's
+                            // system-bar flags while removing their overlay. Re-apply them after
+                            // that hand-off and once more on the following display frame.
+                            applyLastSystemBarAppearance()
+                            window.decorView.postOnAnimation(::applyLastSystemBarAppearance)
+                        },
+                    )
+                    start()
+                }
             }
         }
 
@@ -205,6 +235,10 @@ class MainActivity : ComponentActivity() {
 
     private fun applyLastSystemBarAppearance() {
         systemBarsDarkTheme?.let(::applySystemBarAppearance)
+    }
+
+    private companion object {
+        const val SPLASH_EXIT_DURATION_MS = 520L
     }
 
     override fun onDestroy() {

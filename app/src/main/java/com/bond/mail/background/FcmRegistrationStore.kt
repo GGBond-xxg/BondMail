@@ -30,6 +30,7 @@ internal object FcmRegistrationStore {
         // Do not make that depend on the default Firebase project's token callback: a custom
         // deployment must remain repairable when the bundled project is delayed or unavailable.
         if (PushAccessConfigStore(context).read() != null) {
+            FcmDeviceRegistrationWorker.ensurePeriodicRefresh(context)
             FcmDeviceRegistrationWorker.enqueue(context)
         }
         FirebaseMessaging.getInstance().token
@@ -90,6 +91,7 @@ internal object FcmRegistrationStore {
         accessKey: String,
     ) {
         PushAccessConfigStore(context).save(serviceOrigin, accessKey)
+        FcmDeviceRegistrationWorker.ensurePeriodicRefresh(context)
         FcmDeviceRegistrationWorker.enqueue(context)
     }
 

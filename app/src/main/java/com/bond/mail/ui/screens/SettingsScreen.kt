@@ -55,6 +55,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -76,6 +77,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.bond.mail.BuildConfig
@@ -135,6 +138,24 @@ fun SettingsScreen(
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
     val listState = rememberLazyListState()
+    val selectedDownloadFolderName by produceState<String?>(
+        initialValue = null,
+        key1 = settings.attachmentDownloadTreeUri,
+        key2 = context,
+    ) {
+        val treeUri = settings.attachmentDownloadTreeUri.takeIf(String::isNotBlank)
+        value = treeUri?.let { value ->
+            // DocumentFile resolves the provider-backed display name through a ContentResolver
+            // query. On Xiaomi devices the provider can be cold after memory cleanup, so doing
+            // this while the lazy item first enters the viewport blocks the UI thread and causes
+            // the first downward scroll to visibly hitch.
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    DocumentFile.fromTreeUri(context, Uri.parse(value))?.name
+                }.getOrNull()
+            }
+        }
+    }
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 108.dp else 18.dp,
         animationSpec = tween(
@@ -326,16 +347,11 @@ fun SettingsScreen(
                     onSelect = viewModel::remoteImages,
                 )
                 SettingsDivider()
-                val selectedFolder = remember(settings.attachmentDownloadTreeUri) {
-                    settings.attachmentDownloadTreeUri
-                        .takeIf(String::isNotBlank)
-                        ?.let(Uri::parse)
-                        ?.let { uri -> DocumentFile.fromTreeUri(context, uri)?.name }
-                }
                 SettingsActionRow(
                     icon = Icons.Default.Folder,
                     title = tr("attachment_download_folder"),
-                    subtitle = selectedFolder ?: tr("attachment_download_folder_not_selected"),
+                    subtitle = selectedDownloadFolderName
+                        ?: tr("attachment_download_folder_not_selected"),
                     onClick = { downloadFolderPicker.launch(null) },
                 )
             }

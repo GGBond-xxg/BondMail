@@ -6,8 +6,10 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.bond.mail.BuildConfig
@@ -182,6 +184,17 @@ internal class FcmDeviceRegistrationWorker(
 
     @Suppress("DEPRECATION")
     private suspend fun resolveFcmToken(config: PushFirebaseClientConfig): String {
+        val defaultApp = FirebaseApp.getInstance()
+        if (defaultApp.options.matches(config)) {
+            MailLog.d(MailLog.APP, "FCM push registration uses the default Firebase app")
+            return awaitToken(FirebaseMessaging.getInstance())
+        }
+
+        // Keep custom deployments functional when their Firebase project genuinely differs from
+        // the one bundled with the APK. BondMail's official deployment deliberately takes the
+        // default branch above: Firebase only guarantees onNewToken lifecycle callbacks for the
+        // default app, so creating a duplicate secondary app for the same project can leave the
+        // server holding a stale token after Google rotates it.
         val appName = "bondmail-push-${config.applicationId.sha256Prefix()}"
         val firebaseApp = FirebaseApp.getApps(applicationContext)
             .firstOrNull { app -> app.name == appName }
@@ -199,9 +212,18 @@ internal class FcmDeviceRegistrationWorker(
                         appName,
                     )
             }
-        return withTimeout(FIREBASE_TOKEN_TIMEOUT_MS) {
+        MailLog.w(
+            MailLog.APP,
+            "FCM push project differs from bundled Firebase project; using compatibility token",
+        )
+        return awaitToken(firebaseApp.get(FirebaseMessaging::class.java))
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun awaitToken(messaging: FirebaseMessaging): String =
+        withTimeout(FIREBASE_TOKEN_TIMEOUT_MS) {
             suspendCancellableCoroutine { continuation ->
-                firebaseApp.get(FirebaseMessaging::class.java).token
+                messaging.token
                     .addOnSuccessListener { token ->
                         if (continuation.isActive) continuation.resume(token)
                     }
@@ -210,13 +232,19 @@ internal class FcmDeviceRegistrationWorker(
                     }
             }
         }
-    }
+
+    private fun FirebaseOptions.matches(config: PushFirebaseClientConfig): Boolean =
+        projectId == config.projectId &&
+            applicationId == config.applicationId &&
+            gcmSenderId == config.senderId
 
     companion object {
         private const val PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key"
         private const val UNIQUE_WORK_NAME = "fcm_device_registration"
+        private const val PERIODIC_WORK_NAME = "fcm_device_registration_periodic"
         private const val REQUEST_TIMEOUT_MS = 10_000
         private const val FIREBASE_TOKEN_TIMEOUT_MS = 15_000L
+        private const val REGISTRATION_REFRESH_DAYS = 7L
 
         fun enqueue(context: Context) {
             val request = OneTimeWorkRequestBuilder<FcmDeviceRegistrationWorker>()
@@ -230,6 +258,25 @@ internal class FcmDeviceRegistrationWorker(
             WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
                 UNIQUE_WORK_NAME,
                 ExistingWorkPolicy.REPLACE,
+                request,
+            )
+        }
+
+        fun ensurePeriodicRefresh(context: Context) {
+            val request = PeriodicWorkRequestBuilder<FcmDeviceRegistrationWorker>(
+                REGISTRATION_REFRESH_DAYS,
+                TimeUnit.DAYS,
+            )
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context.applicationContext).enqueueUniquePeriodicWork(
+                PERIODIC_WORK_NAME,
+                ExistingPeriodicWorkPolicy.KEEP,
                 request,
             )
         }

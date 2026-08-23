@@ -3,6 +3,7 @@ const FCM_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const PUSH_ACCESS_KEY_HEADER = "X-BondMail-Push-Key";
 const ALLOWED_INTERVALS = new Set([1, 5, 10, 15, 30, 60]);
 const MAX_DUE_DEVICES_PER_TICK = 50;
+const STALE_DEVICE_SECONDS = 30 * 24 * 60 * 60;
 
 let cachedGoogleAccessToken = null;
 
@@ -111,8 +112,9 @@ async function registerDevice(request, env) {
     env.DB.prepare(
       `INSERT INTO devices (
          installation_id, installation_secret_hash, fcm_token, interval_minutes,
-         enabled, next_sync_at, app_version, created_at, updated_at, access_key_hash
-       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9)
+         enabled, next_sync_at, app_version, created_at, updated_at, access_key_hash,
+         last_registered_at
+       ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, ?9, ?8)
        ON CONFLICT(installation_id) DO UPDATE SET
          fcm_token = excluded.fcm_token,
          interval_minutes = excluded.interval_minutes,
@@ -120,6 +122,7 @@ async function registerDevice(request, env) {
          next_sync_at = MIN(devices.next_sync_at, excluded.next_sync_at),
          app_version = excluded.app_version,
          access_key_hash = excluded.access_key_hash,
+         last_registered_at = excluded.last_registered_at,
          updated_at = excluded.updated_at`,
     ).bind(
       installationId,
@@ -156,6 +159,15 @@ async function unregisterDevice(request, env) {
 
 async function sendScheduledSyncs(env) {
   const now = unixSeconds();
+  const staleResult = await env.DB.prepare(
+    "DELETE FROM devices WHERE last_registered_at < ?1",
+  ).bind(now - STALE_DEVICE_SECONDS).run();
+  if (Number(staleResult.meta?.changes || 0) > 0) {
+    console.log("Removed stale FCM device registrations", {
+      count: staleResult.meta.changes,
+    });
+  }
+
   const accessKeyHash = await configuredAccessKeyHash(env);
   const due = await env.DB.prepare(
     `SELECT installation_id, fcm_token, interval_minutes
@@ -227,7 +239,12 @@ async function sendFcmSync(env, fcmToken, sentAt) {
             sentAt: String(sentAt),
           },
           android: {
-            priority: "HIGH",
+            // This is a periodic synchronization hint, not a user-visible notification. FCM
+            // explicitly deprioritizes repeated HIGH messages that do not immediately display a
+            // notification, which eventually made background delivery look as if it had stopped.
+            // WorkManager remains the Android-side fallback while NORMAL keeps this traffic within
+            // the contract intended for email/data synchronization.
+            priority: "NORMAL",
             ttl: "120s",
             collapse_key: "bondmail-scheduled-sync",
             restricted_package_name: "com.bond.mail",
