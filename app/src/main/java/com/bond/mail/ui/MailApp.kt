@@ -259,6 +259,7 @@ fun MailApp(
     // release it only after MAIN has a real full-size layout, then the exit listener keeps the
     // overlay for the following display frame while that already-laid-out content is painted.
     val firstContentReadyPosted = remember { AtomicBoolean(false) }
+    var coldStartStaggerAvailable by remember { mutableStateOf(true) }
 
     val homeVm: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
         factory = viewModelFactory { HomeViewModel(container) },
@@ -738,6 +739,8 @@ fun MailApp(
                 settings = settings,
                 selectedTab = selectedMainTab,
                 onSelectedTabChange = onSelectedMainTabChange,
+                coldStartStaggerEnabled = coldStartStaggerAvailable,
+                onColdStartStaggerConsumed = { coldStartStaggerAvailable = false },
                 notificationPermissionGranted = notificationPermissionGranted,
                 showPermissionGuide = showPermissionGuide,
                 onRequestNotificationPermission = ::requestNotificationPermission,
@@ -1151,6 +1154,8 @@ private fun MainTabs(
     settings: AppSettings,
     selectedTab: Int,
     onSelectedTabChange: (Int) -> Unit,
+    coldStartStaggerEnabled: Boolean,
+    onColdStartStaggerConsumed: () -> Unit,
     notificationPermissionGranted: Boolean,
     showPermissionGuide: Boolean,
     onRequestNotificationPermission: () -> Unit,
@@ -1173,6 +1178,9 @@ private fun MainTabs(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val stateHolder = rememberSaveableStateHolder()
+    LaunchedEffect(coldStartStaggerEnabled) {
+        if (coldStartStaggerEnabled) onColdStartStaggerConsumed()
+    }
     val motionEnabled = bondMotionEnabled()
 
     BackHandler(enabled = drawerState.isOpen) {
@@ -1304,6 +1312,7 @@ private fun MainTabs(
                                 if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
+                            staggeredEntranceEnabled = coldStartStaggerEnabled && tab == selectedTab,
                         )
 
                         1 -> ContactsScreen(
@@ -1315,6 +1324,7 @@ private fun MainTabs(
                                 if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
+                            staggeredEntranceEnabled = coldStartStaggerEnabled && tab == selectedTab,
                         )
 
                         else -> SettingsScreen(
@@ -1329,6 +1339,7 @@ private fun MainTabs(
                                 if (tab == selectedTab) onMainChromeVisibilityChanged(visible)
                             },
                             chromeControllerEnabled = tab == selectedTab,
+                            staggeredEntranceEnabled = coldStartStaggerEnabled && tab == selectedTab,
                         )
                     }
                 }

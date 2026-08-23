@@ -147,9 +147,11 @@ import com.bond.mail.ui.motion.animateToTopWithMomentum
 import com.bond.mail.ui.motion.bondFadeThrough
 import com.bond.mail.ui.motion.bondMotionEnabled
 import com.bond.mail.ui.motion.bondPressTransform
+import com.bond.mail.ui.motion.bondStaggeredEntrance
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
 import com.bond.mail.ui.motion.rememberBondPressScale
+import com.bond.mail.ui.motion.rememberBondStaggeredEntranceState
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.theme.BondAlertDialog
 import com.bond.mail.ui.theme.BondIconButton as IconButton
@@ -183,6 +185,7 @@ fun HomeScreen(
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
     chromeControllerEnabled: Boolean = true,
+    staggeredEntranceEnabled: Boolean = false,
 ) {
     val accounts by viewModel.accounts.collectAsState()
     val savedContacts by viewModel.savedContacts.collectAsState()
@@ -196,6 +199,9 @@ fun HomeScreen(
     val failure by viewModel.error.collectAsState()
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
     val motionEnabled = bondMotionEnabled()
+    val entranceState = rememberBondStaggeredEntranceState(
+        enabled = motionEnabled && staggeredEntranceEnabled,
+    )
     var topNotice by remember { mutableStateOf<String?>(null) }
     val accountById = remember(accounts) { accounts.associateBy { it.id } }
     val contactAvatarByEmail = remember(savedContacts) {
@@ -290,7 +296,11 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 item(key = "notification-permission") {
-                    Box(Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .bondStaggeredEntrance(entranceState, index = 0),
+                    ) {
                         AnimatedVisibility(
                             visible = !notificationPermissionGranted && showPermissionGuide,
                             enter = expandVertically(
@@ -314,7 +324,9 @@ fun HomeScreen(
                 }
                 item {
                     Surface(
-                        modifier = Modifier.animateItem(),
+                        modifier = Modifier
+                            .animateItem()
+                            .bondStaggeredEntrance(entranceState, index = 1),
                         shape = RoundedCornerShape(30.dp),
                         tonalElevation = 2.dp,
                     ) {
@@ -482,7 +494,9 @@ fun HomeScreen(
                 ) {
                 item(key = "folder-strip") {
                     LazyRow(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bondStaggeredEntrance(entranceState, index = 1),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -498,7 +512,11 @@ fun HomeScreen(
                 }
 
                 item(key = "notification-permission") {
-                    Box(Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .bondStaggeredEntrance(entranceState, index = 2),
+                    ) {
                         AnimatedVisibility(
                             visible = !notificationPermissionGranted && showPermissionGuide,
                             enter = expandVertically(
@@ -523,7 +541,10 @@ fun HomeScreen(
                 if (messages.isEmpty()) {
                     item(key = "empty") {
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(320.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(320.dp)
+                                .bondStaggeredEntrance(entranceState, index = 3),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -555,7 +576,9 @@ fun HomeScreen(
                             messageId = message.id,
                             animateArrival = animateArrival,
                             staggerIndex = index.coerceAtMost(7),
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier
+                                .animateItem()
+                                .bondStaggeredEntrance(entranceState, index = index + 3),
                         ) {
                             RepeatableSwipeMailRow(
                                 message = message,
@@ -638,6 +661,7 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
+                .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
                 .graphicsLayer { translationY = topChromeOffset.toPx() },
             color = MaterialTheme.bondSurfaces.chrome,
             tonalElevation = 0.dp,

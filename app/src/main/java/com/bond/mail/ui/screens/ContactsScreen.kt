@@ -80,6 +80,8 @@ import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.animateChromeOffset
 import com.bond.mail.ui.motion.animateToTopWithMomentum
 import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.bondStaggeredEntrance
+import com.bond.mail.ui.motion.rememberBondStaggeredEntranceState
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.theme.BondAlertDialog
 import com.bond.mail.ui.theme.BondIconButton
@@ -97,6 +99,7 @@ fun ContactsScreen(
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
     chromeControllerEnabled: Boolean = true,
+    staggeredEntranceEnabled: Boolean = false,
 ) {
     val contacts by container.repository.contacts.collectAsState(
         initial = container.repository.startupContactsSnapshot(),
@@ -143,6 +146,9 @@ fun ContactsScreen(
 
     val listState = rememberLazyListState()
     val motionEnabled = bondMotionEnabled()
+    val entranceState = rememberBondStaggeredEntranceState(
+        enabled = motionEnabled && staggeredEntranceEnabled,
+    )
     val scrollScope = rememberCoroutineScope()
     val listBottomContentPadding by animateDpAsState(
         targetValue = if (chromeVisible) 112.dp else 18.dp,
@@ -204,7 +210,9 @@ fun ContactsScreen(
             item(key = "contacts-title") {
                 Text(
                     if (frequentContacts.isEmpty()) tr("contacts") else tr("saved_contacts"),
-                    modifier = Modifier.padding(start = 14.dp, top = 4.dp, bottom = 2.dp),
+                    modifier = Modifier
+                        .padding(start = 14.dp, top = 4.dp, bottom = 2.dp)
+                        .bondStaggeredEntrance(entranceState, index = 1),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -218,6 +226,10 @@ fun ContactsScreen(
                     contentType = { _, _ -> "saved-contact-card" },
                 ) { index, contact ->
                     ContactItem(
+                        modifier = Modifier.bondStaggeredEntrance(
+                            entranceState,
+                            index = index + 2,
+                        ),
                         name = contact.name,
                         email = contact.email,
                         customAvatarText = contact.avatarText,
@@ -242,7 +254,12 @@ fun ContactsScreen(
                     item(key = "all-contacts-title") {
                         Text(
                             tr("contacts"),
-                            modifier = Modifier.padding(start = 14.dp, top = 12.dp, bottom = 2.dp),
+                            modifier = Modifier
+                                .padding(start = 14.dp, top = 12.dp, bottom = 2.dp)
+                                .bondStaggeredEntrance(
+                                    entranceState,
+                                    index = frequentContacts.size + 2,
+                                ),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -256,7 +273,8 @@ fun ContactsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(320.dp),
+                            .height(320.dp)
+                            .bondStaggeredEntrance(entranceState, index = 2),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -272,6 +290,11 @@ fun ContactsScreen(
                     contentType = { _, _ -> "contact-card" },
                 ) { index, contact ->
                     ContactItem(
+                        modifier = Modifier.bondStaggeredEntrance(
+                            entranceState,
+                            index = index + frequentContacts.size +
+                                if (frequentContacts.isEmpty()) 2 else 3,
+                        ),
                         name = contact.senderName.ifBlank { contact.senderAddress },
                         email = contact.senderAddress,
                         customAvatarText = null,
@@ -291,6 +314,7 @@ fun ContactsScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
+                .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
                 .graphicsLayer { translationY = topChromeOffset.toPx() },
             color = MaterialTheme.bondSurfaces.chrome,
             tonalElevation = 0.dp,
@@ -578,6 +602,7 @@ fun ContactsScreen(
 
 @Composable
 private fun ContactItem(
+    modifier: Modifier = Modifier,
     name: String,
     email: String,
     customAvatarText: String?,
@@ -588,7 +613,7 @@ private fun ContactItem(
 ) {
     GroupedListSurface(
         onClick = { onCompose(email) },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = shape,
         containerColor = MaterialTheme.bondSurfaces.content,
     ) {

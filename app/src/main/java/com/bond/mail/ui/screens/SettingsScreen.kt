@@ -93,11 +93,14 @@ import com.bond.mail.ui.i18n.SupportedLanguages
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
+import com.bond.mail.ui.motion.BondStaggeredEntranceState
 import com.bond.mail.ui.motion.LocalThemeRevealController
 import com.bond.mail.ui.motion.ObserveLazyListChromeVisibility
 import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.bondStaggeredEntrance
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
+import com.bond.mail.ui.motion.rememberBondStaggeredEntranceState
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.theme.BondSwitch
 import com.bond.mail.ui.theme.LocalUiStyle
@@ -120,6 +123,7 @@ fun SettingsScreen(
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
     chromeControllerEnabled: Boolean = true,
+    staggeredEntranceEnabled: Boolean = false,
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
@@ -137,6 +141,9 @@ fun SettingsScreen(
     }
     val themeRevealController = LocalThemeRevealController.current
     val motionEnabled = bondMotionEnabled()
+    val entranceState = rememberBondStaggeredEntranceState(
+        enabled = motionEnabled && staggeredEntranceEnabled,
+    )
     val listState = rememberLazyListState()
     val selectedDownloadFolderName by produceState<String?>(
         initialValue = null,
@@ -186,7 +193,11 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
+                    .bondStaggeredEntrance(entranceState, index = 0),
+            ) {
                 Text(
                     text = tr("settings"),
                     style = MaterialTheme.typography.headlineMedium,
@@ -201,23 +212,34 @@ fun SettingsScreen(
             }
         }
 
-        item { SectionTitle(tr("language")) }
         item {
-            SettingsCard {
-                DropdownSettingRow(
-                    title = tr("language"),
-                    options = SupportedLanguages.options.map { language ->
-                        language.code to tr(language.labelKey)
-                    },
-                    selected = settings.languageCode,
-                    onSelect = viewModel::language,
-                )
+            StaggeredSettingsItem(entranceState, index = 1) {
+                SectionTitle(tr("language"))
+            }
+        }
+        item {
+            StaggeredSettingsItem(entranceState, index = 2) {
+                SettingsCard {
+                    DropdownSettingRow(
+                        title = tr("language"),
+                        options = SupportedLanguages.options.map { language ->
+                            language.code to tr(language.labelKey)
+                        },
+                        selected = settings.languageCode,
+                        onSelect = viewModel::language,
+                    )
+                }
             }
         }
 
-        item { SectionTitle(tr("appearance")) }
         item {
-            SettingsCard {
+            StaggeredSettingsItem(entranceState, index = 3) {
+                SectionTitle(tr("appearance"))
+            }
+        }
+        item {
+            StaggeredSettingsItem(entranceState, index = 4) {
+                SettingsCard {
                 DropdownSettingRow(
                     title = tr("ui_style"),
                     options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3).map { style ->
@@ -281,12 +303,18 @@ fun SettingsScreen(
                         )
                     }
                 }
+                }
             }
         }
 
-        item { SectionTitle(tr("sync")) }
         item {
-            SettingsCard {
+            StaggeredSettingsItem(entranceState, index = 5) {
+                SectionTitle(tr("sync"))
+            }
+        }
+        item {
+            StaggeredSettingsItem(entranceState, index = 6) {
+                SettingsCard {
                 DropdownSettingRow(
                     title = tr("sync_interval"),
                     options = listOf(1, 5, 10, 15).map { minutes ->
@@ -308,12 +336,18 @@ fun SettingsScreen(
                     },
                     onClick = onOpenPushSettings,
                 )
+                }
             }
         }
 
-        item { SectionTitle(tr("permissions")) }
         item {
-            SettingsCard {
+            StaggeredSettingsItem(entranceState, index = 7) {
+                SectionTitle(tr("permissions"))
+            }
+        }
+        item {
+            StaggeredSettingsItem(entranceState, index = 8) {
+                SettingsCard {
                 PermissionStatusRow(
                     icon = Icons.Default.Notifications,
                     title = tr("message_notifications"),
@@ -328,12 +362,18 @@ fun SettingsScreen(
                     subtitle = tr("background_run_settings_note_short"),
                     onClick = onOpenBackgroundSettings,
                 )
+                }
             }
         }
 
-        item { SectionTitle(tr("privacy_security")) }
         item {
-            SettingsCard {
+            StaggeredSettingsItem(entranceState, index = 9) {
+                SectionTitle(tr("privacy_security"))
+            }
+        }
+        item {
+            StaggeredSettingsItem(entranceState, index = 10) {
+                SettingsCard {
                 DropdownSettingRow(
                     title = tr("remote_images"),
                     options = RemoteImagePolicy.entries.map { policy ->
@@ -354,20 +394,42 @@ fun SettingsScreen(
                         ?: tr("attachment_download_folder_not_selected"),
                     onClick = { downloadFolderPicker.launch(null) },
                 )
+                }
             }
         }
 
-        item { SectionTitle(tr("about")) }
         item {
-            SettingsCard {
-                SettingsActionRow(
-                    icon = Icons.Default.Info,
-                    title = tr("about_bondmail"),
-                    subtitle = tr("version_label", BuildConfig.VERSION_NAME),
-                    onClick = onOpenAbout,
-                )
+            StaggeredSettingsItem(entranceState, index = 11) {
+                SectionTitle(tr("about"))
             }
         }
+        item {
+            StaggeredSettingsItem(entranceState, index = 12) {
+                SettingsCard {
+                    SettingsActionRow(
+                        icon = Icons.Default.Info,
+                        title = tr("about_bondmail"),
+                        subtitle = tr("version_label", BuildConfig.VERSION_NAME),
+                        onClick = onOpenAbout,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StaggeredSettingsItem(
+    state: BondStaggeredEntranceState,
+    index: Int,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .bondStaggeredEntrance(state, index = index),
+    ) {
+        content()
     }
 }
 
