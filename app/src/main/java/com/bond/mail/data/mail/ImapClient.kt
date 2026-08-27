@@ -45,6 +45,14 @@ internal data class ImapSyncResult(
     val newHeaders: List<MessageEntity>,
     val recentFlags: List<RemoteFlagState>,
     val uidValidityChanged: Boolean,
+    /**
+     * UIDs from the caller's local cache that still exist in this remote folder.
+     *
+     * A null value means this sync did not perform a complete local-UID reconciliation. Inbox
+     * synchronization always supplies it after a successful IMAP response; special folders use
+     * their fetched header window for their existing bounded reconciliation instead.
+     */
+    val existingLocalUids: Set<Long>? = null,
 )
 
 internal data class RemoteAppendResult(
@@ -109,6 +117,7 @@ class ImapClient(context: Context) {
         knownFolder: FolderEntity?,
         localMessageCount: Int,
         localMaxUid: Long?,
+        localRemoteUids: List<Long>,
         initialWindow: Int = 40,
         maxNewMessages: Int = 80,
     ): ImapSyncResult = withContext(Dispatchers.IO) {
@@ -266,6 +275,39 @@ class ImapClient(context: Context) {
                     emptyList()
                 }
 
+                // UIDNEXT only discovers additions. A message moved/deleted by Apple Mail,
+                // webmail, or another client therefore used to remain forever in BondMail's Room
+                // cache and failed when its stale Inbox UID was opened. Verify the UIDs we actually
+                // cache in bounded commands; unlike downloading a full mailbox this stays cheap and
+                // also reconciles older cached rows outside the recent FLAGS window.
+                val existingLocalUids = if (validityChanged || localRemoteUids.isEmpty()) {
+                    emptySet()
+                } else {
+                    buildSet {
+                        localRemoteUids.distinct().chunked(LOCAL_UID_RECONCILE_CHUNK_SIZE).forEach { chunk ->
+                            val cachedRemotes = folder.getMessagesByUID(chunk.toLongArray())
+                                .filterNotNull()
+                            if (cachedRemotes.isNotEmpty()) {
+                                // COPY + \Deleted is a valid IMAP move implementation. Outlook can
+                                // keep that deleted source addressable by UID until a later expunge,
+                                // although clients must no longer present it as Inbox mail.
+                                folder.fetch(
+                                    cachedRemotes.toTypedArray(),
+                                    FetchProfile().apply {
+                                        add(FetchProfile.Item.FLAGS)
+                                        add(UIDFolder.FetchProfileItem.UID)
+                                    },
+                                )
+                            }
+                            cachedRemotes
+                                .filterNot { it.isExpunged || it.isSet(Flags.Flag.DELETED) }
+                                .forEach { remote ->
+                                    folder.getUID(remote).takeIf { it > 0L }?.let(::add)
+                                }
+                        }
+                    }
+                }
+
                 val latestFetchedUid = remoteMessages.maxOfOrNull { folder.getUID(it) }?.coerceAtLeast(0L) ?: 0L
                 val stableUidNext = when {
                     reportedUidNext > 0L -> reportedUidNext
@@ -293,6 +335,7 @@ class ImapClient(context: Context) {
                     newHeaders = headers,
                     recentFlags = recentFlags,
                     uidValidityChanged = validityChanged,
+                    existingLocalUids = existingLocalUids,
                 )
             } finally {
                 folder.close(false)
@@ -1353,6 +1396,7 @@ class ImapClient(context: Context) {
     )
 
     private companion object {
+        const val LOCAL_UID_RECONCILE_CHUNK_SIZE = 250
         const val STORE_IDLE_TIMEOUT_MS = 2 * 60 * 1000L
         const val FLAG_REFRESH_WINDOW = 24
         const val INTERACTIVE_FULL_FETCH_MAX_BYTES = 8 * 1024 * 1024

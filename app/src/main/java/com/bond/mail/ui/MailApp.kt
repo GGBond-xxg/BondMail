@@ -1689,11 +1689,11 @@ private fun MailDrawerContent(
 
         val folderItems = listOf(
             Triple("INBOX", tr("inbox"), Icons.Default.Inbox),
+            Triple("SPAM", tr("spam"), Icons.Default.Report),
             Triple("UNREAD", tr("unread_mail"), Icons.Default.MarkEmailUnread),
             Triple("STARRED", tr("starred"), Icons.Default.Star),
             Triple("SENT", tr("sent"), Icons.AutoMirrored.Filled.Send),
             Triple("DRAFTS", tr("drafts"), Icons.Default.Drafts),
-            Triple("SPAM", tr("spam"), Icons.Default.Report),
             Triple("TRASH", tr("trash"), Icons.Default.Delete),
         )
         folderItems.forEach { (folder, label, icon) ->

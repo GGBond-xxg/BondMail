@@ -764,6 +764,9 @@ class MailRepository(
         val knownFolder = database.folderDao().byCanonicalType(account.id, "INBOX")
         val localMessageCount = database.messageDao().countForFolder(account.id, "INBOX")
         val localMaxUid = database.messageDao().maxRemoteUid(account.id, "INBOX")
+        val localRemoteRows = database.messageDao()
+            .folderEntitySnapshot(account.id, "INBOX")
+            .filter { it.deliveryState == "REMOTE" && it.remoteUid > 0L }
         // Keep an interrupted first sync in baseline mode. Staged inserts may already have written
         // the first visible rows while `lastSyncAt` intentionally remains null; checking only the
         // local row count would then misclassify the remaining historical mail as new arrivals.
@@ -778,6 +781,7 @@ class MailRepository(
                 knownFolder = knownFolder,
                 localMessageCount = localMessageCount,
                 localMaxUid = localMaxUid,
+                localRemoteUids = localRemoteRows.map(MessageEntity::remoteUid),
             )
         }
 
@@ -791,6 +795,13 @@ class MailRepository(
                 .toHashSet()
             result.newHeaders.filterNot { it.id in existingIds }
         }
+        val staleMessageIds = if (result.uidValidityChanged) {
+            emptyList()
+        } else {
+            result.existingLocalUids?.let { existingUids ->
+                localRemoteRows.filter { it.remoteUid !in existingUids }.map(MessageEntity::id)
+            }.orEmpty()
+        }
 
         persistInboxSync(
             account = account,
@@ -798,6 +809,7 @@ class MailRepository(
             newMessages = newMessages,
             progressive = establishingNotificationBaseline || result.uidValidityChanged,
             remoteFlagSnapshotGeneration = remoteFlagSnapshotGeneration,
+            staleMessageIds = staleMessageIds,
         )
         // The first successful mailbox read establishes the local history baseline. Those rows
         // must appear in the inbox but are not newly-arrived notifications. A UIDVALIDITY reset is
@@ -823,17 +835,32 @@ class MailRepository(
         newMessages: List<MessageEntity>,
         progressive: Boolean,
         remoteFlagSnapshotGeneration: Long,
+        staleMessageIds: List<String>,
     ) {
         val rowsToInsert = (if (result.uidValidityChanged) result.newHeaders else newMessages)
             .sortedWith(compareByDescending<MessageEntity> { it.receivedAt }.thenByDescending { it.remoteUid })
 
-        if (progressive) {
-            val firstVisibleRows = rowsToInsert.take(INITIAL_VISIBLE_BATCH_SIZE)
+        // Reconcile removals only after ImapClient has completed the full UID existence check. This
+        // makes an external move/delete disappear from every Room-backed projection while ensuring
+        // a timeout or partial server response can never wipe local mail.
+        if (result.uidValidityChanged || staleMessageIds.isNotEmpty()) {
+            staleMessageIds.forEach(::clearPendingOpenSeen)
             database.withTransaction {
                 if (result.uidValidityChanged) {
                     database.messageDao().deleteForFolder(account.id, "INBOX")
+                } else {
+                    staleMessageIds.forEach { database.messageDao().deleteById(it) }
                 }
             }
+            MailLog.d(
+                MailLog.APP,
+                "inbox reconciliation provider=${account.providerId} removed=${staleMessageIds.size} " +
+                    "uidValidityChanged=${result.uidValidityChanged}",
+            )
+        }
+
+        if (progressive) {
+            val firstVisibleRows = rowsToInsert.take(INITIAL_VISIBLE_BATCH_SIZE)
 
             firstVisibleRows.forEachIndexed { index, row ->
                 currentCoroutineContext().ensureActive()

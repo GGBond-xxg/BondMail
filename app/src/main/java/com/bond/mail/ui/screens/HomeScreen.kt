@@ -268,11 +268,13 @@ fun HomeScreen(
 
     val folderItems = listOf(
         FolderUi("INBOX", tr("inbox"), Icons.Filled.Inbox),
+        // Junk is a recovery destination, not an obscure secondary filter. Keep it beside Inbox
+        // so mail moved by another client can always be found and restored without blind scrolling.
+        FolderUi("SPAM", tr("spam"), Icons.Filled.Report),
         FolderUi("UNREAD", tr("unread_mail"), Icons.Filled.MarkEmailUnread),
         FolderUi("STARRED", tr("starred"), Icons.Filled.Star),
         FolderUi("SENT", tr("sent"), Icons.AutoMirrored.Filled.Send),
         FolderUi("DRAFTS", tr("drafts"), Icons.Filled.Drafts),
-        FolderUi("SPAM", tr("spam"), Icons.Filled.Report),
         FolderUi("TRASH", tr("trash"), Icons.Filled.Delete),
     )
 
@@ -497,8 +499,10 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .bondStaggeredEntrance(entranceState, index = 1),
+                        // Match the MIUIX mail-card inset at both scroll boundaries. Individual
+                        // chips stay compact, but the first/last item no longer touches the screen.
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         items(folderItems, key = { it.id }) { folder ->
                             FolderChip(
@@ -1409,7 +1413,7 @@ private fun FolderChip(
     onClick: () -> Unit,
 ) {
     val width by animateDpAsState(
-        targetValue = if (selected) 156.dp else 52.dp,
+        targetValue = if (selected) 108.dp else 48.dp,
         animationSpec = tween(220),
         label = "folder-chip-width",
     )
@@ -1438,7 +1442,7 @@ private fun FolderChip(
                     indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
                     onClick = onClick,
                 )
-                .padding(horizontal = if (selected) 12.dp else 0.dp),
+                .padding(horizontal = if (selected) 6.dp else 0.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -1447,7 +1451,7 @@ private fun FolderChip(
                 Text(
                     label,
                     modifier = Modifier
-                        .padding(start = 10.dp)
+                        .padding(start = 7.dp)
                         .graphicsLayer { alpha = labelAlpha },
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
