@@ -20,6 +20,7 @@ replay_pid*.log
 /VALIDATION_*.txt
 /.codex-video-frames/
 /ICON/
+/releases/
 /.npm-cache/
 /.wrangler-config/
 /.wrangler/
