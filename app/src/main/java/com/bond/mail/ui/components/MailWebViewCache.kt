@@ -196,7 +196,15 @@ internal object MailWebViewCache {
         val responsiveMediaRules = hasResponsiveMediaRules(document)
         val responsiveMarkup = hasResponsiveMarkup(document)
         document.outputSettings().prettyPrint(false)
-        document.select("script, iframe, object, embed, form").remove()
+        document.select("script, iframe, object, embed").remove()
+        // Forms cannot be trusted or submitted inside the mail reader, but the form element is
+        // often only a compatibility wrapper around the complete visible newsletter. Removing the
+        // element used to remove all of its children too, leaving otherwise valid messages blank.
+        // Keep the visible descendants and discard only controls that have no useful read-only
+        // representation. Button labels are retained as plain text.
+        document.select("form").toList().forEach(Element::unwrap)
+        document.select("input, select, textarea").remove()
+        document.select("button").toList().forEach(Element::unwrap)
         document.select("meta[http-equiv~=(?i)content-security-policy]").remove()
         document.select("meta[http-equiv~=(?i)refresh]").remove()
         // Let Android WebView's algorithmic darkening decide how to transform light-only mail.
@@ -248,6 +256,7 @@ internal object MailWebViewCache {
         // while leaving a transparent tracking pixel in src. WebView does not execute the sender's
         // lazy-loading JavaScript, so promote those safe URL attributes before rendering.
         normalizeImageSources(document)
+        removeExplicitTrackingPixels(document)
         if (appleSender) {
             replaceAppleBrandLogo(document)
         }
@@ -338,12 +347,15 @@ internal object MailWebViewCache {
             ?.takeIf { candidate ->
                 (!forceTransactionalFluid || grabSender) &&
                     !forceKnownSenderResponsive &&
-                    compactContentWidthPx == null && (
-                    // An explicit 560/600/640px canvas is a stronger signal than a generic
-                    // viewport declaration. Cloudflare-style newsletters often include a
-                    // device-width meta tag but still require whole-canvas scaling.
+                    compactContentWidthPx == null &&
+                    // A real phone viewport or media query must take precedence over legacy
+                    // Outlook fallback widths. Repeated 600/720px declarations otherwise shrink
+                    // an already-mobile message a second time and produce a narrow centre column.
+                    // Known fixed-canvas exceptions are selected above through
+                    // knownSenderCanvasWidthPx, so this generic detector is intentionally strict.
+                    !responsiveMarkup && (
                     candidate.hardWidthScore >= STRONG_DESKTOP_HARD_SCORE ||
-                        (!responsiveMarkup && candidate.score >= MIN_DESKTOP_CANVAS_SCORE) ||
+                        candidate.score >= MIN_DESKTOP_CANVAS_SCORE ||
                         (!hasStrongFluidRoot(document) && candidate.score >= STRONG_DESKTOP_SCORE)
                     )
             }
@@ -2234,7 +2246,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v51|")
+        append("layout-v52|")
         append(key)
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|sender=").append(header.senderName.hashCode())
@@ -2450,6 +2462,28 @@ internal object MailWebViewCache {
         container.children().toList().asReversed().forEach { child ->
             if (!isTrailingNonVisualSection(child)) return
             child.remove()
+        }
+    }
+
+    /** Remove only unambiguously non-visual tracking pixels, wherever a mailer placed them. */
+    private fun removeExplicitTrackingPixels(document: Document) {
+        document.select("img").toList().forEach { image ->
+            val width = parsePixelDimension(image.attr("width"))
+                ?: STYLE_WIDTH_DECLARATION.find(image.attr("style"))
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.let(::parsePixelDimension)
+            val height = parsePixelDimension(image.attr("height"))
+                ?: STYLE_HEIGHT_DECLARATION.find(image.attr("style"))
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.let(::parsePixelDimension)
+            val hasAccessibleMeaning = image.attr("alt").isNotBlank() ||
+                image.attr("title").isNotBlank() ||
+                image.attr("aria-label").isNotBlank()
+            if (width != null && height != null && width <= 2 && height <= 2 && !hasAccessibleMeaning) {
+                image.remove()
+            }
         }
     }
 

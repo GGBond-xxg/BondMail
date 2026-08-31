@@ -42,6 +42,7 @@ class ContactLogoAssetTest {
             "钱迹" to "notice@qianjiapp.com",
             "Moovit" to "notice@moovit.com",
             "Apple" to "no_reply@apple.com",
+            "Amazon" to "shipment-tracking@amazon.com",
             "网易邮箱账号安全" to "safe@service.netease.com",
         )
 
