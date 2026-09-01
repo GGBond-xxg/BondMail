@@ -59,13 +59,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -295,6 +299,84 @@ fun BondPopupMenu(
 /** Text-only actions used by sheets and confirmation dialogs. */
 private val LocalBondDialogAction = staticCompositionLocalOf { false }
 
+/**
+ * Keeps three dialog actions on one even row while their natural widths fit. If translated labels
+ * or the user's font scale make that unsafe, all actions switch to a predictable full-width stack
+ * instead of letting AlertDialog wrap one button onto a seemingly random row.
+ */
+@Composable
+private fun BondThreeActionLayout(
+    first: @Composable () -> Unit,
+    second: @Composable () -> Unit,
+    third: @Composable () -> Unit,
+    horizontalSpacing: Dp,
+    verticalSpacing: Dp,
+) {
+    Layout(
+        modifier = Modifier.fillMaxWidth(),
+        content = {
+            Box(contentAlignment = Alignment.Center) { first() }
+            Box(contentAlignment = Alignment.Center) { second() }
+            Box(contentAlignment = Alignment.Center) { third() }
+        },
+    ) { measurables, constraints ->
+        val horizontalGap = horizontalSpacing.roundToPx()
+        val verticalGap = verticalSpacing.roundToPx()
+        val availableWidth = constraints.maxWidth
+        val rowContentWidth = (availableWidth - horizontalGap * 2).coerceAtLeast(0)
+        val slotWidth = rowContentWidth / 3
+        val naturalWidths = measurables.map { measurable ->
+            measurable.maxIntrinsicWidth(Constraints.Infinity)
+        }
+        val canStayHorizontal = constraints.hasBoundedWidth &&
+            slotWidth > 0 &&
+            naturalWidths.all { width -> width <= slotWidth }
+
+        if (canStayHorizontal) {
+            val childConstraints = Constraints(
+                minWidth = slotWidth,
+                maxWidth = slotWidth,
+                minHeight = 0,
+                maxHeight = constraints.maxHeight,
+            )
+            val placeables = measurables.map { it.measure(childConstraints) }
+            val measuredHeight = placeables.maxOfOrNull { it.height } ?: 0
+            val layoutHeight = constraints.constrainHeight(measuredHeight)
+            layout(constraints.constrainWidth(availableWidth), layoutHeight) {
+                var x = 0
+                placeables.forEach { placeable ->
+                    placeable.placeRelative(x, (layoutHeight - placeable.height) / 2)
+                    x += slotWidth + horizontalGap
+                }
+            }
+        } else {
+            val preferredStackWidth = if (constraints.hasBoundedWidth) {
+                availableWidth
+            } else {
+                naturalWidths.maxOrNull() ?: constraints.minWidth
+            }
+            val childWidth = constraints.constrainWidth(preferredStackWidth)
+            val childConstraints = Constraints(
+                minWidth = childWidth,
+                maxWidth = childWidth,
+                minHeight = 0,
+                maxHeight = constraints.maxHeight,
+            )
+            val placeables = measurables.map { it.measure(childConstraints) }
+            val measuredHeight = placeables.sumOf { it.height } +
+                verticalGap * (placeables.size - 1).coerceAtLeast(0)
+            val layoutHeight = constraints.constrainHeight(measuredHeight)
+            layout(childWidth, layoutHeight) {
+                var y = 0
+                placeables.forEach { placeable ->
+                    placeable.placeRelative(0, y)
+                    y += placeable.height + verticalGap
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun BondTextAction(
     text: String,
@@ -518,25 +600,43 @@ fun BondAlertDialog(
     confirmButton: @Composable () -> Unit,
     dismissButton: @Composable (() -> Unit)? = null,
     neutralButton: @Composable (() -> Unit)? = null,
-    dismissButtonWeight: Float = 1f,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> AlertDialog(
-            onDismissRequest = onDismissRequest,
-            title = title,
-            text = text,
-            confirmButton = confirmButton,
-            dismissButton = if (dismissButton != null || neutralButton != null) {
-                ({
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        dismissButton?.invoke()
-                        neutralButton?.invoke()
-                    }
-                })
-            } else {
-                null
-            },
-        )
+        UiStyle.MATERIAL3 -> {
+            val materialDismissButton = dismissButton
+            val materialNeutralButton = neutralButton
+            val hasThreeActions = materialDismissButton != null && materialNeutralButton != null
+            AlertDialog(
+                onDismissRequest = onDismissRequest,
+                title = title,
+                text = text,
+                confirmButton = if (hasThreeActions) {
+                    ({
+                        BondThreeActionLayout(
+                            first = { materialDismissButton?.invoke() },
+                            second = { materialNeutralButton?.invoke() },
+                            third = confirmButton,
+                            horizontalSpacing = 4.dp,
+                            verticalSpacing = 4.dp,
+                        )
+                    })
+                } else {
+                    confirmButton
+                },
+                dismissButton = if (hasThreeActions) {
+                    null
+                } else if (materialDismissButton != null || materialNeutralButton != null) {
+                    ({
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            materialDismissButton?.invoke()
+                            materialNeutralButton?.invoke()
+                        }
+                    })
+                } else {
+                    null
+                },
+            )
+        }
 
         UiStyle.MIUIX -> {
             val show = remember { mutableStateOf(true) }
@@ -579,28 +679,43 @@ fun BondAlertDialog(
                         }
                         text?.invoke()
                         Spacer(Modifier.height(2.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (dismissButton != null) {
-                                Row(Modifier.weight(dismissButtonWeight)) {
+                        if (dismissButton != null && neutralButton != null) {
+                            BondThreeActionLayout(
+                                first = {
                                     CompositionLocalProvider(LocalBondDialogAction provides true) {
                                         dismissButton()
                                     }
-                                }
-                            }
-                            if (neutralButton != null) {
-                                Box(Modifier.weight(1f)) {
+                                },
+                                second = {
                                     CompositionLocalProvider(LocalBondDialogAction provides true) {
                                         neutralButton()
                                     }
+                                },
+                                third = {
+                                    CompositionLocalProvider(LocalBondDialogAction provides true) {
+                                        confirmButton()
+                                    }
+                                },
+                                horizontalSpacing = 10.dp,
+                                verticalSpacing = 10.dp,
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (dismissButton != null) {
+                                    Row(Modifier.weight(1f)) {
+                                        CompositionLocalProvider(LocalBondDialogAction provides true) {
+                                            dismissButton()
+                                        }
+                                    }
                                 }
-                            }
-                            Box(Modifier.weight(1f)) {
-                                CompositionLocalProvider(LocalBondDialogAction provides true) {
-                                    confirmButton()
+                                Box(Modifier.weight(1f)) {
+                                    CompositionLocalProvider(LocalBondDialogAction provides true) {
+                                        confirmButton()
+                                    }
                                 }
                             }
                         }

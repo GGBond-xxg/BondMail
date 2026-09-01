@@ -715,7 +715,6 @@ fun ComposeScreen(
         if (showDraftDecision) {
             BondAlertDialog(
                 onDismissRequest = { showDraftDecision = false },
-                dismissButtonWeight = 2f,
                 title = { Text(tr("save_draft_title")) },
                 text = { Text(tr("save_draft_message")) },
                 confirmButton = {
@@ -743,25 +742,23 @@ fun ComposeScreen(
                     )
                 },
                 dismissButton = {
-                    Row(Modifier.fillMaxWidth()) {
-                        BondTextAction(
-                            text = tr("cancel"),
-                            modifier = Modifier.weight(1f),
-                            onClick = { showDraftDecision = false },
-                        )
-                        BondTextAction(
-                            text = tr("discard"),
-                            modifier = Modifier.weight(1f),
-                            destructive = true,
-                            enabled = !sending,
-                            onClick = {
-                                showDraftDecision = false
-                                resolvedClose = true
-                                scope.launch { sheetState.hide() }
-                                viewModel.discardDraft(draftTaskId, sourceMessageId)
-                            },
-                        )
-                    }
+                    BondTextAction(
+                        text = tr("cancel"),
+                        onClick = { showDraftDecision = false },
+                    )
+                },
+                neutralButton = {
+                    BondTextAction(
+                        text = tr("discard"),
+                        destructive = true,
+                        enabled = !sending,
+                        onClick = {
+                            showDraftDecision = false
+                            resolvedClose = true
+                            scope.launch { sheetState.hide() }
+                            viewModel.discardDraft(draftTaskId, sourceMessageId)
+                        },
+                    )
                 },
             )
         }
