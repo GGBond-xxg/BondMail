@@ -313,7 +313,7 @@ private data class ContactLogo(
     val raster: ImageBitmap? = null,
 )
 
-internal fun contactLogoSvgMarkup(
+fun contactLogoSvgMarkup(
     context: Context,
     senderName: String,
     senderAddress: String,

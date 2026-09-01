@@ -352,7 +352,7 @@ object BrandMatcher {
         "live.com" to Brand("live.com", "O"), "microsoft" to Brand("microsoft", "MS"),
         "openai" to Brand("openai", "AI"), "chatgpt" to Brand("chatgpt", "AI"),
         "cloudflare" to Brand("cloudflare", "CF"), "amazon" to Brand("amazon", "A"),
-        "aws" to Brand("aws", "AWS"), "slack" to Brand("slack", "SL"),
+        "aws" to Brand("amazon", "A"), "slack" to Brand("slack", "SL"),
         "zoom" to Brand("zoom", "Z"), "dropbox" to Brand("dropbox", "DB"),
         "adobe" to Brand("adobe", "AD"), "figma" to Brand("figma", "FI"),
         "notion" to Brand("notion", "NO"), "steam" to Brand("steam", "ST"),

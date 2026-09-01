@@ -43,6 +43,8 @@ class ContactLogoAssetTest {
             "Moovit" to "notice@moovit.com",
             "Apple" to "no_reply@apple.com",
             "Amazon" to "shipment-tracking@amazon.com",
+            "Amazon Web Services" to "no-reply@aws.amazon.com",
+            "Kraken" to "no-reply@email.kraken.com",
             "网易邮箱账号安全" to "safe@service.netease.com",
         )
 

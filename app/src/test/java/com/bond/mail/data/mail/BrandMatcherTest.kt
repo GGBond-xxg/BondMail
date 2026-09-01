@@ -80,6 +80,9 @@ class BrandMatcherTest {
             Triple("Western Digital", "news@westerndigital.com", "westerndigital"),
             Triple("智联招聘", "notice@zhaopin.com", "zhaopin"),
             Triple("Adobe", "mail@mail.adobe.com", "adobe"),
+            Triple("Amazon Web Services", "no-reply@aws.amazon.com", "amazon"),
+            Triple("AWS", "notifications@aws.example", "amazon"),
+            Triple("Kraken", "no-reply@email.kraken.com", "kraken"),
         )
 
         cases.forEach { (name, address, expectedKey) ->
