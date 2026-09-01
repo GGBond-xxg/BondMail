@@ -5,6 +5,30 @@ import org.junit.Test
 
 class BrandMatcherTest {
     @Test
+    fun requestedBrandIconsMatchOfficialSenders() {
+        val cases = listOf(
+            Triple("Grab", "offers@grab.com", "grab"),
+            Triple("前程无忧", "jobs@51job.com", "51job"),
+            Triple("WhatsApp", "security@whatsapp.com", "whatsapp"),
+            Triple("Discord", "noreply@discord.com", "discord"),
+            Triple("CoinMarketCap", "newsletter@coinmarketcap.com", "coinmarketcap"),
+            Triple("东方财富", "notice@eastmoney.com", "eastmoney"),
+            Triple("拼多多", "notice@pinduoduo.com", "pinduoduo"),
+            Triple("比亚迪", "news@byd.com", "byd"),
+            Triple("中国移动", "service@10086.cn", "chinamobile"),
+            Triple("中国电信", "service@189.cn", "chinatelecom"),
+            Triple("中国联通", "service@10010.com", "chinaunicom"),
+            Triple("中际旭创", "ir@zj-innolight.com", "innolight"),
+            Triple("中国人寿", "service@e-chinalife.com", "chinalife"),
+            Triple("美的集团", "news@midea.com", "midea"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+    }
+
+    @Test
     fun travelMobilityDeliveryAndPaymentBrandsMatch() {
         val cases = listOf(
             Triple("去哪儿旅行", "offers@qunar.com", "qunar"),

@@ -1,0 +1,21 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1569 1574" width="1569" height="1574">
+	<title>China_Life_logo_3-svg</title>
+	<defs>
+		<radialGradient id="g1" cx="1104.9" cy="572" r="785.7" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#f7f7f8"/>
+			<stop offset=".3" stop-color="#b9b9ba"/>
+			<stop offset=".7" stop-color="#7b7b7c"/>
+			<stop offset="1" stop-color="#000000"/>
+		</radialGradient>
+	</defs>
+	<style>
+		.s0 { fill: url(#g1) } 
+		.s1 { fill: #00a86d } 
+	</style>
+	<g id="g4014">
+		<g id="g3893">
+			<ellipse id="path34-7" class="s0" cx="1157.7" cy="411.8" rx="411" ry="411"/>
+			<path id="path54" class="s1" d="m0.3 795.2c0-422.8 337.4-766.5 757.6-777.4v368.5c-216.6 10.6-389 189.6-389 408.9 0 226.1 183.4 409.4 409.5 409.4 220.7 0 400.5-174.5 409.2-393h368.5c-8.7 422-353.4 761.6-777.7 761.6-429.7 0-778.1-348.3-778.1-778z"/>
+		</g>
+	</g>
+</svg>
