@@ -29,9 +29,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Card
@@ -113,7 +113,7 @@ fun AboutScreen(
                     modifier = Modifier.padding(bottom = 4.dp),
                 )
                 AboutActionRow(
-                    icon = Icons.Default.OpenInNew,
+                    icon = Icons.AutoMirrored.Filled.OpenInNew,
                     title = tr("go_to_github"),
                     subtitle = tr("go_to_github_desc"),
                     external = true,
@@ -498,7 +498,7 @@ private fun AboutActionRow(
                 )
             }
             Icon(
-                imageVector = if (external) Icons.Default.OpenInNew
+                imageVector = if (external) Icons.AutoMirrored.Filled.OpenInNew
                 else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,

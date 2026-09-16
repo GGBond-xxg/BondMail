@@ -343,7 +343,11 @@ fun MiuixActionSetting(
             }
         },
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        // SuperArrow draws its pressed overlay across its full bounds. Clip that overlay here so
+        // action rows inside larger cards use the same rounded feedback as a standalone setting.
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(SmoothRoundedCornerShape(20.dp)),
     )
 }
 

@@ -304,7 +304,10 @@ fun MailApp(
     // above NavHost so returning to a scrolled mailbox never draws a visible toolbar/dock for one
     // frame before its restored LazyList state hides them again.
     var mainChromeVisible by remember { mutableStateOf(true) }
-    var snapshotNavigationInFlight by remember { mutableStateOf(false) }
+    // A destination change is asynchronous from the click callback. Keep one synchronous gate
+    // across every forward-navigation entry point so repeated taps cannot enqueue duplicate back
+    // stack entries while Room updates, snapshot capture, or the first destination frame runs.
+    val forwardNavigationGate = remember { ForwardNavigationGate() }
     // Navigation can compose the destination in the same frame as the click callback. Keep a
     // synchronous, non-state snapshot so the first detail frame always has subject/sender data
     // instead of briefly rendering an empty page while Room emits the full entity.
@@ -325,14 +328,33 @@ fun MailApp(
         nav.navigate(route) { launchSingleTop = true }
     }
 
+    fun beginForwardNavigation(expectedSourceRoute: String): Boolean {
+        // Cover transitions intentionally keep their source composed underneath. Ignore any late
+        // touch delivered to that covered screen after Navigation has already changed destination.
+        return forwardNavigationGate.tryAcquire(
+            activeRoute = nav.currentBackStackEntry?.destination?.route,
+            expectedSourceRoute = expectedSourceRoute,
+        )
+    }
+
+    fun releaseForwardNavigationAfterTransition() {
+        appScope.launch {
+            // Releasing after only one frame lets the remaining taps in a burst land on a newly
+            // composed action at the same coordinate (for example Settings/About -> About/License).
+            delay((BondMotionDuration.MaximumNormal + BondMotionDuration.EffectShort).toLong())
+            forwardNavigationGate.release()
+        }
+    }
+
     fun navigateAfterSnapshot(
+        expectedSourceRoute: String,
         route: String,
         capture: suspend () -> androidx.compose.ui.graphics.ImageBitmap,
         store: (androidx.compose.ui.graphics.ImageBitmap?) -> Unit,
     ) {
-        if (snapshotNavigationInFlight) return
-        snapshotNavigationInFlight = true
+        if (!beginForwardNavigation(expectedSourceRoute)) return
         appScope.launch {
+            var navigationSubmitted = false
             try {
                 val snapshot = try {
                     capture()
@@ -345,9 +367,12 @@ fun MailApp(
                 // The forward transition now keeps this source destination alive while the new
                 // page covers it, so its release/ripple finishes normally after this copy.
                 navigateOnce(route)
-                withFrameNanos { }
+                navigationSubmitted = true
+                releaseForwardNavigationAfterTransition()
             } finally {
-                snapshotNavigationInFlight = false
+                // A successful request schedules its release after the transition window. Capture
+                // or navigation failure must reopen the gate immediately because no route changed.
+                if (!navigationSubmitted) forwardNavigationGate.release()
             }
         }
     }
@@ -694,20 +719,28 @@ fun MailApp(
             openDraft(message)
             return
         }
+        if (!beginForwardNavigation(MAIN)) return
         appScope.launch {
-            // Keep the list's read state live underneath the reader before starting its cover
-            // motion. MainTabs now remains composed while detail is open, so later sync results and
-            // refresh motion are also visible during a predictive-back preview.
-            homeVm.openMessage(message)
-            withFrameNanos { }
-            val openedMessage = if (message.unread) message.copy(unread = false) else message
-            val initialSnapshot = detailInitialSnapshots[message.id]
-                ?.withLatestListState(openedMessage)
-                ?: openedMessage.toInitialMessage()
-            rememberDetailSnapshot(initialSnapshot)
-            detailOpenSeenRequests[message.id] = message.unread
-            selectedMessage = openedMessage
-            navigateOnce("detail/${Uri.encode(message.id)}")
+            var navigationSubmitted = false
+            try {
+                // Keep the list's read state live underneath the reader before starting its cover
+                // motion. MainTabs now remains composed while detail is open, so later sync results
+                // and refresh motion are also visible during a predictive-back preview.
+                homeVm.openMessage(message)
+                withFrameNanos { }
+                val openedMessage = if (message.unread) message.copy(unread = false) else message
+                val initialSnapshot = detailInitialSnapshots[message.id]
+                    ?.withLatestListState(openedMessage)
+                    ?: openedMessage.toInitialMessage()
+                rememberDetailSnapshot(initialSnapshot)
+                detailOpenSeenRequests[message.id] = message.unread
+                selectedMessage = openedMessage
+                navigateOnce("detail/${Uri.encode(message.id)}")
+                navigationSubmitted = true
+                releaseForwardNavigationAfterTransition()
+            } finally {
+                if (!navigationSubmitted) forwardNavigationGate.release()
+            }
         }
     }
 
@@ -753,6 +786,7 @@ fun MailApp(
                     pushSettingsBackBackground = null
                     aboutChildBackBackground = null
                     navigateAfterSnapshot(
+                        expectedSourceRoute = MAIN,
                         route = ABOUT,
                         capture = { mailboxSnapshotLayer.toImageBitmap() },
                         store = { aboutBackBackground = it },
@@ -764,6 +798,7 @@ fun MailApp(
                     aboutBackBackground = null
                     aboutChildBackBackground = null
                     navigateAfterSnapshot(
+                        expectedSourceRoute = MAIN,
                         route = PUSH_SETTINGS,
                         capture = { mailboxSnapshotLayer.toImageBitmap() },
                         store = { pushSettingsBackBackground = it },
@@ -775,6 +810,7 @@ fun MailApp(
                     aboutChildBackBackground = null
                     credentialsBackBackground = null
                     navigateAfterSnapshot(
+                        expectedSourceRoute = MAIN,
                         route = PROVIDERS,
                         capture = { mailboxSnapshotLayer.toImageBitmap() },
                         store = { providersBackBackground = it },
@@ -845,6 +881,7 @@ fun MailApp(
                                     onBack = requestBack,
                                     onProviderSelected = { providerId ->
                                         navigateAfterSnapshot(
+                                            expectedSourceRoute = PROVIDERS,
                                             route = "credentials/${Uri.encode(providerId)}",
                                             capture = { providersSnapshotLayer.toImageBitmap() },
                                             store = { credentialsBackBackground = it },
@@ -923,6 +960,7 @@ fun MailApp(
                                     onCheckForUpdates = ::checkForUpdates,
                                     onOpenSourceLicenses = {
                                         navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
                                             route = OPEN_SOURCE_LICENSES,
                                             capture = { aboutSnapshotLayer.toImageBitmap() },
                                             store = { aboutChildBackBackground = it },
@@ -930,6 +968,7 @@ fun MailApp(
                                     },
                                     onOpenAppLicense = {
                                         navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
                                             route = APP_LICENSE,
                                             capture = { aboutSnapshotLayer.toImageBitmap() },
                                             store = { aboutChildBackBackground = it },
@@ -937,6 +976,7 @@ fun MailApp(
                                     },
                                     onOpenPrivacyPolicy = {
                                         navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
                                             route = PRIVACY_POLICY,
                                             capture = { aboutSnapshotLayer.toImageBitmap() },
                                             store = { aboutChildBackBackground = it },
