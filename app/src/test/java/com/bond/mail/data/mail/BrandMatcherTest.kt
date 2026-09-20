@@ -16,8 +16,10 @@ class BrandMatcherTest {
             Triple("拼多多", "notice@pinduoduo.com", "pinduoduo"),
             Triple("比亚迪", "news@byd.com", "byd"),
             Triple("中国移动", "service@10086.cn", "chinamobile"),
+            Triple("China Mobile Hong Kong", "service@cmhk.com", "chinamobile"),
             Triple("中国电信", "service@189.cn", "chinatelecom"),
             Triple("中国联通", "service@10010.com", "chinaunicom"),
+            Triple("10010", "10010@wo.cn", "chinaunicom"),
             Triple("中际旭创", "ir@zj-innolight.com", "innolight"),
             Triple("中国人寿", "service@e-chinalife.com", "chinalife"),
             Triple("美的集团", "news@midea.com", "midea"),
@@ -26,6 +28,57 @@ class BrandMatcherTest {
         cases.forEach { (name, address, expectedKey) ->
             assertEquals(expectedKey, BrandMatcher.match(name, address).key)
         }
+    }
+
+    @Test
+    fun requestedSocialTelecomFinanceAndTravelBrandsMatch() {
+        val cases = listOf(
+            Triple("Instagram", "security@mail.instagram.com", "instagram"),
+            Triple("Telegram", "abuse@telegram.org", "telegram"),
+            Triple("Facebook", "security@facebookmail.com", "facebook"),
+            Triple("QuickQ", "cs@js7.io", "quickq"),
+            Triple("giffgaff", "no_reply@giffgaff.com", "giffgaff"),
+            Triple("Vodafone", "notice@vodafone.co.uk", "vodafone"),
+            Triple("HTX", "htxsupport@htx-inc.com", "huobi"),
+            Triple("OKX", "noreply@okx.com", "okx"),
+            Triple("McDonald's", "press@us.mcd.com", "mcdonalds"),
+            Triple("Charles Schwab", "alerts@schwab.com", "charlesschwab"),
+            Triple("Firstrade", "service@email-mc.firstrade.com", "firstrade"),
+            Triple("Grok", "support@x.ai", "grok"),
+            Triple("Holafly", "help@holafly.com", "holafly"),
+            Triple("华泰证券", "95597@htsc.com", "huatai"),
+            Triple("RedteaGO", "service@redteago.com", "redteago"),
+            Triple("酷安", "notice@coolapk.com", "coolapk"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+    }
+
+    @Test
+    fun airlineAndSimCardFallbacksStayBehindSpecificBrands() {
+        val cases = listOf(
+            Triple("Singapore Airlines", "notice@singaporeair.com", "airplane"),
+            Triple("阿联酋航空", "notice@emirates.com", "airplane"),
+            Triple("SoSIM", "service@sosimhk.com", "simcard"),
+            Triple("Airalo eSIM", "hello@airalo.com", "simcard"),
+            Triple("Airbnb", "notice@airbnb.com", "airbnb"),
+            Triple("Air China", "notice@airchina.com", "airchina"),
+            Triple("Holafly eSIM", "help@holafly.com", "holafly"),
+            Triple("RedteaGO eSIM", "service@redteago.com", "redteago"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+    }
+
+    @Test
+    fun domainRulesDoNotMatchLookalikeDomainSuffixes() {
+        assertEquals("unknown", BrandMatcher.match("Invoice", "notice@two.cn").key)
+        assertEquals("unknown", BrandMatcher.match("Travel", "notice@notairasia.com").key)
+        assertEquals("unknown", BrandMatcher.match("Mobile notice", "notice@fake-sosimhk.com").key)
     }
 
     @Test

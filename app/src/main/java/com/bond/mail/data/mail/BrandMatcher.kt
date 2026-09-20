@@ -11,6 +11,56 @@ object BrandMatcher {
     }
 
     private val rules = linkedMapOf(
+        "js7.io" to Brand("quickq", "Q"),
+        "quickq.io" to Brand("quickq", "Q"),
+        "q-quickq.com" to Brand("quickq", "Q"),
+        "quickq" to Brand("quickq", "Q"),
+        "giffgaff.com" to Brand("giffgaff", "gg"),
+        "giffgaff" to Brand("giffgaff", "gg"),
+        "vodafone.com" to Brand("vodafone", "VF"),
+        "vodafone.co.uk" to Brand("vodafone", "VF"),
+        "vodafone.de" to Brand("vodafone", "VF"),
+        "vodafone.com.au" to Brand("vodafone", "VF"),
+        "vodafone.ie" to Brand("vodafone", "VF"),
+        "vodafone.es" to Brand("vodafone", "VF"),
+        "vodafone.it" to Brand("vodafone", "VF"),
+        "vodafone.pt" to Brand("vodafone", "VF"),
+        "vodafone.gr" to Brand("vodafone", "VF"),
+        "vodafone" to Brand("vodafone", "VF"),
+        "huobi.com" to Brand("huobi", "HTX"),
+        "huobi.pro" to Brand("huobi", "HTX"),
+        "htx.com" to Brand("huobi", "HTX"),
+        "htx-inc.com" to Brand("huobi", "HTX"),
+        "huobi" to Brand("huobi", "HTX"),
+        "火币" to Brand("huobi", "HTX"),
+        "火幣" to Brand("huobi", "HTX"),
+        "htx" to Brand("huobi", "HTX"),
+        "mcd.com" to Brand("mcdonalds", "M"),
+        "mcdonalds.com" to Brand("mcdonalds", "M"),
+        "mcdonalds.de" to Brand("mcdonalds", "M"),
+        "mcdonald's" to Brand("mcdonalds", "M"),
+        "mcdonalds" to Brand("mcdonalds", "M"),
+        "麦当劳" to Brand("mcdonalds", "M"),
+        "麥當勞" to Brand("mcdonalds", "M"),
+        "schwab.com" to Brand("charlesschwab", "CS"),
+        "schwab" to Brand("charlesschwab", "CS"),
+        "charles schwab" to Brand("charlesschwab", "CS"),
+        "firstrade.com" to Brand("firstrade", "FT"),
+        "firstrade" to Brand("firstrade", "FT"),
+        "grok.com" to Brand("grok", "G"),
+        "x.ai" to Brand("grok", "G"),
+        "grok" to Brand("grok", "G"),
+        "holafly.com" to Brand("holafly", "H"),
+        "holafly" to Brand("holafly", "H"),
+        "htsc.com" to Brand("huatai", "HT"),
+        "htsc.com.cn" to Brand("huatai", "HT"),
+        "htsc.com.hk" to Brand("huatai", "HT"),
+        "huatai" to Brand("huatai", "HT"),
+        "华泰证券" to Brand("huatai", "HT"),
+        "華泰證券" to Brand("huatai", "HT"),
+        "redteago.com" to Brand("redteago", "RT"),
+        "redteamobile.com" to Brand("redteago", "RT"),
+        "redteago" to Brand("redteago", "RT"),
         "n26.com" to Brand("n26", "N26"),
         "n26" to Brand("n26", "N26"),
         "51job.com" to Brand("51job", "51"),
@@ -28,6 +78,8 @@ object BrandMatcher {
         "10086.cn" to Brand("chinamobile", "移动"),
         "chinamobile.com" to Brand("chinamobile", "移动"),
         "139.com" to Brand("chinamobile", "移动"),
+        "cmhk.com" to Brand("chinamobile", "移动"),
+        "cmhk" to Brand("chinamobile", "移动"),
         "china mobile" to Brand("chinamobile", "移动"),
         "中国移动" to Brand("chinamobile", "移动"),
         "189.cn" to Brand("chinatelecom", "电信"),
@@ -36,6 +88,11 @@ object BrandMatcher {
         "china telecom" to Brand("chinatelecom", "电信"),
         "中国电信" to Brand("chinatelecom", "电信"),
         "10010.com" to Brand("chinaunicom", "联通"),
+        "10010.cn" to Brand("chinaunicom", "联通"),
+        "wo.cn" to Brand("chinaunicom", "联通"),
+        "chinaunicom.cn" to Brand("chinaunicom", "联通"),
+        "chinaunicomglobal.com" to Brand("chinaunicom", "联通"),
+        "cuniq.com" to Brand("chinaunicom", "联通"),
         "chinaunicom.com" to Brand("chinaunicom", "联通"),
         "chinaunicom.com.cn" to Brand("chinaunicom", "联通"),
         "china unicom" to Brand("chinaunicom", "联通"),
@@ -417,13 +474,127 @@ object BrandMatcher {
         "outlook" to Brand("outlook", "O"), "yahoo" to Brand("yahoo", "Y"),
     )
 
+    private val airlineDomains = setOf(
+        "aa.com",
+        "airasia.com",
+        "aircanada.com",
+        "airfrance.com",
+        "alaskaair.com",
+        "ana.co.jp",
+        "asiana.com",
+        "austrian.com",
+        "britishairways.com",
+        "cebupacificair.com",
+        "ceair.com",
+        "china-airlines.com",
+        "csair.com",
+        "delta.com",
+        "easyjet.com",
+        "emirates.com",
+        "etihad.com",
+        "evaair.com",
+        "finnair.com",
+        "hainanairlines.com",
+        "hkexpress.com",
+        "jal.com",
+        "jetblue.com",
+        "juneyaoair.com",
+        "klm.com",
+        "koreanair.com",
+        "lufthansa.com",
+        "malaysiaairlines.com",
+        "philippineairlines.com",
+        "qantas.com",
+        "qatarairways.com",
+        "ryanair.com",
+        "scoot.com",
+        "shenzhenair.com",
+        "sichuanair.com",
+        "singaporeair.com",
+        "southwest.com",
+        "springairlines.com",
+        "swiss.com",
+        "thaiairways.com",
+        "turkishairlines.com",
+        "united.com",
+        "vietnamairlines.com",
+        "xiamenair.com",
+    )
+
+    private val airlineNameTokens = listOf(
+        " air lines",
+        " airline",
+        " airlines",
+        " airways",
+        "航空",
+    )
+
+    private val simCardDomains = setOf(
+        "airalo.com",
+        "alosim.com",
+        "clubsim.com.hk",
+        "esim.net",
+        "getnomad.app",
+        "gigsky.com",
+        "hkcsl.com",
+        "maya.net",
+        "smartone.com",
+        "sosimhk.com",
+        "three.com.hk",
+        "ubigi.com",
+    )
+
+    private val simCardNameTokens = listOf(
+        "3hk",
+        "airalo",
+        "alosim",
+        "club sim",
+        "e-sim",
+        "esim",
+        "gigsky",
+        "nomad esim",
+        "sim card",
+        "simcard",
+        "smartone",
+        "sosim",
+        "ubigi",
+    )
+
+    private val domainRuleRegex = Regex("^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,}$")
+
     @Synchronized
     fun match(senderName: String, senderAddress: String): Brand {
         val cacheKey = "$senderName|$senderAddress".lowercase()
         cache[cacheKey]?.let { return it }
-        val haystack = "$senderName $senderAddress".lowercase()
-        val entry = rules.entries.firstOrNull { haystack.contains(it.key) }
+        val normalizedName = senderName.lowercase()
+        val normalizedAddress = senderAddress.lowercase()
+        val haystack = "$normalizedName $normalizedAddress"
+        val senderDomain = extractDomain(normalizedAddress)
+        val entry = rules.entries.firstOrNull { (key, _) ->
+            if (domainRuleRegex.matches(key)) {
+                domainMatches(senderDomain, key) || normalizedName.contains(key)
+            } else {
+                haystack.contains(key)
+            }
+        }
         val fallback = senderName.trim().firstOrNull()?.uppercase() ?: senderAddress.firstOrNull()?.uppercase() ?: "?"
-        return (entry?.value ?: Brand("unknown", fallback)).also { cache[cacheKey] = it }
+        val brand = entry?.value ?: when {
+            airlineDomains.any { domainMatches(senderDomain, it) } ||
+                airlineNameTokens.any(normalizedName::contains) -> Brand("airplane", "AIR")
+
+            simCardDomains.any { domainMatches(senderDomain, it) } ||
+                simCardNameTokens.any(normalizedName::contains) -> Brand("simcard", "SIM")
+
+            else -> Brand("unknown", fallback)
+        }
+        return brand.also { cache[cacheKey] = it }
     }
+
+    private fun extractDomain(address: String): String =
+        address.substringAfterLast('@', "")
+            .takeWhile { it.isLetterOrDigit() || it == '.' || it == '-' }
+            .trimEnd('.')
+
+    private fun domainMatches(senderDomain: String, ruleDomain: String): Boolean =
+        senderDomain == ruleDomain || senderDomain.endsWith(".$ruleDomain")
 }

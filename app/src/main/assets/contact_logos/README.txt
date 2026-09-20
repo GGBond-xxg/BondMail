@@ -20,6 +20,11 @@ vendors, vehicle makers, retail and entertainment services, including ABC, CCB, 
 American Express, Mastercard, Visa, Alibaba, JD, Meituan, Pinduoduo, Huawei, Intel, AMD, Nvidia,
 ASML, TSMC, Micron, SK Hynix, Apple ecosystem senders, BMW, Mercedes-Benz, Volkswagen, Toyota,
 Tesla, Netflix, Disney, Spotify, Discord, Bilibili, Coolapk, PayPal, Walmart, Costco, and others.
+The v1.5.1 set adds Instagram, Telegram, Facebook, QuickQ, giffgaff, Vodafone, Huobi/HTX, OKX,
+McDonald's, Charles Schwab, Firstrade, Grok, Holafly, Huatai Securities, and RedteaGO. A generic
+airplane mark covers recognized airlines without a dedicated logo, while a SIM-card mark covers
+recognized mobile/eSIM providers such as SoSIM. China Unicom includes the official `wo.cn` sender
+domain used by 10010 notices. HSBC, Shopee, Shopify, and Zoom fill previously detected asset gaps.
 Source filenames from the working-tree ICON folder are mapped to ASCII asset names here for Android
 lookup. ANT Bank senders reuse the bundled Alipay/AiPay mark. All official `imigrasi.go.id` mailboxes
 and their notification subdomains reuse the Indonesian Immigration mark.

@@ -300,6 +300,7 @@ private val DARK_AVATAR_LIGHT_INK_BRANDS = setOf(
 private fun brandLogoScale(key: String): Float = when (key) {
     "alipay" -> 0.66f
     "pixiv" -> 0.72f
+    "giffgaff", "holafly" -> 0.74f
     else -> 0.54f
 }
 
@@ -762,6 +763,20 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "chinamobile" -> Color(0xFF0085CC)
     "chinatelecom" -> Color(0xFF02489D)
     "chinaunicom" -> Color(0xFFDB2C1C)
+    "quickq" -> Color(0xFF1C69F0)
+    "giffgaff" -> Color(0xFF111111)
+    "vodafone" -> Color(0xFFE60000)
+    "airplane" -> Color(0xFF1677FF)
+    "simcard" -> Color(0xFF00897B)
+    "huobi" -> Color(0xFF008CD6)
+    "mcdonalds" -> Color(0xFFFBC817)
+    "charlesschwab" -> Color(0xFF00A0DF)
+    "firstrade" -> Color(0xFF17365D)
+    "grok" -> Color(0xFF111111)
+    "holafly" -> Color(0xFFE6485C)
+    "huatai" -> Color(0xFFD93514)
+    "redteago" -> Color(0xFF4B74FB)
+    "coolapk" -> Color(0xFF11A668)
     "innolight" -> Color(0xFF0075C1)
     "chinalife" -> Color(0xFF00A86D)
     "midea" -> Color(0xFF34364E)
