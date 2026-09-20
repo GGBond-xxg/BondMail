@@ -57,6 +57,24 @@ class BrandMatcherTest {
     }
 
     @Test
+    fun newCompanyAndGenericBankIconsMatchWithoutOverridingSpecificBanks() {
+        val cases = listOf(
+            Triple("EastWest Bank", "service@eastwestbanker.com", "eastwestbank"),
+            Triple("Logitech", "support@logitech.com", "logitech"),
+            Triple("Logitech Privacy", "privacy@logi.com", "logitech"),
+            Triple("Example Community Bank", "alerts@example.bank", "bank"),
+            Triple("示例银行", "notice@example.org", "bank"),
+            Triple("Hang Seng Bank", "notice@example.org", "hang seng"),
+            Triple("HSBC", "notice@hsbc.com", "hsbc"),
+            Triple("中国工商银行", "notice@icbc.com.cn", "icbc"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+    }
+
+    @Test
     fun airlineAndSimCardFallbacksStayBehindSpecificBrands() {
         val cases = listOf(
             Triple("Singapore Airlines", "notice@singaporeair.com", "airplane"),

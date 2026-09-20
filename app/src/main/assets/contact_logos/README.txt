@@ -25,6 +25,8 @@ McDonald's, Charles Schwab, Firstrade, Grok, Holafly, Huatai Securities, and Red
 airplane mark covers recognized airlines without a dedicated logo, while a SIM-card mark covers
 recognized mobile/eSIM providers such as SoSIM. China Unicom includes the official `wo.cn` sender
 domain used by 10010 notices. HSBC, Shopee, Shopify, and Zoom fill previously detected asset gaps.
+EastWest Bank and Logitech have dedicated marks. The generic bank mark covers otherwise recognized
+banks and is also used for known bank senders whose dedicated mark is not bundled.
 Source filenames from the working-tree ICON folder are mapped to ASCII asset names here for Android
 lookup. ANT Bank senders reuse the bundled Alipay/AiPay mark. All official `imigrasi.go.id` mailboxes
 and their notification subdomains reuse the Indonesian Immigration mark.

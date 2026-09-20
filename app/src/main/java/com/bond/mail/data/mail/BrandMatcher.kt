@@ -304,6 +304,9 @@ object BrandMatcher {
         "dow jones" to Brand("dowjones", "DJ"),
         "eastwestbanker.com" to Brand("eastwestbank", "EW"),
         "eastwest bank" to Brand("eastwestbank", "EW"),
+        "logitech.com" to Brand("logitech", "L"),
+        "logi.com" to Brand("logitech", "L"),
+        "logitech" to Brand("logitech", "L"),
         "lilly.com" to Brand("elililly", "LILLY"),
         "elililly.com" to Brand("elililly", "LILLY"),
         "eli lilly" to Brand("elililly", "LILLY"),
@@ -560,6 +563,15 @@ object BrandMatcher {
         "ubigi",
     )
 
+    private val bankNameTokens = listOf(
+        " bank",
+        "bank ",
+        "credit union",
+        "银行",
+        "銀行",
+        "信用社",
+    )
+
     private val domainRuleRegex = Regex("^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,}$")
 
     @Synchronized
@@ -584,6 +596,9 @@ object BrandMatcher {
 
             simCardDomains.any { domainMatches(senderDomain, it) } ||
                 simCardNameTokens.any(normalizedName::contains) -> Brand("simcard", "SIM")
+
+            senderDomain.endsWith(".bank") || normalizedName == "bank" ||
+                bankNameTokens.any(normalizedName::contains) -> Brand("bank", "BANK")
 
             else -> Brand("unknown", fallback)
         }

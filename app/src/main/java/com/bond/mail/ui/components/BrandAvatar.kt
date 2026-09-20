@@ -66,11 +66,7 @@ fun brandAvatarPalette(
     }
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
-    val officialInk = OFFICIAL_LIGHT_AVATAR_INKS[brand.key]
-    val isDarkPalette = scheme.background.luminance() < 0.5f
-    val background = if (officialInk != null) {
-        if (isDarkPalette) scheme.surfaceVariant else Color.White
-    } else if (monet) {
+    val background = if (monet) {
         when (tone) {
             0 -> scheme.primaryContainer
             1 -> scheme.secondaryContainer
@@ -83,13 +79,7 @@ fun brandAvatarPalette(
             else -> scheme.tertiary
         }
     }
-    val foreground = if (officialInk != null) {
-        if (isDarkPalette && brand.key in DARK_AVATAR_LIGHT_INK_BRANDS) {
-            scheme.onSurface
-        } else {
-            officialInk
-        }
-    } else if (monet) {
+    val foreground = if (monet) {
         when (tone) {
             0 -> scheme.onPrimaryContainer
             1 -> scheme.onSecondaryContainer
@@ -282,19 +272,6 @@ private val DARK_FOREGROUND_BRANDS = setOf(
     "bitget",
     "trae",
     "fliggy",
-)
-
-private val OFFICIAL_LIGHT_AVATAR_INKS = mapOf(
-    "alipay" to Color(0xFF1677FF),
-    "pixiv" to Color(0xFF0096FA),
-    "plasmaone" to Color(0xFF141414),
-    "safepal" to Color(0xFF4A21EF),
-    "qianji" to Color(0xFF111111),
-)
-
-private val DARK_AVATAR_LIGHT_INK_BRANDS = setOf(
-    "plasmaone",
-    "qianji",
 )
 
 private fun brandLogoScale(key: String): Float = when (key) {
@@ -703,6 +680,7 @@ private object ContactLogoStore {
         "126.com" -> "126.com"
         "bank of china", "bochk" -> "bocbank"
         "za bank" -> "zabank"
+        "hang seng" -> "bank"
         "gate.io", "gate" -> "gate"
         "neverless" -> "neverless"
         else -> key
@@ -742,6 +720,10 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "chinapost" -> Color(0xFF006845)
     "sfexpress" -> Color(0xFFDA2032)
     "alipay" -> Color(0xFF1677FF)
+    "pixiv" -> Color(0xFF0096FA)
+    "plasmaone" -> Color(0xFF141414)
+    "safepal" -> Color(0xFF4A21EF)
+    "qianji" -> Color(0xFF111111)
     "moovit" -> Color(0xFFF05523)
     "lottiefiles" -> Color(0xFF00BFA5)
     "wise" -> Color(0xFF9FE870)
@@ -777,6 +759,9 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "huatai" -> Color(0xFFD93514)
     "redteago" -> Color(0xFF4B74FB)
     "coolapk" -> Color(0xFF11A668)
+    "eastwestbank" -> Color(0xFFDA291C)
+    "logitech" -> Color(0xFF00B8FC)
+    "bank", "hang seng" -> Color(0xFF315C9B)
     "innolight" -> Color(0xFF0075C1)
     "chinalife" -> Color(0xFF00A86D)
     "midea" -> Color(0xFF34364E)
