@@ -277,6 +277,9 @@ private val DARK_FOREGROUND_BRANDS = setOf(
 private fun brandLogoScale(key: String): Float = when (key) {
     "alipay" -> 0.66f
     "pixiv" -> 0.72f
+    "aol", "dolby" -> 0.72f
+    "cloudflare", "google" -> 0.68f
+    "gemini", "messenger", "mexc", "microsoftcopilot" -> 0.62f
     "giffgaff", "holafly" -> 0.74f
     else -> 0.54f
 }
@@ -449,6 +452,7 @@ private object ContactLogoStore {
         val source = when (tag) {
             "path" -> parser.attribute("d")
                 ?.takeIf(String::isNotBlank)
+                ?.let(::normalizePathDataForAndroid)
                 ?.let(PathParser::createPathFromPathData)
 
             "circle" -> {
@@ -484,7 +488,18 @@ private object ContactLogoStore {
                 }
             }
 
-            "polygon" -> parsePolygon(parser.attribute("points"))
+            "polygon" -> parsePoints(parser.attribute("points"), close = true)
+            "polyline" -> parsePoints(parser.attribute("points"), close = false)
+            "line" -> {
+                val x1 = parser.numberAttribute("x1") ?: return null
+                val y1 = parser.numberAttribute("y1") ?: return null
+                val x2 = parser.numberAttribute("x2") ?: return null
+                val y2 = parser.numberAttribute("y2") ?: return null
+                AndroidPath().apply {
+                    moveTo(x1, y1)
+                    lineTo(x2, y2)
+                }
+            }
             else -> null
         } ?: return null
 
@@ -526,12 +541,56 @@ private object ContactLogoStore {
         )
     }
 
-    private fun parsePolygon(points: String?): AndroidPath? {
+    /**
+     * AndroidX PathParser treats adjacent SVG arc flags (for example `01`) as one
+     * number, while SVG 2 allows the two single-digit flags to omit a separator.
+     * Tokenise path data and add separators around arc flags before parsing it.
+     */
+    private fun normalizePathDataForAndroid(pathData: String): String {
+        if (!pathData.contains('a', ignoreCase = true)) return pathData
+
+        val normalized = StringBuilder(pathData.length + 32)
+        var index = 0
+        var command: Char? = null
+        var argumentIndex = 0
+        while (index < pathData.length) {
+            val character = pathData[index]
+            when {
+                character.isWhitespace() || character == ',' -> index++
+
+                character.isLetter() -> {
+                    command = character
+                    argumentIndex = 0
+                    normalized.append(character).append(' ')
+                    index++
+                }
+
+                command?.lowercaseChar() == 'a' && argumentIndex % 7 in 3..4 -> {
+                    if (character != '0' && character != '1') return pathData
+                    normalized.append(character).append(' ')
+                    argumentIndex++
+                    index++
+                }
+
+                else -> {
+                    val number = NUMBER_REGEX.find(pathData, index)
+                    if (number == null || number.range.first != index) return pathData
+                    normalized.append(number.value).append(' ')
+                    argumentIndex++
+                    index = number.range.last + 1
+                }
+            }
+        }
+        return normalized.toString()
+    }
+
+    private fun parsePoints(points: String?, close: Boolean): AndroidPath? {
         val values = points?.let(NUMBER_REGEX::findAll)
             ?.mapNotNull { it.value.toFloatOrNull() }
             ?.toList()
             .orEmpty()
-        if (values.size < 6 || values.size % 2 != 0) return null
+        val minimumValueCount = if (close) 6 else 4
+        if (values.size < minimumValueCount || values.size % 2 != 0) return null
         return AndroidPath().apply {
             moveTo(values[0], values[1])
             var index = 2
@@ -539,7 +598,7 @@ private object ContactLogoStore {
                 lineTo(values[index], values[index + 1])
                 index += 2
             }
-            close()
+            if (close) close()
         }
     }
 
@@ -554,7 +613,8 @@ private object ContactLogoStore {
             "circle" -> listOf("cx", "cy", "r")
             "ellipse" -> listOf("cx", "cy", "rx", "ry")
             "rect" -> listOf("x", "y", "width", "height", "rx", "ry")
-            "polygon" -> listOf("points")
+            "polygon", "polyline" -> listOf("points")
+            "line" -> listOf("x1", "y1", "x2", "y2")
             else -> emptyList()
         }
         val geometry = geometryAttributes.mapNotNull { name ->
@@ -765,6 +825,40 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "innolight" -> Color(0xFF0075C1)
     "chinalife" -> Color(0xFF00A86D)
     "midea" -> Color(0xFF34364E)
+    "gitee" -> Color(0xFFC71D23)
+    "git" -> Color(0xFFF05032)
+    "alibaba", "alibabacloud" -> Color(0xFFFF6A00)
+    "antgroup" -> Color(0xFF1677FF)
+    "aol" -> Color(0xFF111111)
+    "arc" -> Color(0xFF6C5CE7)
+    "avalanche" -> Color(0xFFE84142)
+    "baidu" -> Color(0xFF2932E1)
+    "bento" -> Color(0xFFF5C344)
+    "brave" -> Color(0xFFFB542B)
+    "burton" -> Color(0xFF111111)
+    "claude" -> Color(0xFFD97757)
+    "cmake" -> Color(0xFF064F8C)
+    "cnes" -> Color(0xFF003B71)
+    "cnet" -> Color(0xFFE00000)
+    "cnn" -> Color(0xFFCC0000)
+    "codex" -> Color(0xFF111111)
+    "continente" -> Color(0xFFE30613)
+    "dazhongdianping" -> Color(0xFFFF6633)
+    "deepai", "deepseek" -> Color(0xFF4D6BFE)
+    "docker" -> Color(0xFF2496ED)
+    "dolby" -> Color(0xFF111111)
+    "douban" -> Color(0xFF2E963D)
+    "drupal" -> Color(0xFF0678BE)
+    "duolingo" -> Color(0xFF58CC02)
+    "exchange" -> Color(0xFF2CA9BC)
+    "gemini" -> Color(0xFF3186FF)
+    "messenger" -> Color(0xFF168AFF)
+    "mexc" -> Color(0xFF1972E2)
+    "microsoftcopilot" -> Color(0xFF0078D4)
+    "patreon" -> Color(0xFFFF424D)
+    "vk" -> Color(0xFF0077FF)
+    "xiaomimimo" -> Color(0xFFFF6900)
+    "gamebanana" -> Color(0xFFF4C430)
     "github" -> Color(0xFF24292F)
     "gitlab" -> Color(0xFFFC6D26)
     "google", "gmail.com" -> Color(0xFF4285F4)

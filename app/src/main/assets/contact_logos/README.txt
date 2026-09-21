@@ -27,13 +27,19 @@ recognized mobile/eSIM providers such as SoSIM. China Unicom includes the offici
 domain used by 10010 notices. HSBC, Shopee, Shopify, and Zoom fill previously detected asset gaps.
 EastWest Bank and Logitech have dedicated marks. The generic bank mark covers otherwise recognized
 banks and is also used for known bank senders whose dedicated mark is not bundled.
+The v1.5.1.1 expanded offline set also includes Gitee, GitLab, GMX, Google, Alibaba and Alibaba Cloud,
+Ant Group, AOL, Arc, Avalanche, Baidu, Bento, Brave, Burton, Claude, Cloudflare, CMake, CNES,
+CNET, CNN, Codex, Continente, Dianping, DeepAI, DeepSeek, Docker, Dolby, Douban, Drupal,
+Duolingo, Gemini, LinkedIn, Messenger, MEXC, Microsoft Copilot, Patreon, VK, WhatsApp,
+Xiaomi MiMo, YouTube, GameBanana, and Git. A generic exchange mark covers recognized trading
+platforms without their own bundled logo while dedicated exchange marks remain preferred.
 Source filenames from the working-tree ICON folder are mapped to ASCII asset names here for Android
 lookup. ANT Bank senders reuse the bundled Alipay/AiPay mark. All official `imigrasi.go.id` mailboxes
 and their notification subdomains reuse the Indonesian Immigration mark.
 
-The local renderer supports paths, circles, ellipses, rectangles, polygons, SVG transform matrices,
-and stroked marks. Logos remain fully offline and never trigger favicon or network requests while
-scrolling.
+The local renderer supports paths, circles, ellipses, rectangles, polygons, polylines, lines, SVG
+transform matrices, and stroked marks. Logos remain fully offline and never trigger favicon or
+network requests while scrolling.
 
 Simple Icons source and usage:
 https://simpleicons.org/

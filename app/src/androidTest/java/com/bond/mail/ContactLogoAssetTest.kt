@@ -3,7 +3,7 @@ package com.bond.mail
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bond.mail.ui.components.contactLogoSvgMarkup
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -82,14 +82,63 @@ class ContactLogoAssetTest {
             "Logitech" to "support@logitech.com",
             "Example Community Bank" to "alerts@example.bank",
             "Hang Seng Bank" to "notice@example.org",
+            "Gitee" to "notice@gitee.com",
+            "GitLab" to "noreply@gitlab.com",
+            "GMX" to "service@gmx.com",
+            "Google" to "no-reply@google.com",
+            "Alibaba" to "notice@alibaba.com",
+            "Alibaba Cloud" to "notice@alibabacloud.com",
+            "Ant Group" to "notice@antgroup.com",
+            "AOL" to "service@aol.com",
+            "Arc Browser" to "team@arc.net",
+            "Avalanche" to "updates@avalabs.org",
+            "百度" to "notice@baidu.com",
+            "Bento" to "hello@bento.me",
+            "Brave Browser" to "notice@brave.com",
+            "Burton" to "news@burton.com",
+            "Claude" to "notice@anthropic.com",
+            "Cloudflare" to "updates@cloudflare.com",
+            "CMake" to "news@cmake.org",
+            "CNES" to "press@cnes.fr",
+            "CNET" to "newsletter@cnet.com",
+            "CNN" to "newsletter@cnn.com",
+            "Codex" to "notice@openai.com",
+            "Continente" to "news@continente.pt",
+            "大众点评" to "notice@dianping.com",
+            "DeepAI" to "hello@deepai.org",
+            "DeepSeek" to "service@deepseek.com",
+            "Docker" to "notice@docker.com",
+            "Dolby" to "news@dolby.com",
+            "豆瓣" to "notice@douban.com",
+            "Drupal" to "notice@drupal.org",
+            "Duolingo" to "notice@duolingo.com",
+            "Gemini" to "google-gemini-noreply@google.com",
+            "LinkedIn" to "messages@linkedin.com",
+            "Messenger" to "notification@facebookmail.com",
+            "MEXC" to "dontreply@notification.mexc.link",
+            "Microsoft Copilot" to "copilot@email.microsoft.com",
+            "Patreon" to "notice@patreon.com",
+            "VK" to "notice@vk.com",
+            "Xiaomi MiMo" to "support-mimo@xiaomi.com",
+            "YouTube" to "no-reply@youtube.com",
+            "GameBanana" to "notice@gamebanana.com",
+            "Git" to "notice@git-scm.com",
+            "KuCoin" to "news@kucoin.com",
             "HSBC" to "notice@hsbc.com",
             "Shopee" to "notice@shopee.com",
             "Shopify" to "notice@shopify.com",
             "Zoom" to "notice@zoom.us",
         )
 
-        senders.forEach { (name, address) ->
-            assertNotNull("Logo did not load for $name", contactLogoSvgMarkup(context, name, address))
+        val missingLogos = senders.mapNotNull { (name, address) ->
+            name.takeIf { contactLogoSvgMarkup(context, name, address) == null }
         }
+        assertTrue(
+            "Logos did not load for: ${missingLogos.joinToString()}",
+            missingLogos.isEmpty(),
+        )
+
+        val exchangeMarkup = contactLogoSvgMarkup(context, "KuCoin", "news@kucoin.com")
+        assertTrue("Generic exchange arrows were not parsed", exchangeMarkup.orEmpty().contains("<polyline"))
     }
 }

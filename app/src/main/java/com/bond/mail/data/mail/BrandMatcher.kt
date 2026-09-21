@@ -11,6 +11,88 @@ object BrandMatcher {
     }
 
     private val rules = linkedMapOf(
+        "google-gemini" to Brand("gemini", "GM"),
+        "google gemini" to Brand("gemini", "GM"),
+        "gemini by google" to Brand("gemini", "GM"),
+        "messenger.com" to Brand("messenger", "MSG"),
+        "messenger" to Brand("messenger", "MSG"),
+        "microsoft copilot" to Brand("microsoftcopilot", "CP"),
+        "copilot" to Brand("microsoftcopilot", "CP"),
+        "codex" to Brand("codex", "CX"),
+        "gitee.com" to Brand("gitee", "GE"),
+        "gitee" to Brand("gitee", "GE"),
+        "gitlab.com" to Brand("gitlab", "GL"),
+        "gmx.com" to Brand("gmx", "GMX"),
+        "gmx.net" to Brand("gmx", "GMX"),
+        "antgroup.com" to Brand("antgroup", "ANT"),
+        "ant group" to Brand("antgroup", "ANT"),
+        "蚂蚁集团" to Brand("antgroup", "蚁"),
+        "螞蟻集團" to Brand("antgroup", "蟻"),
+        "aol.com" to Brand("aol", "AOL"),
+        "aol" to Brand("aol", "AOL"),
+        "arc.net" to Brand("arc", "ARC"),
+        "thebrowser.company" to Brand("arc", "ARC"),
+        "arc browser" to Brand("arc", "ARC"),
+        "avalabs.org" to Brand("avalanche", "AVAX"),
+        "baidu.com" to Brand("baidu", "百"),
+        "baidu" to Brand("baidu", "百"),
+        "百度" to Brand("baidu", "百"),
+        "bento.me" to Brand("bento", "B"),
+        "bento" to Brand("bento", "B"),
+        "burton.com" to Brand("burton", "B"),
+        "burton" to Brand("burton", "B"),
+        "claude.ai" to Brand("claude", "CL"),
+        "anthropic.com" to Brand("claude", "CL"),
+        "claude" to Brand("claude", "CL"),
+        "anthropic" to Brand("claude", "CL"),
+        "cloudflare.com" to Brand("cloudflare", "CF"),
+        "cmake.org" to Brand("cmake", "CM"),
+        "cmake" to Brand("cmake", "CM"),
+        "cnes.fr" to Brand("cnes", "CNES"),
+        "cnes" to Brand("cnes", "CNES"),
+        "cnet.com" to Brand("cnet", "CNET"),
+        "cnet" to Brand("cnet", "CNET"),
+        "cnn.com" to Brand("cnn", "CNN"),
+        "cnn" to Brand("cnn", "CNN"),
+        "continente.pt" to Brand("continente", "C"),
+        "continente" to Brand("continente", "C"),
+        "deepai.org" to Brand("deepai", "DAI"),
+        "deep ai" to Brand("deepai", "DAI"),
+        "deepai" to Brand("deepai", "DAI"),
+        "deepseek.com" to Brand("deepseek", "DS"),
+        "deepseek" to Brand("deepseek", "DS"),
+        "深度求索" to Brand("deepseek", "深"),
+        "docker.com" to Brand("docker", "DK"),
+        "docker" to Brand("docker", "DK"),
+        "dolby.com" to Brand("dolby", "DB"),
+        "dolby" to Brand("dolby", "DB"),
+        "douban.com" to Brand("douban", "豆"),
+        "douban" to Brand("douban", "豆"),
+        "豆瓣" to Brand("douban", "豆"),
+        "drupal.org" to Brand("drupal", "DR"),
+        "drupal" to Brand("drupal", "DR"),
+        "duolingo.com" to Brand("duolingo", "DUO"),
+        "duolingo" to Brand("duolingo", "DUO"),
+        "linkedin.com" to Brand("linkedin", "IN"),
+        "mexc.com" to Brand("mexc", "MEXC"),
+        "mexc.link" to Brand("mexc", "MEXC"),
+        "mexc.sg" to Brand("mexc", "MEXC"),
+        "mexc" to Brand("mexc", "MEXC"),
+        "patreon.com" to Brand("patreon", "PT"),
+        "patreon" to Brand("patreon", "PT"),
+        "vk.com" to Brand("vk", "VK"),
+        "whatsapp.com" to Brand("whatsapp", "WA"),
+        "whatsapp.net" to Brand("whatsapp", "WA"),
+        "mimo.mi.com" to Brand("xiaomimimo", "MiMo"),
+        "xiaomimimo.com" to Brand("xiaomimimo", "MiMo"),
+        "xiaomi mimo" to Brand("xiaomimimo", "MiMo"),
+        "小米 mimo" to Brand("xiaomimimo", "MiMo"),
+        "youtube.com" to Brand("youtube", "YT"),
+        "youtu.be" to Brand("youtube", "YT"),
+        "gamebanana.com" to Brand("gamebanana", "GB"),
+        "gamebanana" to Brand("gamebanana", "GB"),
+        "git-scm.com" to Brand("git", "GIT"),
+        "git scm" to Brand("git", "GIT"),
         "js7.io" to Brand("quickq", "Q"),
         "quickq.io" to Brand("quickq", "Q"),
         "q-quickq.com" to Brand("quickq", "Q"),
@@ -234,12 +316,14 @@ object BrandMatcher {
         "農業銀行" to Brand("abchina", "ABC"),
         "adobe.com" to Brand("adobe", "AD"),
         "adobe systems" to Brand("adobe", "AD"),
-        "alibabacloud.com" to Brand("alibaba", "ALI"),
+        "alibabacloud.com" to Brand("alibabacloud", "AC"),
         "alibaba.com" to Brand("alibaba", "ALI"),
-        "aliyun.com" to Brand("alibaba", "ALI"),
+        "aliyun.com" to Brand("alibabacloud", "AC"),
+        "alibaba cloud" to Brand("alibabacloud", "AC"),
         "alibaba " to Brand("alibaba", "ALI"),
         "阿里巴巴" to Brand("alibaba", "ALI"),
-        "阿里云" to Brand("alibaba", "ALI"),
+        "阿里云" to Brand("alibabacloud", "AC"),
+        "阿里雲" to Brand("alibabacloud", "AC"),
         "altria.com" to Brand("altria", "A"),
         "altria" to Brand("altria", "A"),
         "advanced micro devices" to Brand("amd", "AMD"),
@@ -345,7 +429,10 @@ object BrandMatcher {
         "mazda.com" to Brand("mazda", "M"),
         "mazda" to Brand("mazda", "M"),
         "meituan.com" to Brand("meituan", "美"),
-        "dianping.com" to Brand("meituan", "美"),
+        "dianping.com" to Brand("dazhongdianping", "点"),
+        "dazhong dianping" to Brand("dazhongdianping", "点"),
+        "大众点评" to Brand("dazhongdianping", "点"),
+        "大眾點評" to Brand("dazhongdianping", "點"),
         "美团" to Brand("meituan", "美"),
         "mercedes-benz.com" to Brand("mercedesbenz", "MB"),
         "mercedes-benz" to Brand("mercedesbenz", "MB"),
@@ -572,6 +659,46 @@ object BrandMatcher {
         "信用社",
     )
 
+    private val exchangeDomains = setOf(
+        "bingx.com",
+        "bitfinex.com",
+        "bitflyer.com",
+        "bithumb.com",
+        "bitmart.com",
+        "bitstamp.net",
+        "coincheck.com",
+        "coinex.com",
+        "crypto.com",
+        "gemini.com",
+        "kucoin.com",
+        "lbank.com",
+        "phemex.com",
+        "poloniex.com",
+        "upbit.com",
+    )
+
+    private val exchangeNameTokens = listOf(
+        " exchange",
+        "exchange ",
+        "bingx",
+        "bitfinex",
+        "bitflyer",
+        "bithumb",
+        "bitmart",
+        "bitstamp",
+        "coincheck",
+        "coinex",
+        "crypto.com",
+        "gemini",
+        "kucoin",
+        "lbank",
+        "phemex",
+        "poloniex",
+        "upbit",
+        "交易所",
+        "交易平台",
+    )
+
     private val domainRuleRegex = Regex("^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,}$")
 
     @Synchronized
@@ -582,15 +709,32 @@ object BrandMatcher {
         val normalizedAddress = senderAddress.lowercase()
         val haystack = "$normalizedName $normalizedAddress"
         val senderDomain = extractDomain(normalizedAddress)
-        val entry = rules.entries.firstOrNull { (key, _) ->
-            if (domainRuleRegex.matches(key)) {
-                domainMatches(senderDomain, key) || normalizedName.contains(key)
-            } else {
-                haystack.contains(key)
+        val normalizedDisplayName = normalizedName.trim()
+        val contextualBrand = when {
+            normalizedDisplayName == "git" -> Brand("git", "GIT")
+            normalizedDisplayName == "vk" -> Brand("vk", "VK")
+            normalizedDisplayName.contains("gemini") && domainMatches(senderDomain, "google.com") ->
+                Brand("gemini", "GM")
+
+            else -> null
+        }
+        val entry = if (contextualBrand == null) {
+            rules.entries.firstOrNull { (key, _) ->
+                if (domainRuleRegex.matches(key)) {
+                    domainMatches(senderDomain, key) || normalizedName.contains(key)
+                } else {
+                    haystack.contains(key)
+                }
             }
+        } else {
+            null
         }
         val fallback = senderName.trim().firstOrNull()?.uppercase() ?: senderAddress.firstOrNull()?.uppercase() ?: "?"
-        val brand = entry?.value ?: when {
+        val brand = contextualBrand ?: entry?.value ?: when {
+            exchangeDomains.any { domainMatches(senderDomain, it) } ||
+                normalizedDisplayName == "exchange" ||
+                exchangeNameTokens.any(normalizedName::contains) -> Brand("exchange", "EX")
+
             airlineDomains.any { domainMatches(senderDomain, it) } ||
                 airlineNameTokens.any(normalizedName::contains) -> Brand("airplane", "AIR")
 

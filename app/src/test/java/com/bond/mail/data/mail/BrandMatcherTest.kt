@@ -75,6 +75,76 @@ class BrandMatcherTest {
     }
 
     @Test
+    fun expandedOfflineBrandIconsMatchOfficialSenders() {
+        val cases = listOf(
+            Triple("Gitee", "notice@gitee.com", "gitee"),
+            Triple("GitLab", "noreply@gitlab.com", "gitlab"),
+            Triple("GMX", "service@gmx.com", "gmx"),
+            Triple("Google", "no-reply@google.com", "google"),
+            Triple("Alibaba", "notice@alibaba.com", "alibaba"),
+            Triple("Alibaba Cloud", "notice@alibabacloud.com", "alibabacloud"),
+            Triple("Ant Group", "notice@antgroup.com", "antgroup"),
+            Triple("AOL", "service@aol.com", "aol"),
+            Triple("Arc Browser", "team@arc.net", "arc"),
+            Triple("Avalanche", "updates@avalabs.org", "avalanche"),
+            Triple("百度", "notice@baidu.com", "baidu"),
+            Triple("Bento", "hello@bento.me", "bento"),
+            Triple("Brave Browser", "notice@brave.com", "brave"),
+            Triple("Burton", "news@burton.com", "burton"),
+            Triple("Claude", "notice@anthropic.com", "claude"),
+            Triple("Cloudflare", "updates@cloudflare.com", "cloudflare"),
+            Triple("CMake", "news@cmake.org", "cmake"),
+            Triple("CNES", "press@cnes.fr", "cnes"),
+            Triple("CNET", "newsletter@cnet.com", "cnet"),
+            Triple("CNN", "newsletter@cnn.com", "cnn"),
+            Triple("Codex", "notice@openai.com", "codex"),
+            Triple("Continente", "news@continente.pt", "continente"),
+            Triple("大众点评", "notice@dianping.com", "dazhongdianping"),
+            Triple("DeepAI", "hello@deepai.org", "deepai"),
+            Triple("DeepSeek", "service@deepseek.com", "deepseek"),
+            Triple("Docker", "notice@docker.com", "docker"),
+            Triple("Dolby", "news@dolby.com", "dolby"),
+            Triple("豆瓣", "notice@douban.com", "douban"),
+            Triple("Drupal", "notice@drupal.org", "drupal"),
+            Triple("Duolingo", "notice@duolingo.com", "duolingo"),
+            Triple("Gemini", "google-gemini-noreply@google.com", "gemini"),
+            Triple("LinkedIn", "messages@linkedin.com", "linkedin"),
+            Triple("Messenger", "notification@facebookmail.com", "messenger"),
+            Triple("MEXC", "dontreply@notification.mexc.link", "mexc"),
+            Triple("Microsoft Copilot", "copilot@email.microsoft.com", "microsoftcopilot"),
+            Triple("Patreon", "notice@patreon.com", "patreon"),
+            Triple("VK", "notice@vk.com", "vk"),
+            Triple("WhatsApp", "security@whatsapp.com", "whatsapp"),
+            Triple("Xiaomi MiMo", "support-mimo@xiaomi.com", "xiaomimimo"),
+            Triple("YouTube", "no-reply@youtube.com", "youtube"),
+            Triple("GameBanana", "notice@gamebanana.com", "gamebanana"),
+            Triple("Git", "notice@git-scm.com", "git"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+    }
+
+    @Test
+    fun genericExchangeStaysBehindDedicatedBrandsAndRejectsLookalikes() {
+        val cases = listOf(
+            Triple("KuCoin", "news@kucoin.com", "exchange"),
+            Triple("Gemini", "notice@gemini.com", "exchange"),
+            Triple("Digital Asset Exchange", "notice@example.org", "exchange"),
+            Triple("MEXC", "notice@mexc.com", "mexc"),
+            Triple("OKX", "notice@okx.com", "okx"),
+            Triple("Binance", "notice@binance.com", "binance"),
+            Triple("Microsoft Exchange", "notice@microsoft.com", "microsoft"),
+        )
+
+        cases.forEach { (name, address, expectedKey) ->
+            assertEquals(expectedKey, BrandMatcher.match(name, address).key)
+        }
+        assertEquals("unknown", BrandMatcher.match("Crypto Notice", "notice@fakekucoin.com").key)
+    }
+
+    @Test
     fun airlineAndSimCardFallbacksStayBehindSpecificBrands() {
         val cases = listOf(
             Triple("Singapore Airlines", "notice@singaporeair.com", "airplane"),
