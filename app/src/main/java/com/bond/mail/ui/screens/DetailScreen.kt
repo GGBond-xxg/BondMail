@@ -1033,16 +1033,12 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
             Text(if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
                 else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                Spacer(Modifier.weight(2f))
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    if (translation.result != null) MessageTranslationButton(
-                        icon = Icons.Outlined.Restore, label = tr("translation_original"),
-                        onClick = { translation.showOriginal = true },
-                    )
-                }
-            }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
+            if (translation.result != null) MessageTranslationButton(
+                icon = Icons.Outlined.Restore, label = tr("translation_original"),
+                onClick = { translation.showOriginal = true },
+            )
             MessageTranslationButton(
                 icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
                 label = tr(if (translation.busy) "cancel" else "translate_body"),
