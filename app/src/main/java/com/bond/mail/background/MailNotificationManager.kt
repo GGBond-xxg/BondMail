@@ -49,6 +49,7 @@ class MailNotificationManager(private val context: Context) {
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
             manager.createNotificationChannel(channel)
+            manager.createNotificationChannel(NotificationChannel("mail_quiet", context.getString(R.string.notifications) + " · Silent", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
             // v1.2.0 replaced the permanent foreground service with data-only FCM wakeups.
             // Remove the obsolete channel so upgraded devices no longer show a misleading
             // "background sync" notification category.
@@ -69,7 +70,11 @@ class MailNotificationManager(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun show(message: MessageEntity) {
+    fun show(message: MessageEntity, reminder: Boolean = false) {
+        val mode = if (reminder) "all" else com.bond.mail.data.settings.ProductivityStore(context)
+            .notificationMode(message.accountId, message.senderAddress)
+        if (mode == "off") return
+        val silent = mode == "silent"
         // Kept in one helper so both the runtime permission and the per-app notification switch
         // are checked immediately before notify(). Lint cannot infer that contract across methods.
         if (!canPostNotifications()) return
@@ -85,7 +90,7 @@ class MailNotificationManager(private val context: Context) {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(context, NEW_MAIL_CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, if (silent) "mail_quiet" else NEW_MAIL_CHANNEL_ID)
             .setSmallIcon(R.drawable.bondmail_notification_monet)
             .setContentTitle(message.senderName.ifBlank { message.senderAddress })
             .setContentText(message.subject)
@@ -105,7 +110,7 @@ class MailNotificationManager(private val context: Context) {
                     NotificationCompat.DEFAULT_VIBRATE or
                     NotificationCompat.DEFAULT_LIGHTS,
             )
-            .setSilent(false)
+            .setSilent(silent)
             .setOnlyAlertOnce(false)
             .setWhen(message.receivedAt)
             .setShowWhen(true)
@@ -185,6 +190,7 @@ class MailNotificationManager(private val context: Context) {
         private const val LEGACY_BACKGROUND_SYNC_CHANNEL_ID = "background_mail_sync_v1"
         private const val LEGACY_FOREGROUND_NOTIFICATION_ID = 0xB0D
         private val NEW_MAIL_CHANNEL_IDS = setOf(
+            "mail_quiet",
             "new_mail_alerts_v1",
             "new_mail_alerts_v2",
             NEW_MAIL_CHANNEL_ID,

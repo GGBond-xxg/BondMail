@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.1.1](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.1.1)
-- 安装包：[BondMail-v1.5.1.1.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.1.1/BondMail-v1.5.1.1.apk)
+- 最新版本：[BondMail v1.5.2](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.2)
+- 安装包：[BondMail-v1.5.2.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.2/BondMail-v1.5.2.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -20,6 +20,11 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - Material 3 与 MIUIX 样式切换，支持浅色、深色和跟随系统
 - 简体中文、繁体中文与英文 JSON 多语言
 - 可选的自建 Cloudflare FCM 推送
+- 多服务商正文翻译、加密译文缓存、原文对照与密钥测试
+- 10 秒撤销发送、搜索筛选、账号签名/模板、通知分级
+- 邮箱工具：同步诊断、附件索引、按回复标识聚合会话、稍后提醒及存储清理
+
+新功能入口与使用限制见 [邮箱效率功能](docs/PRODUCTIVITY.md)。
 
 ## 支持的邮箱
 
@@ -90,7 +95,7 @@ CF FCM 是可选功能；不配置时，邮箱登录、手动刷新和 Android �
 - 后续同步以 UID 增量获取新邮件，并轻量刷新已读和星标状态。
 - 邮件正文按需下载并保存到 Room，已缓存内容不会重复连接服务器。
 - HTML 预处理结果使用内存 LRU 缓存，`cid:` 图片会转换为本地 Data URI。
-- 后台任务由 WorkManager 调度；短周期使用可持续的一次性任务链。
+- 后台由 FCM 唤醒与 WorkManager 至少 15 分钟的周期任务共同调度；手动刷新和推送唤醒采用一次性任务。
 
 ## JSON 多语言
 

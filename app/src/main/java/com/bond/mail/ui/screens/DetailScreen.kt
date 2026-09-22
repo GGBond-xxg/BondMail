@@ -1,5 +1,7 @@
 package com.bond.mail.ui.screens
 
+import androidx.compose.material.icons.outlined.Translate
+
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -201,6 +203,10 @@ fun DetailScreen(
     val scope = rememberCoroutineScope()
     val latestOnMessageSnapshot by rememberUpdatedState(onMessageSnapshot)
     var moreOpen by remember { mutableStateOf(false) }
+    var bilingualTranslation by remember(messageId) { mutableStateOf(false) }
+    var inlineTranslation by remember(messageId) { mutableStateOf<String?>(null) }
+    var toolsOpen by remember(messageId) { mutableStateOf(false) }
+    var translationOpen by remember(messageId) { mutableStateOf(false) }
     var externalUrl by remember { mutableStateOf<String?>(null) }
     var bodyLoading by remember(messageId) {
         mutableStateOf(initialMessage == null || initialMessage.needsBodyRefresh())
@@ -487,6 +493,10 @@ fun DetailScreen(
     }
 
     val shareLabel = tr("share")
+    if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog(messageId = messageId, initialTab = "tools_reminders") { toolsOpen = false }
+    if (translationOpen) {
+        com.bond.mail.ui.components.BodyTranslationDialog(item.bodyHtml, item.bodyText, onResult = { text, bilingual -> inlineTranslation = text; bilingualTranslation = bilingual }) { translationOpen = false }
+    }
     fun share() {
         val share = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -641,11 +651,11 @@ fun DetailScreen(
             }
 
             else -> {
-                val html = item.bodyHtml
+                val html = inlineTranslation?.let { com.bond.mail.ui.components.translatedDocument(it, item.bodyHtml, item.bodyText, bilingualTranslation, tr("translation_result"), tr("translation_original"), tr("translation_links")) } ?: item.bodyHtml
                     ?.takeIf(String::isNotBlank)
                     ?: plainTextHtml(item.bodyText)
                 MailHtmlView(
-                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:retry=$renderRetryToken",
+                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:retry=$renderRetryToken:translation=${inlineTranslation?.hashCode()}:bilingual=$bilingualTranslation",
                     html = html,
                     header = mailHeader,
                     headerLayout = headerLayout,
@@ -858,6 +868,12 @@ fun DetailScreen(
                     }
                 },
                 actions = {
+                    androidx.compose.material3.TextButton(onClick = { toolsOpen = true }) { Text(tr("mail_tools_short")) }
+                    if (!bodyLoading && item.hasDisplayBody()) {
+                        BondIconButton(onClick = { if (inlineTranslation != null) inlineTranslation = null else translationOpen = true }) {
+                            Icon(Icons.Outlined.Translate, contentDescription = tr(if (inlineTranslation != null) "translation_original" else "translate_body"))
+                        }
+                    }
                     BondIconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
                         Icon(
                             if (item.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,

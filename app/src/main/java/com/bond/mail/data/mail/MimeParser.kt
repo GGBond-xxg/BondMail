@@ -29,6 +29,8 @@ internal data class ParsedMailHeader(
     val subject: String,
     val receivedAt: Long,
     val internetMessageId: String?,
+    val inReplyTo: String? = null,
+    val referencesHeader: String? = null,
 )
 
 internal data class ParsedMail(
@@ -43,6 +45,8 @@ internal data class ParsedMail(
     val attachments: List<MailAttachmentInfo>,
     val receivedAt: Long,
     val internetMessageId: String?,
+    val inReplyTo: String? = null,
+    val referencesHeader: String? = null,
 )
 
 internal object MimeParser {
@@ -64,6 +68,8 @@ internal object MimeParser {
             subject = decodeSubject(message.subject),
             receivedAt = (message.receivedDate ?: message.sentDate)?.time ?: System.currentTimeMillis(),
             internetMessageId = message.getHeader("Message-ID")?.firstOrNull(),
+            inReplyTo = message.getHeader("In-Reply-To")?.firstOrNull(),
+            referencesHeader = message.getHeader("References")?.firstOrNull(),
         )
     }
 
@@ -114,6 +120,7 @@ internal object MimeParser {
             attachments = collector.attachments.toList(),
             receivedAt = header.receivedAt,
             internetMessageId = header.internetMessageId,
+            inReplyTo = header.inReplyTo, referencesHeader = header.referencesHeader,
         )
     }
 
@@ -232,6 +239,7 @@ internal object MimeParser {
             attachments = collector.attachments.toList(),
             receivedAt = header.receivedAt,
             internetMessageId = header.internetMessageId,
+            inReplyTo = header.inReplyTo, referencesHeader = header.referencesHeader,
         )
     }
 

@@ -238,7 +238,7 @@ class MailRepository(
     fun message(id: String) = database.messageDao().observeById(id)
     suspend fun messageNow(id: String) = database.messageDao().byId(id)
     suspend fun draftNow(taskId: String) = database.outboxDao().byId(taskId)
-    fun search(accountId: String?, query: String) = database.messageDao().searchRows(accountId, query)
+    fun search(accountId: String?, query: String, limit: Int = 100) = database.messageDao().searchAdvanced(com.bond.mail.data.mail.mailSearchQuery(accountId, query, limit))
 
     suspend fun saveContact(
         name: String,
@@ -1797,6 +1797,12 @@ class MailRepository(
         }.onFailure { database.messageDao().upsert(message); throw it }
     }
 
+    suspend fun undoSend(taskId: String): Boolean = database.withTransaction {
+        if (database.outboxDao().undoQueued(taskId, System.currentTimeMillis()) == 0) return@withTransaction false
+        database.messageDao().deleteById("outbox:$taskId")
+        true
+    }
+
     suspend fun queueSend(
         accountId: String,
         recipients: String,
@@ -1807,8 +1813,10 @@ class MailRepository(
         attachmentUris: List<String> = emptyList(),
         draftTaskId: String? = null,
         sourceMessageId: String? = null,
+        replyMessageId: String? = null,
     ): OutboxEntity {
         require(recipients.isNotBlank()) { "Recipient is required" }
+        val reply = replyMessageId?.let { database.messageDao().byId(it) }
         val account = requireAccount(accountId)
         val now = System.currentTimeMillis()
         val previousDraft = draftTaskId?.let { database.outboxDao().byId(it) }
@@ -1831,6 +1839,9 @@ class MailRepository(
             attachmentsJson = JSONArray(attachmentUris.distinct()).toString(),
             internetMessageId = internetMessageId,
             state = "QUEUED",
+            inReplyTo = reply?.internetMessageId ?: previousDraft?.inReplyTo,
+            referencesHeader = reply?.let { listOfNotNull(it.referencesHeader, it.internetMessageId).joinToString(" ") } ?: previousDraft?.referencesHeader,
+            sendAfter = now + 10_000L,
             remoteFolder = previousDraft?.remoteFolder ?: sourceDraft?.remoteFolder,
             remoteUid = previousDraft?.remoteUid ?: sourceDraft?.remoteUid?.takeIf { it > 0L },
             sourceMessageId = sourceMessageId ?: previousDraft?.sourceMessageId,
@@ -1850,6 +1861,7 @@ class MailRepository(
                     remoteFolder = "SENT",
                     remoteUid = -now.coerceAtLeast(1L),
                     internetMessageId = internetMessageId,
+                    inReplyTo = task.inReplyTo, referencesHeader = task.referencesHeader,
                     senderName = account.displayName,
                     senderAddress = account.email,
                     recipients = recipients,
@@ -1874,6 +1886,15 @@ class MailRepository(
 
     suspend fun sendOutboxTask(taskId: String) {
         val task = database.outboxDao().byId(taskId) ?: return
+        // A restarted worker cannot determine whether the previous SMTP session was accepted.
+        // Surface the uncertainty instead of silently resubmitting the same message.
+        if (task.state == "SENDING") {
+            database.withTransaction {
+                database.outboxDao().updateState(taskId, "UNKNOWN", "send_unknown", 0, System.currentTimeMillis())
+                database.messageDao().setDeliveryState("outbox:$taskId", "UNKNOWN")
+            }
+            return
+        }
         if (task.state == "DRAFT") {
             syncDraftTask(taskId)
             return
@@ -1886,11 +1907,15 @@ class MailRepository(
         // into the IMAP Sent folder failed. WorkManager retries below enter through state=SENT and
         // only reconcile the mailbox copy/draft cleanup.
         if (task.state != "SENT") {
+            val remaining = task.sendAfter - System.currentTimeMillis()
+            if (remaining > 0) kotlinx.coroutines.delay(remaining)
             val startedAt = System.currentTimeMillis()
-            database.withTransaction {
-                database.outboxDao().updateState(task.id, "SENDING", null, 0, startedAt)
+            val claimed = database.withTransaction {
+                if (database.outboxDao().claimSend(task.id, startedAt) == 0) return@withTransaction false
                 database.messageDao().setDeliveryState(placeholderId, "SENDING")
+                true
             }
+            if (!claimed) return
             val prepared = runCatching {
                 withMailboxCredential(account) { credential ->
                     smtp.send(account, ProviderRegistry.forAccount(account), credential, task)
@@ -2135,7 +2160,9 @@ class MailRepository(
         attachmentUris: List<String> = emptyList(),
         existingTaskId: String? = null,
         sourceMessageId: String? = null,
+        replyMessageId: String? = null,
     ): OutboxEntity {
+        val reply = replyMessageId?.let { database.messageDao().byId(it) }
         val now = System.currentTimeMillis()
         val previous = existingTaskId?.let { database.outboxDao().byId(it) }
         val source = sourceMessageId?.let { database.messageDao().byId(it) }
@@ -2155,6 +2182,8 @@ class MailRepository(
                     ?.takeIf(String::isNotBlank)
                 ?: "<$taskId@bondmail.local>",
             state = "DRAFT",
+            inReplyTo = reply?.internetMessageId ?: previous?.inReplyTo,
+            referencesHeader = reply?.let { listOfNotNull(it.referencesHeader, it.internetMessageId).joinToString(" ") } ?: previous?.referencesHeader,
             remoteFolder = previous?.remoteFolder ?: source?.remoteFolder,
             remoteUid = previous?.remoteUid ?: source?.remoteUid?.takeIf { it > 0L },
             sourceMessageId = sourceMessageId ?: previous?.sourceMessageId,

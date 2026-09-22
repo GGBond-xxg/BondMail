@@ -38,7 +38,7 @@ fun ProviderAvatar(
     when (provider.id) {
         "qq", "gmail", "icloud" -> BrandAvatar(
             senderName = provider.label,
-            senderAddress = provider.suffixes.firstOrNull().orEmpty(),
+            senderAddress = provider.avatarAddress(),
             size = size,
             monet = false,
         )
@@ -59,12 +59,16 @@ fun ProviderAvatar(
 
         else -> BrandAvatar(
             senderName = provider.label,
-            senderAddress = provider.suffixes.firstOrNull().orEmpty(),
+            senderAddress = provider.avatarAddress(),
             size = size,
             monet = false,
         )
     }
 }
+
+// Brand and asset lookup extract the domain from a mailbox address, not a bare domain.
+internal fun MailProvider.avatarAddress(): String =
+    suffixes.firstOrNull()?.let { "@$it" }.orEmpty()
 
 @Composable
 private fun NetEaseProviderAvatar(label: String, size: Dp) {

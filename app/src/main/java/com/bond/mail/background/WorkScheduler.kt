@@ -99,11 +99,14 @@ class WorkScheduler(private val context: Context) {
     fun send(taskId: String) {
         manager.cancelUniqueWork("draft_$taskId")
         val request = OneTimeWorkRequestBuilder<MailSendWorker>()
+            .setInitialDelay(10, TimeUnit.SECONDS)
             .setInputData(Data.Builder().putString("task_id", taskId).build())
             .setConstraints(networkConstraints())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        manager.enqueueUniqueWork("send_$taskId", ExistingWorkPolicy.KEEP, request)
+        // Undo keeps the draft's task ID. A subsequent explicit send must replace its old
+        // delayed worker; KEEP could discard the new request while that worker is finishing.
+        manager.enqueueUniqueWork("send_$taskId", ExistingWorkPolicy.REPLACE, request)
     }
 
     fun saveDraft(taskId: String) {

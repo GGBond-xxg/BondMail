@@ -1,5 +1,7 @@
 package com.bond.mail.ui.screens
 
+import androidx.compose.material.icons.outlined.Translate
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -127,6 +129,12 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
+    var toolsOpen by remember { mutableStateOf(false) }
+    if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog { toolsOpen = false }
+    var translationSettingsOpen by remember { mutableStateOf(false) }
+    if (translationSettingsOpen) {
+        com.bond.mail.ui.components.TranslationSettingsDialog { translationSettingsOpen = false }
+    }
     val downloadFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
@@ -335,6 +343,20 @@ fun SettingsScreen(
                         PushAccessState.FAILED -> tr("push_access_failed_short")
                     },
                     onClick = onOpenPushSettings,
+                )
+                SettingsDivider()
+                SettingsActionRow(
+                    icon = Icons.Outlined.Translate,
+                    title = tr("mail_tools"),
+                    subtitle = tr("mail_tools_summary"),
+                    onClick = { toolsOpen = true },
+                )
+                SettingsDivider()
+                SettingsActionRow(
+                    icon = Icons.Outlined.Translate,
+                    title = tr("translation_settings"),
+                    subtitle = tr("translation_settings_summary"),
+                    onClick = { translationSettingsOpen = true },
                 )
                 }
             }

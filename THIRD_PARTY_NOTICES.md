@@ -1,5 +1,13 @@
 # Third-party notices
 
+## theSVG
+
+Selected SVG resources are synchronized from `@thesvg/icons` 3.3.8
+(https://github.com/glincker/thesvg). Tooling/package license: MIT, copied to
+`app/src/main/assets/contact_logos/thesvg/LICENSE.txt`. Individual brand marks remain the
+property of their owners. `thesvg/sources.json` identifies package and local overrides;
+the upstream icon modules also include per-icon license and source metadata.
+
 ## Thunderbird Android / K-9 Mail
 
 BondMail v0.2.14.0 studied and adapted architectural ideas from the Thunderbird Android source tree supplied for comparison, especially the message WebView configuration, local-first message loading, and partial body download flow. BondMail's Compose/Room/JavaMail implementation was written for this project rather than copied as a complete module.

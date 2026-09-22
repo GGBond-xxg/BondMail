@@ -119,6 +119,8 @@ class SmtpClient(context: Context) {
     ): MimeMessage {
         val attachmentUris = parseAttachmentUris(task.attachmentsJson)
         return MimeMessage(session).apply {
+            task.inReplyTo?.replace(Regex("[\\r\\n]+"), " ")?.let { setHeader("In-Reply-To", it) }
+            task.referencesHeader?.replace(Regex("[\\r\\n]+"), " ")?.let { setHeader("References", it) }
             setFrom(InternetAddress(account.visibleEmail, account.displayName))
             if (task.recipients.isNotBlank()) {
                 setRecipients(Message.RecipientType.TO, InternetAddress.parse(task.recipients, false))

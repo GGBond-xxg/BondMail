@@ -313,6 +313,20 @@ fun contactLogoSvgMarkup(
  * in the nested simpleicons directory and use the same names.
  */
 private object ContactLogoStore {
+    @Volatile private var domainAliases: Map<String, String>? = null
+
+    private fun domainAlias(context: Context, domain: String): String? {
+        val aliases = domainAliases ?: synchronized(this) {
+            domainAliases ?: runCatching {
+                context.assets.open("contact_logos/domains.json").bufferedReader().use {
+                    val json = org.json.JSONObject(it.readText())
+                    json.keys().asSequence().associateWith { key -> json.getString(key) }
+                }
+            }.getOrDefault(emptyMap()).also { domainAliases = it }
+        }
+        return aliases.entries.filter { domain == it.key || domain.endsWith(".${it.key}") }
+            .maxByOrNull { it.key.length }?.value
+    }
     private val cache = ConcurrentHashMap<String, ContactLogo>()
     private val missing = ConcurrentHashMap.newKeySet<String>()
     private val viewBoxRegex = Regex(
@@ -333,12 +347,12 @@ private object ContactLogoStore {
             sanitize(domain).takeIf(String::isNotBlank)?.let(::add)
             sanitize(rootDomain).takeIf(String::isNotBlank)?.let(::add)
             sanitize(assetSlug(brandKey)).takeIf(String::isNotBlank)?.let(::add)
+            domainAlias(context, domain)?.let(::add)
         }
-        names.forEach { name ->
-            listOf(
-                "contact_logos/$name.svg",
-                "contact_logos/simpleicons/$name.svg",
-            ).forEach { assetPath ->
+        // Search every local override before falling back to either bundled library.
+        listOf("local/", "", "thesvg/", "simpleicons/").forEach { directory ->
+            names.forEach { name ->
+                val assetPath = "contact_logos/$directory$name.svg"
                 cache[assetPath]?.let { return it }
                 if (assetPath in missing) return@forEach
                 val parsed = runCatching {

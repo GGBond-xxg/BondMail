@@ -129,6 +129,7 @@ fun ComposeScreen(
     initialAttachmentUris: List<String> = emptyList(),
     draftTaskId: String? = null,
     sourceMessageId: String? = null,
+    replyMessageId: String? = null,
     onBack: () -> Unit,
     onQueued: () -> Unit,
 ) {
@@ -255,6 +256,7 @@ fun ComposeScreen(
                 attachmentUris = attachments.map { it.uri.toString() },
                 draftTaskId = draftTaskId,
                 sourceMessageId = sourceMessageId,
+                replyMessageId = replyMessageId,
             ) {
                 scope.launch {
                     queuedClose = true
@@ -664,6 +666,9 @@ fun ComposeScreen(
                                 .onFocusChanged { if (it.isFocused) expandForInput() },
                             singleLine = true,
                         )
+                        com.bond.mail.ui.components.ComposeExtras(accountId) { text ->
+                            body = if (body.isBlank()) text else body + "\n\n" + text
+                        }
                         BondTextField(
                             value = body,
                             onValueChange = { body = it },
@@ -733,6 +738,7 @@ fun ComposeScreen(
                                 attachmentUris = attachments.map { it.uri.toString() },
                                 existingTaskId = draftTaskId,
                                 sourceMessageId = sourceMessageId,
+                replyMessageId = replyMessageId,
                             ) {
                                 showDraftDecision = false
                                 resolvedClose = true

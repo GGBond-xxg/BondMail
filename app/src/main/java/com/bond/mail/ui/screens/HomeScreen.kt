@@ -80,6 +80,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -542,6 +543,8 @@ fun HomeScreen(
                     }
                 }
 
+                item(key = "send-queue") { com.bond.mail.ui.components.SendQueueBanner() }
+
                 if (messages.isEmpty()) {
                     item(key = "empty") {
                         Box(
@@ -923,7 +926,8 @@ fun HomeScreen(
             expanded = showSearch,
             sourceBounds = searchSourceBounds,
             query = query,
-            onQueryChange = { viewModel.searchQuery.value = it },
+            onLoadMore = viewModel::loadMoreSearch,
+            onQueryChange = { viewModel.searchLimit.value = 100; viewModel.searchQuery.value = it },
             results = messages,
             accountById = accountById,
             contactAvatarByEmail = contactAvatarByEmail,
@@ -1467,6 +1471,7 @@ private fun SearchContainerOverlay(
     sourceBounds: Rect?,
     query: String,
     onQueryChange: (String) -> Unit,
+    onLoadMore: () -> Unit,
     results: List<MessageListRow>,
     accountById: Map<String, AccountEntity>,
     contactAvatarByEmail: Map<String, String?>,
@@ -1620,7 +1625,7 @@ private fun SearchContainerOverlay(
                 when {
                     query.isBlank() -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(tr("search"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("search_filter_help"), Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     results.isEmpty() -> {
@@ -1642,6 +1647,8 @@ private fun SearchContainerOverlay(
                                 if (miuixLayout) 12.dp else 13.dp,
                             ),
                         ) {
+                            item { Text(tr("search_filter_help"), style = MaterialTheme.typography.bodySmall) }
+                            item { TextButton(onClick = onLoadMore) { Text(tr("load_more")) } }
                             itemsIndexed(
                                 items = results,
                                 key = { _, message -> message.id },

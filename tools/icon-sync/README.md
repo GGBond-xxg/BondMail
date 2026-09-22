@@ -1,0 +1,32 @@
+# Offline icon sync
+
+From the repository root:
+
+```powershell
+npm.cmd ci --prefix tools/icon-sync --ignore-scripts
+npm.cmd run sync --prefix tools/icon-sync
+```
+
+`package-lock.json` pins theSVG package. The generated assets are committed, so Android builds
+and phone rendering need neither Node.js nor an internet connection. Run sync after updating
+ICON files, the catalog, or the pinned package; review the generated diff before shipping.
+
+`catalog.json` maps asset keys to theSVG slugs, optional local ICON filenames, and exact email
+domains (including their subdomains at runtime). Add a catalog entry to support a new brand
+without editing Kotlin. Domain matching uses a dot boundary, never a substring. A library
+cannot reliably infer a sender's brand from an arbitrary email domain.
+
+Existing ASCII asset names are also matched to ICON filenames ignoring punctuation/case.
+Nonmatching names (including Chinese names) require an explicit `local` entry in the catalog;
+previously bundled overrides remain available. Original ICON files are never changed.
+
+Runtime order: generated local ICON overrides, existing custom assets, theSVG, Simple Icons,
+then the existing initials fallback. Mono variants are preferred; the renderer applies the
+app's tint to default variants as well. Yahoo's background circle is removed explicitly.
+
+Only catalog-selected library icons are packaged, not the entire npm catalog. No favicon or
+network request runs on the phone. `thesvg/sources.json` records the source of each synced asset.
+Package updates are deliberate, not an automatic fetch of latest code on every Gradle build.
+
+Source: https://github.com/glincker/thesvg . Tooling is MIT; individual brand marks retain
+their respective rights. See the bundled LICENSE and THIRD_PARTY_NOTICES.md.

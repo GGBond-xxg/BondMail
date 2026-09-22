@@ -282,6 +282,7 @@ fun MailApp(
     var composeAccountId by rememberSaveable { mutableStateOf("") }
     var composeAttachmentUris by remember { mutableStateOf<List<String>>(emptyList()) }
     var composeDraftTaskId by rememberSaveable { mutableStateOf<String?>(null) }
+    var composeReplyMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var composeSourceMessageId by rememberSaveable { mutableStateOf<String?>(null) }
     var composeVisible by rememberSaveable { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<MessageListRow?>(null) }
@@ -391,10 +392,12 @@ fun MailApp(
         composeAttachmentUris = emptyList()
         composeDraftTaskId = null
         composeSourceMessageId = null
+        composeReplyMessageId = null
         composeVisible = true
     }
 
     fun openDraft(message: MessageListRow) {
+        composeReplyMessageId = null
         appScope.launch {
             val localTask = message.localTaskId?.let { container.repository.draftNow(it) }
             if (localTask != null) {
@@ -456,6 +459,7 @@ fun MailApp(
         composeAttachmentUris = emptyList()
         composeDraftTaskId = null
         composeSourceMessageId = null
+        composeReplyMessageId = message.id
         composeVisible = true
         appScope.launch {
             val loaded = container.repository.ensureBodyLoaded(
@@ -493,6 +497,7 @@ fun MailApp(
         composeAttachmentUris = emptyList()
         composeDraftTaskId = null
         composeSourceMessageId = null
+        composeReplyMessageId = null
         composeVisible = true
         appScope.launch {
             val loaded = container.repository.ensureBodyLoaded(
@@ -647,6 +652,7 @@ fun MailApp(
         composeAttachmentUris = request.attachmentUris
         composeDraftTaskId = null
         composeSourceMessageId = null
+        composeReplyMessageId = null
         composeVisible = true
         onExternalComposeRequestConsumed(request.requestId)
     }
@@ -1090,6 +1096,7 @@ fun MailApp(
                                         composeAttachmentUris = emptyList()
                                         composeDraftTaskId = null
                                         composeSourceMessageId = null
+        composeReplyMessageId = messageId
                                         composeVisible = true
                                     },
                                     onForward = { subject, body ->
@@ -1106,6 +1113,7 @@ fun MailApp(
                                         composeAttachmentUris = emptyList()
                                         composeDraftTaskId = null
                                         composeSourceMessageId = null
+        composeReplyMessageId = null
                                         composeVisible = true
                                     },
                                 )
@@ -1126,10 +1134,13 @@ fun MailApp(
                         initialAttachmentUris = composeAttachmentUris,
                         draftTaskId = composeDraftTaskId,
                         sourceMessageId = composeSourceMessageId,
+                        replyMessageId = composeReplyMessageId,
                         onBack = { composeVisible = false },
                         onQueued = { composeVisible = false },
                     )
                 }
+
+                com.bond.mail.ui.components.SendUndoNotice()
 
                 availableUpdate?.takeIf {
                     (currentRoute == MAIN || currentRoute == ABOUT) &&

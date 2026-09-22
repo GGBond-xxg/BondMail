@@ -63,6 +63,8 @@ data class MessageEntity(
     val remoteFolder: String,
     val remoteUid: Long,
     val internetMessageId: String? = null,
+    val inReplyTo: String? = null,
+    val referencesHeader: String? = null,
     val senderName: String,
     val senderAddress: String,
     val recipients: String = "",
@@ -139,6 +141,9 @@ data class OutboxEntity(
     val remoteFolder: String? = null,
     val remoteUid: Long? = null,
     val sourceMessageId: String? = null,
+    @ColumnInfo(defaultValue = "0") val sendAfter: Long = 0,
+    val inReplyTo: String? = null,
+    val referencesHeader: String? = null,
     val retryCount: Int = 0,
     val lastError: String? = null,
     val createdAt: Long,
@@ -174,4 +179,11 @@ data class SavedContactEntity(
     val avatarText: String? = null,
     val createdAt: Long,
     val updatedAt: Long,
+)
+
+/** Mailbox tools projection deliberately excludes large bodies. */
+data class MailIndexRow(
+    val id: String, val accountId: String, val subject: String, val senderAddress: String,
+    val receivedAt: Long, val attachmentsJson: String, val internetMessageId: String?,
+    val inReplyTo: String?, val referencesHeader: String?,
 )

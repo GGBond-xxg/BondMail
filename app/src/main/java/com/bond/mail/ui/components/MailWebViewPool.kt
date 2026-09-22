@@ -28,6 +28,12 @@ internal object MailWebViewPool {
     // newsletters compete for Chromium tile memory in the same renderer.
     private const val MAX_CACHED_WEB_VIEWS = 2
 
+    fun clearCachedPages() {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        cached.toList().forEach { view -> retainedContentKeys.remove(view); view.stopLoading(); view.destroy() }
+        cached.clear()
+    }
+
     fun acquire(context: Context, preferredContentKey: String? = null): WebView {
         check(Looper.myLooper() == Looper.getMainLooper()) {
             "MailWebViewPool.acquire must run on the main thread"

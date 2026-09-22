@@ -1,8 +1,8 @@
-# BondMail v0.2.38.0 实现状态
+# BondMail v1.5.2实现状态
 
-更新时间：2026-07-27
+更新时间：2026-09-22
 技术栈：Kotlin、Jetpack Compose、Material 3、Room、DataStore、WorkManager、Android JavaMail、Google Identity Services、Microsoft MSAL
-当前数据库版本：Room v8
+当前数据库版本：Room v12
 
 > 本文记录当前源码状态。历史变更请查看 `docs/CHANGELOG_v*.md`。
 
@@ -29,7 +29,7 @@
 | 授权码安全 | 已完成 | Android Keystore AES/GCM；新凭证双协议验证成功后再替换 |
 | 后台同步/通知 | 已完成基础版 | WorkManager、UID 去重；应用内主动/前台刷新静默消费且不重复通知，后台仅在应用不可见时提醒；新 `new_mail_alerts_v3` HIGH 频道使用默认声音、振动和悬浮提示条件；首次历史邮件不批量通知；系统权限仅由用户主动请求 |
 | 多语言 | 已完成基础版 | `zh`、`zh-CHT`、`en` Key 与格式占位符一致；通知权限与权限设置文案已同步 |
-| Room 迁移 | 已完成 | 1→2、2→3、3→4、4→5、5→6、6→7、7→8；v7 新增发送状态、稳定 Message-ID 与远端草稿定位字段，v8 新增附件元数据 JSON，全部使用无损 `ALTER TABLE` |
+| Room 迁移 | 已完成 | 连续注册 1→12 迁移；v12 新增回复标识和发送等待截止时间，保留现有数据 |
 | 性能构建 | 已配置 | 非调试、R8、资源压缩、Debug 签名；已忽略 Nimbus JOSE 未使用的可选 Tink/Bouncy Castle 算法引用 |
 
 ## 服务商登录状态
@@ -60,4 +60,10 @@
 .\gradlew.bat clean compileDebugKotlin assembleDebug assemblePerformance --no-daemon
 ```
 
-当前交付环境没有 Android SDK，也无法下载完整 Gradle/Android/Maven 依赖，因此发行包执行 Kotlin PSI、核心源码桩类型检查、JSON/XML、文案引用、Room 迁移静态检查、补丁应用、ZIP 比对和 SHA256 校验。Compose 类型解析、Room KSP、R8、OAuth 服务商页面、真实 XOAUTH2 连接与 WebView 真机排版，必须以本机 Gradle 和联网设备结果为准。
+当前环境具备 Android SDK、离线 Gradle 依赖与 adb 真机连接。新增功能使用本地单元测试、Room/加密缓存仪器测试与 UI 冒烟测试验证；线上翻译、OAuth 和真实收发仍需有效用户凭证回归。
+
+## 本次效率功能
+
+见 [PRODUCTIVITY.md](PRODUCTIVITY.md) 与 [TRANSLATION.md](TRANSLATION.md)。图标采用离线打包、本地优先、theSVG 目录补充及域名别名映射；运行时不依赖国外图标 CDN。
+
+新增数据库字段、搜索构建、会话分组、译文缓存、引用折叠、提醒任务与设置 UI 分别放在独立文件中，避免继续集中到 MailRepository / MailWebViewCache。现有核心同步与布局算法仍保留，未进行大规模重写。

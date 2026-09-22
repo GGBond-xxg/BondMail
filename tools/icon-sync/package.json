@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": { "sync": "node sync.mjs" },
+  "dependencies": {
+    "@thesvg/icons": "3.3.8"
+  }
+}

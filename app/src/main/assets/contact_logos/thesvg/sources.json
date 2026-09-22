@@ -1,0 +1,726 @@
+[
+  {
+    "key": "abbvie",
+    "source": "ICON/Abbvie.svg"
+  },
+  {
+    "key": "adobe",
+    "source": "ICON/Adobe.svg"
+  },
+  {
+    "key": "agoda",
+    "source": "ICON/Agoda.svg"
+  },
+  {
+    "key": "airbnb",
+    "source": "ICON/Airbnb.svg"
+  },
+  {
+    "key": "airchina",
+    "source": "ICON/AirChina.svg"
+  },
+  {
+    "key": "airplane",
+    "source": "ICON/Airplane.svg"
+  },
+  {
+    "key": "alibaba",
+    "source": "ICON/Alibaba.svg"
+  },
+  {
+    "key": "alibabacloud",
+    "source": "ICON/AlibabaCloud.svg"
+  },
+  {
+    "key": "alipay",
+    "source": "ICON/Alipay.svg"
+  },
+  {
+    "key": "altria",
+    "source": "ICON/Altria.svg"
+  },
+  {
+    "key": "amazon",
+    "source": "ICON/Amazon.svg"
+  },
+  {
+    "key": "amd",
+    "source": "ICON/AMD.svg"
+  },
+  {
+    "key": "antgroup",
+    "source": "ICON/Antgroup.svg"
+  },
+  {
+    "key": "aol",
+    "source": "ICON/Aol.svg"
+  },
+  {
+    "key": "arc",
+    "source": "ICON/Arc.svg"
+  },
+  {
+    "key": "asml",
+    "source": "ICON/ASML.svg"
+  },
+  {
+    "key": "asus",
+    "source": "ICON/ASUS.svg"
+  },
+  {
+    "key": "audi",
+    "source": "ICON/AUDI.svg"
+  },
+  {
+    "key": "avalanche",
+    "source": "ICON/Avalanche.svg"
+  },
+  {
+    "key": "baidu",
+    "source": "ICON/Baidu.svg"
+  },
+  {
+    "key": "bank",
+    "source": "ICON/bank.svg"
+  },
+  {
+    "key": "bento",
+    "source": "ICON/Bento.svg"
+  },
+  {
+    "key": "bilibili",
+    "source": "ICON/bilibili.svg"
+  },
+  {
+    "key": "bitget",
+    "source": "ICON/Bitget.svg"
+  },
+  {
+    "key": "blackberry",
+    "source": "ICON/Blackberry.svg"
+  },
+  {
+    "key": "bmw",
+    "source": "ICON/BMW.svg"
+  },
+  {
+    "key": "bocbank",
+    "source": "ICON/BoC_Bank.svg"
+  },
+  {
+    "key": "bolt",
+    "source": "ICON/Bolt.svg"
+  },
+  {
+    "key": "booking",
+    "source": "ICON/Booking.svg"
+  },
+  {
+    "key": "bosszhipin",
+    "source": "ICON/BOSS_Zhipin.svg"
+  },
+  {
+    "key": "brave",
+    "source": "ICON/Brave.svg"
+  },
+  {
+    "key": "broadcom",
+    "source": "ICON/Broadcom.svg"
+  },
+  {
+    "key": "btn",
+    "source": "ICON/BTN.svg"
+  },
+  {
+    "key": "burton",
+    "source": "ICON/Burton.svg"
+  },
+  {
+    "key": "bybit",
+    "source": "ICON/ByBit.svg"
+  },
+  {
+    "key": "cabify",
+    "source": "ICON/Cabify.svg"
+  },
+  {
+    "key": "cathay",
+    "source": "ICON/Cathay.svg"
+  },
+  {
+    "key": "charlesschwab",
+    "source": "ICON/CharlesSchwab.svg"
+  },
+  {
+    "key": "chinapost",
+    "source": "ICON/China_Post.svg"
+  },
+  {
+    "key": "citibank",
+    "source": "ICON/Citibank.svg"
+  },
+  {
+    "key": "citymapper",
+    "source": "ICON/Citymapper.svg"
+  },
+  {
+    "key": "claude",
+    "source": "ICON/Claude.svg"
+  },
+  {
+    "key": "cloudflare",
+    "source": "ICON/Cloudflare.svg"
+  },
+  {
+    "key": "cmake",
+    "source": "ICON/Cmake.svg"
+  },
+  {
+    "key": "cnes",
+    "source": "ICON/Cnes.svg"
+  },
+  {
+    "key": "cnet",
+    "source": "ICON/Cnet.svg"
+  },
+  {
+    "key": "cnn",
+    "source": "ICON/CNN.svg"
+  },
+  {
+    "key": "cocacola",
+    "source": "ICON/Coca-Cola.svg"
+  },
+  {
+    "key": "codex",
+    "source": "ICON/CodeX.svg"
+  },
+  {
+    "key": "coinbase",
+    "source": "ICON/Coinbase.svg"
+  },
+  {
+    "key": "coinmarketcap",
+    "source": "ICON/CoinMarketCap.svg"
+  },
+  {
+    "key": "continente",
+    "source": "ICON/Continente.svg"
+  },
+  {
+    "key": "coolapk",
+    "source": "ICON/CoolApk.svg"
+  },
+  {
+    "key": "costco",
+    "source": "ICON/Costco.svg"
+  },
+  {
+    "key": "dazhongdianping",
+    "source": "ICON/DazhongDianping.svg"
+  },
+  {
+    "key": "deepai",
+    "source": "ICON/deepai.svg"
+  },
+  {
+    "key": "deepseek",
+    "source": "ICON/Deepseek.svg"
+  },
+  {
+    "key": "didi",
+    "source": "ICON/DiDi.svg"
+  },
+  {
+    "key": "discord",
+    "source": "ICON/Discord.svg"
+  },
+  {
+    "key": "disney",
+    "source": "ICON/Disney.svg"
+  },
+  {
+    "key": "docker",
+    "source": "ICON/Docker.svg"
+  },
+  {
+    "key": "dolby",
+    "source": "ICON/Dolby.svg"
+  },
+  {
+    "key": "douban",
+    "source": "ICON/Douban.svg"
+  },
+  {
+    "key": "dowjones",
+    "source": "ICON/Dow_Jones.svg"
+  },
+  {
+    "key": "drupal",
+    "source": "ICON/Drupal.svg"
+  },
+  {
+    "key": "duolingo",
+    "source": "ICON/Duolingo.svg"
+  },
+  {
+    "key": "eastwestbank",
+    "source": "ICON/EastWestBank.svg"
+  },
+  {
+    "key": "elililly",
+    "source": "ICON/EliLilly.svg"
+  },
+  {
+    "key": "exchange",
+    "source": "ICON/Exchange.svg"
+  },
+  {
+    "key": "expedia",
+    "source": "ICON/Expedia.svg"
+  },
+  {
+    "key": "ferrari",
+    "source": "ICON/Ferrari.svg"
+  },
+  {
+    "key": "firstrade",
+    "source": "ICON/Firstrade.svg"
+  },
+  {
+    "key": "ford",
+    "source": "ICON/Ford.svg"
+  },
+  {
+    "key": "gamebanana",
+    "source": "ICON/Gamebanana.svg"
+  },
+  {
+    "key": "gemini",
+    "source": "ICON/Gemini.svg"
+  },
+  {
+    "key": "giffgaff",
+    "source": "ICON/giffgaff.svg"
+  },
+  {
+    "key": "git",
+    "source": "ICON/Git.svg"
+  },
+  {
+    "key": "gitee",
+    "source": "ICON/Gitee.svg"
+  },
+  {
+    "key": "gitlab",
+    "source": "ICON/Gitlab.svg"
+  },
+  {
+    "key": "gmail",
+    "source": "ICON/Gmail.svg"
+  },
+  {
+    "key": "gmx",
+    "source": "ICON/Gmx.svg"
+  },
+  {
+    "key": "google",
+    "source": "ICON/Google.svg"
+  },
+  {
+    "key": "grab",
+    "source": "ICON/Grab.svg"
+  },
+  {
+    "key": "grok",
+    "source": "ICON/Grok.svg"
+  },
+  {
+    "key": "hey",
+    "source": "@thesvg/icons/hey (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://hey.com"
+  },
+  {
+    "key": "holafly",
+    "source": "ICON/Holafly.svg"
+  },
+  {
+    "key": "honda",
+    "source": "ICON/Honda.svg"
+  },
+  {
+    "key": "hostelworld",
+    "source": "ICON/Hostelworld.svg"
+  },
+  {
+    "key": "hotels.com",
+    "source": "ICON/Hotels.com.svg"
+  },
+  {
+    "key": "huatai",
+    "source": "ICON/Huatai.svg"
+  },
+  {
+    "key": "huawei",
+    "source": "ICON/Huawei.svg"
+  },
+  {
+    "key": "huobi",
+    "source": "ICON/HuoBi.svg"
+  },
+  {
+    "key": "ibkr",
+    "source": "ICON/IBKR.svg"
+  },
+  {
+    "key": "icloud",
+    "source": "@thesvg/icons/icloud (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.icloud.com"
+  },
+  {
+    "key": "ifast",
+    "source": "ICON/iFAST.svg"
+  },
+  {
+    "key": "instagram",
+    "source": "ICON/Instagram.svg"
+  },
+  {
+    "key": "intel",
+    "source": "ICON/Intel.svg"
+  },
+  {
+    "key": "johnsonandjohnson",
+    "source": "ICON/JohnsonAndJohnson.svg"
+  },
+  {
+    "key": "kraken",
+    "source": "ICON/Kraken.svg"
+  },
+  {
+    "key": "lenovo",
+    "source": "ICON/Lenovo.svg"
+  },
+  {
+    "key": "lexus",
+    "source": "ICON/Lexus.svg"
+  },
+  {
+    "key": "linkedin",
+    "source": "ICON/Linkedin.svg"
+  },
+  {
+    "key": "logitech",
+    "source": "ICON/Logitech.svg"
+  },
+  {
+    "key": "longbridge",
+    "source": "ICON/Longbridge.svg"
+  },
+  {
+    "key": "lyft",
+    "source": "ICON/Lyft.svg"
+  },
+  {
+    "key": "maildotcom",
+    "source": "@thesvg/icons/maildotcom (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.mail.com"
+  },
+  {
+    "key": "maildotru",
+    "source": "@thesvg/icons/maildotru (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://my.mail.ru"
+  },
+  {
+    "key": "mastercard",
+    "source": "ICON/Mastercard.svg"
+  },
+  {
+    "key": "mazda",
+    "source": "ICON/Mazda.svg"
+  },
+  {
+    "key": "meituan",
+    "source": "ICON/Meituan.svg"
+  },
+  {
+    "key": "mercedesbenz",
+    "source": "ICON/Mercedes-Benz.svg"
+  },
+  {
+    "key": "messenger",
+    "source": "ICON/Messenger.svg"
+  },
+  {
+    "key": "mexc",
+    "source": "ICON/MEXC.svg"
+  },
+  {
+    "key": "microsoftcopilot",
+    "source": "ICON/MicrosoftCopilot.svg"
+  },
+  {
+    "key": "microsoftoutlook",
+    "source": "@thesvg/icons/microsoft-outlook (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.microsoft.com/microsoft-365/outlook/email-and-calendar-software-application"
+  },
+  {
+    "key": "moovit",
+    "source": "ICON/Moovit.svg"
+  },
+  {
+    "key": "motorola",
+    "source": "ICON/Motorola.svg"
+  },
+  {
+    "key": "n26",
+    "source": "ICON/N26.svg"
+  },
+  {
+    "key": "nasdaq",
+    "source": "ICON/Nasdaq.svg"
+  },
+  {
+    "key": "netflix",
+    "source": "ICON/Netflix.svg"
+  },
+  {
+    "key": "nissan",
+    "source": "ICON/Nissan.svg"
+  },
+  {
+    "key": "nokia",
+    "source": "ICON/Nokia.svg"
+  },
+  {
+    "key": "nvidia",
+    "source": "ICON/Nvidia.svg"
+  },
+  {
+    "key": "okx",
+    "source": "ICON/OKX.svg"
+  },
+  {
+    "key": "omio",
+    "source": "ICON/Omio.svg"
+  },
+  {
+    "key": "oppo",
+    "source": "ICON/OPPO.svg"
+  },
+  {
+    "key": "oracle",
+    "source": "ICON/Oracle.svg"
+  },
+  {
+    "key": "osl",
+    "source": "ICON/OSL.svg"
+  },
+  {
+    "key": "patreon",
+    "source": "ICON/Patreon.svg"
+  },
+  {
+    "key": "paypal",
+    "source": "ICON/PayPal.svg"
+  },
+  {
+    "key": "pepsi",
+    "source": "ICON/Pepsi.svg"
+  },
+  {
+    "key": "philips",
+    "source": "ICON/Philips.svg"
+  },
+  {
+    "key": "pixiv",
+    "source": "ICON/Pixiv.svg"
+  },
+  {
+    "key": "plasmaone",
+    "source": "ICON/Plasma_one.svg"
+  },
+  {
+    "key": "porsche",
+    "source": "ICON/Porsche.svg"
+  },
+  {
+    "key": "procterandgamble",
+    "source": "ICON/ProcterAndGamble.svg"
+  },
+  {
+    "key": "protonmail",
+    "source": "@thesvg/icons/proton-mail (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://mail.proton.me"
+  },
+  {
+    "key": "qq",
+    "source": "ICON/QQ.svg"
+  },
+  {
+    "key": "quickq",
+    "source": "ICON/QuickQ.svg"
+  },
+  {
+    "key": "redteago",
+    "source": "ICON/RedteaGO.svg"
+  },
+  {
+    "key": "rome2rio",
+    "source": "ICON/Rome2rio.svg"
+  },
+  {
+    "key": "safepal",
+    "source": "ICON/SafePal.svg"
+  },
+  {
+    "key": "samsung",
+    "source": "ICON/Samsung.svg"
+  },
+  {
+    "key": "sandisk",
+    "source": "ICON/SanDisk.svg"
+  },
+  {
+    "key": "sfexpress",
+    "source": "ICON/SF_Express.svg"
+  },
+  {
+    "key": "simcard",
+    "source": "ICON/SimCard.svg"
+  },
+  {
+    "key": "skhynix",
+    "source": "ICON/Sk-hynix.svg"
+  },
+  {
+    "key": "spacex",
+    "source": "ICON/Spacex.svg"
+  },
+  {
+    "key": "spglobal",
+    "source": "ICON/S&P_Global.svg"
+  },
+  {
+    "key": "spotify",
+    "source": "ICON/Spotify.svg"
+  },
+  {
+    "key": "tecno",
+    "source": "ICON/Tecno.svg"
+  },
+  {
+    "key": "telegram",
+    "source": "ICON/Telegram.svg"
+  },
+  {
+    "key": "tesla",
+    "source": "ICON/Tesla.svg"
+  },
+  {
+    "key": "tiktok",
+    "source": "ICON/Tiktok.svg"
+  },
+  {
+    "key": "toyota",
+    "source": "ICON/Toyota.svg"
+  },
+  {
+    "key": "trae",
+    "source": "ICON/TRAE.svg"
+  },
+  {
+    "key": "trainline",
+    "source": "ICON/Trainline.svg"
+  },
+  {
+    "key": "tsmc",
+    "source": "ICON/Tsmc.svg"
+  },
+  {
+    "key": "tuta",
+    "source": "@thesvg/icons/tuta (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://github.com/tutao/tutanota/blob/65d087b1bc2cb7aee46e7a46431303483d2da986/resources/favicon/logo-favicon.svg"
+  },
+  {
+    "key": "uber",
+    "source": "ICON/Uber.svg"
+  },
+  {
+    "key": "visa",
+    "source": "ICON/Visa.svg"
+  },
+  {
+    "key": "vivo",
+    "source": "ICON/VIVO.svg"
+  },
+  {
+    "key": "vk",
+    "source": "ICON/VK.svg"
+  },
+  {
+    "key": "vodafone",
+    "source": "ICON/Vodafone.svg"
+  },
+  {
+    "key": "volkswagen",
+    "source": "ICON/Volkswagen(大众).svg"
+  },
+  {
+    "key": "walmart",
+    "source": "ICON/Walmart.svg"
+  },
+  {
+    "key": "weather",
+    "source": "ICON/Weather.svg"
+  },
+  {
+    "key": "webdotde",
+    "source": "@thesvg/icons/webdotde (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://web.de"
+  },
+  {
+    "key": "whatsapp",
+    "source": "ICON/Whatsapp.svg"
+  },
+  {
+    "key": "xiaomimimo",
+    "source": "ICON/XiaomiMimo.svg"
+  },
+  {
+    "key": "yahoo",
+    "source": "ICON/Yahoo.svg"
+  },
+  {
+    "key": "yandex",
+    "source": "@thesvg/icons/yandex (mono)",
+    "license": "MIT",
+    "upstreamUrl": "https://ai.yandex.com"
+  },
+  {
+    "key": "youtube",
+    "source": "ICON/Youtube.svg"
+  },
+  {
+    "key": "zabank",
+    "source": "ICON/ZA_Bank.svg"
+  },
+  {
+    "key": "zeiss",
+    "source": "ICON/Zeiss.svg"
+  },
+  {
+    "key": "zohomail",
+    "source": "@thesvg/icons/zohomail (default)",
+    "license": "Trademark of Zoho Corporation. Used for identification under nominative fair use.",
+    "upstreamUrl": "https://www.zoho.com/mail/"
+  }
+]

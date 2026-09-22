@@ -1,7 +1,15 @@
 Contact logo SVG overrides
 ==========================
 
-Place monochrome SVG files in this directory. The avatar resolver checks:
+QQ, Gmail, and Yahoo overrides come from ICON/QQ.svg, ICON/Gmail.svg, and ICON/Yahoo.svg.
+Yahoo's background circle is removed so the monochrome renderer preserves the white mark
+against the avatar's purple background. The original files in ICON are unchanged.
+
+Run the offline synchronization tool documented in tools/icon-sync/README.md to import
+local ICON overrides and selected theSVG package resources. domains.json supplies additional
+domain-to-asset mappings. Runtime source priority is local/, this directory, thesvg/, simpleicons/.
+
+Place monochrome SVG files in this directory. Within each source the avatar resolver checks:
 
 1. Full sender domain, for example: email-service.bybit.com.svg
 2. Root domain, for example: bybit.com.svg

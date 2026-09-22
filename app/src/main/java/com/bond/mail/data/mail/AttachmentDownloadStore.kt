@@ -11,6 +11,21 @@ import java.security.MessageDigest
 internal class AttachmentDownloadStore(private val context: Context) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
+    /** Only count files recorded by BondMail; never traverse or delete the user's download folder. */
+    suspend fun downloadedStats(): Pair<Int, Long> = withContext(Dispatchers.IO) {
+        var count = 0
+        var bytes = 0L
+        preferences.all.values.filterIsInstance<String>().distinct().forEach { raw ->
+            runCatching {
+                context.contentResolver.openFileDescriptor(Uri.parse(raw), "r")?.use { descriptor ->
+                    count++
+                    bytes += descriptor.statSize.coerceAtLeast(0)
+                }
+            }
+        }
+        count to bytes
+    }
+
     fun downloadedUri(messageId: String, index: Int, info: MailAttachmentInfo): Uri? {
         val raw = preferences.getString(key(messageId, index, info), null) ?: return null
         val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return null

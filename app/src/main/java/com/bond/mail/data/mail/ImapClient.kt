@@ -199,6 +199,7 @@ class ImapClient(context: Context) {
                 if (remoteMessagesUnsorted.isNotEmpty()) {
                     val profile = FetchProfile().apply {
                         add(FetchProfile.Item.ENVELOPE)
+                        add("In-Reply-To"); add("References")
                         add(FetchProfile.Item.FLAGS)
                         add(UIDFolder.FetchProfileItem.UID)
                         add("Message-ID")
@@ -227,6 +228,7 @@ class ImapClient(context: Context) {
                         remoteFolder = folder.fullName,
                         remoteUid = uid,
                         internetMessageId = parsed.internetMessageId,
+                        inReplyTo = parsed.inReplyTo, referencesHeader = parsed.referencesHeader,
                         senderName = parsed.senderName,
                         senderAddress = parsed.senderAddress,
                         recipients = parsed.recipients,
@@ -390,6 +392,7 @@ class ImapClient(context: Context) {
                 if (remoteMessages.isNotEmpty()) {
                     val profile = FetchProfile().apply {
                         add(FetchProfile.Item.ENVELOPE)
+                        add("In-Reply-To"); add("References")
                         add(FetchProfile.Item.FLAGS)
                         add(UIDFolder.FetchProfileItem.UID)
                         add("Message-ID")
@@ -408,6 +411,7 @@ class ImapClient(context: Context) {
                         remoteFolder = folder.fullName,
                         remoteUid = uid,
                         internetMessageId = parsed.internetMessageId,
+                        inReplyTo = parsed.inReplyTo, referencesHeader = parsed.referencesHeader,
                         senderName = parsed.senderName.ifBlank { account.displayName },
                         senderAddress = parsed.senderAddress.ifBlank { account.email },
                         recipients = parsed.recipients,
@@ -710,6 +714,7 @@ class ImapClient(context: Context) {
                     ?: error("Message no longer exists on the server")
                 val profile = FetchProfile().apply {
                     add(FetchProfile.Item.ENVELOPE)
+                        add("In-Reply-To"); add("References")
                     add(FetchProfile.Item.FLAGS)
                     add(FetchProfile.Item.CONTENT_INFO)
                     add(FetchProfile.Item.SIZE)
@@ -754,6 +759,7 @@ class ImapClient(context: Context) {
 
                 val result = local.copy(
                     internetMessageId = parsed.internetMessageId,
+                        inReplyTo = parsed.inReplyTo, referencesHeader = parsed.referencesHeader,
                     senderName = parsed.senderName,
                     senderAddress = parsed.senderAddress,
                     recipients = parsed.recipients,
@@ -823,6 +829,7 @@ class ImapClient(context: Context) {
 
                     val metadataProfile = FetchProfile().apply {
                         add(FetchProfile.Item.ENVELOPE)
+                        add("In-Reply-To"); add("References")
                         add(FetchProfile.Item.FLAGS)
                         add(FetchProfile.Item.CONTENT_INFO)
                         add(FetchProfile.Item.SIZE)
@@ -858,6 +865,7 @@ class ImapClient(context: Context) {
                             }
                             local.copy(
                                 internetMessageId = parsed.internetMessageId,
+                        inReplyTo = parsed.inReplyTo, referencesHeader = parsed.referencesHeader,
                                 senderName = parsed.senderName,
                                 senderAddress = parsed.senderAddress,
                                 recipients = parsed.recipients,

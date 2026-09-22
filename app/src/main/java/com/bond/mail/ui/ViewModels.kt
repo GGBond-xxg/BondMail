@@ -61,6 +61,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     val selectedAccount = MutableStateFlow<String?>(null)
     val folder = MutableStateFlow("INBOX")
     val searchQuery = MutableStateFlow("")
+    val searchLimit = MutableStateFlow(100)
+    fun loadMoreSearch() { searchLimit.value = (searchLimit.value + 100).coerceAtMost(10_000) }
     val busy = MutableStateFlow(false)
     val error = MutableStateFlow<UiFailure?>(null)
     val foregroundSession = MutableStateFlow(0L)
@@ -98,8 +100,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            combine(selectedAccount, folder, searchQuery) { account, f, q -> Triple(account, f, q) }
-                .collectLatest { (account, f, q) ->
+            combine(selectedAccount, folder, searchQuery, searchLimit) { account, f, q, limit -> Pair(Triple(account, f, q), limit) }
+                .collectLatest { (selection, limit) ->
+                    val (account, f, q) = selection
                     if (q.isBlank()) {
                         val snapshotKey = FolderSnapshotKey(account, f)
                         val staged = stagedMailboxSelection
@@ -131,7 +134,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
                         }
                     } else {
                         contentReady.value = true
-                        container.repository.search(account, q).collect { results ->
+                        container.repository.search(account, q, limit).collect { results ->
                             _messages.value = applyOptimisticRead(results)
                         }
                     }
@@ -991,6 +994,7 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
         attachmentUris: List<String>,
         draftTaskId: String? = null,
         sourceMessageId: String? = null,
+        replyMessageId: String? = null,
         onQueued: () -> Unit,
     ) = viewModelScope.launch {
         if (sending.value) return@launch
@@ -1010,6 +1014,7 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
                 attachmentUris = attachmentUris,
                 draftTaskId = draftTaskId,
                 sourceMessageId = sourceMessageId,
+                replyMessageId = replyMessageId,
             )
             container.scheduler.send(task.id)
         }.onSuccess { onQueued() }
@@ -1027,6 +1032,7 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
         attachmentUris: List<String>,
         existingTaskId: String?,
         sourceMessageId: String?,
+        replyMessageId: String? = null,
         onSaved: () -> Unit,
     ) = viewModelScope.launch {
         if (sending.value || accountId.isBlank()) return@launch
@@ -1046,6 +1052,7 @@ class ComposeViewModel(private val container: AppContainer) : ViewModel() {
                 attachmentUris = attachmentUris,
                 existingTaskId = existingTaskId,
                 sourceMessageId = sourceMessageId,
+                replyMessageId = replyMessageId,
             )
             container.scheduler.saveDraft(task.id)
         }.onSuccess { onSaved() }

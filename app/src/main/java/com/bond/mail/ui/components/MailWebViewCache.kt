@@ -54,6 +54,7 @@ private data class DesktopCanvasCandidate(
 /** Caches the sanitized local HTML document. Message bodies themselves are persisted in Room. */
 internal object MailWebViewCache {
     private val documents = LruCache<String, PreparedMailDocument>(64)
+    @Synchronized fun clear() { documents.evictAll() }
 
     /**
      * Returns a prepared document already present in the in-memory LRU without dispatcher hops.
@@ -189,6 +190,7 @@ internal object MailWebViewCache {
         documents.get(cacheKey)?.let { return it }
 
         val document = Jsoup.parse(html)
+        collapseQuotedHistory(document)
         // Record responsive intent before replacing the sender's viewport declaration. Many
         // transactional messages keep a 600 px fallback table for Outlook but include real phone
         // media rules for modern clients. Those rules should win: scaling the fallback canvas again

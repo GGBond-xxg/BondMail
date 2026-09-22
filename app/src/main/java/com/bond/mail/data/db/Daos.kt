@@ -78,6 +78,18 @@ interface FolderDao {
 
 @Dao
 interface MessageDao {
+    @androidx.room.RawQuery(observedEntities = [MessageEntity::class])
+    fun searchAdvanced(query: androidx.sqlite.db.SupportSQLiteQuery): Flow<List<MessageListRow>>
+
+    @Query("SELECT id, accountId, subject, senderAddress, receivedAt, attachmentsJson, internetMessageId, inReplyTo, referencesHeader FROM messages WHERE (:accountId IS NULL OR accountId = :accountId) ORDER BY receivedAt DESC LIMIT :limit")
+    fun observeIndex(accountId: String?, limit: Int): Flow<List<MailIndexRow>>
+
+    @Query("SELECT COALESCE(SUM(LENGTH(CAST(bodyText AS BLOB)) + LENGTH(CAST(COALESCE(bodyHtml, '') AS BLOB))), 0) FROM messages WHERE deliveryState = 'REMOTE' AND folderType != 'DRAFTS'")
+    suspend fun bodyBytes(): Long
+
+    @Query("UPDATE messages SET bodyText = '', bodyHtml = NULL, bodyLoaded = 0, bodyParserVersion = 0, htmlContentHash = NULL WHERE deliveryState = 'REMOTE' AND folderType != 'DRAFTS'")
+    suspend fun clearBodyCache()
+
     @Query("""
         SELECT id, accountId, folderType, senderName, senderAddress, recipients, subject, preview, receivedAt, unread, starred, deliveryState, NULL AS localTaskId
         FROM messages
@@ -307,6 +319,14 @@ interface SavedContactDao {
 
 @Dao
 interface OutboxDao {
+    @Query("UPDATE outbox SET state = 'DRAFT', sendAfter = 0, updatedAt = :now WHERE id = :id AND state = 'QUEUED' AND sendAfter > :now")
+    suspend fun undoQueued(id: String, now: Long): Int
+
+    @Query("UPDATE outbox SET state = 'SENDING', updatedAt = :now WHERE id = :id AND state IN ('QUEUED','FAILED') AND sendAfter <= :now")
+    suspend fun claimSend(id: String, now: Long): Int
+
+    @Query("SELECT * FROM outbox WHERE state IN ('QUEUED','SENDING','FAILED','UNKNOWN') ORDER BY createdAt DESC")
+    fun observeSending(): Flow<List<OutboxEntity>>
     @Upsert
     suspend fun upsert(task: OutboxEntity)
 

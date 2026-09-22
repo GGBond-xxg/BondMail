@@ -29,3 +29,4 @@ replay_pid*.log
 /.launch-wrangler-login.mjs
 /cloudflare-worker/.wrangler/
 /cloudflare-worker/node_modules/
+/tools/icon-sync/node_modules/
