@@ -345,8 +345,8 @@
   "translation_region": "Azure region (if required, e.g. eastasia)",
   "translation_remove_key": "Remove this provider’s key",
   "translation_save_failed": "Unable to save credentials. Please try again.",
-  "translate_body": "Translate body",
-  "translation_send_note": "Translate sends body text only to the selected provider. Images and attachments are not translated. Original mail is unchanged.",
+  "translate_body": "Translate email",
+  "translation_send_note": "Translate sends the subject and body text to the selected provider. Images and attachments are not translated. Original mail is unchanged.",
   "translation_not_configured": "Configure and save this provider’s key first.",
   "translation_working": "Translating…",
   "translation_original": "View original",
@@ -398,7 +398,7 @@
   "send_undo": "Undo send",
   "send_undone": "Undone. Saved in Drafts (tap to dismiss).",
   "send_pending": "Pending / sending",
-  "translation_inline": "Show translation in message",
+  "translation_inline": "Show in message",
   "translation_test": "Test connection",
   "translation_test_note": "Sends the fixed sample Hello. and may use a small amount of translation quota.",
   "translation_test_ok": "Connected. Translation service is available.",
@@ -410,5 +410,8 @@
   "translation_bilingual": "Show original below translation",
   "translation_links": "Links from original message",
   "send_unknown": "Send interrupted. Check the server Sent folder before resending.",
-  "translation_cache": "Translation cache"
+  "translation_cache": "Translation cache",
+  "translation_tab_result": "Translated",
+  "translation_tab_compare": "Compare",
+  "translation_tab_original": "Original"
 }

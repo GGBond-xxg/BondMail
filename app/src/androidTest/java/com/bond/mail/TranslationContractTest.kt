@@ -19,6 +19,48 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class TranslationContractTest {
+    @Test fun longTranslationKeepsActionsVisibleAndTranslatesSubject() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val device = UiDevice.getInstance(instrumentation)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            // MainActivity asynchronously installs its normal content during startup.
+            instrumentation.waitForIdleSync()
+            Thread.sleep(2000)
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    MaterialTheme {
+                        JsonStringsProvider("zh") {
+                            val density = androidx.compose.ui.platform.LocalDensity.current
+                            androidx.compose.runtime.CompositionLocalProvider(
+                                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, 1.5f)
+                            ) {
+                                BodyTranslationDialog(null, "Long original body.\n".repeat(100), subject = "Interest update",
+                                    onResult = { _, _, _ -> },
+                                    translateText = { text, _, _ ->
+                                        if (text == "Interest update") "利率更新" else "这是长邮件译文。\n".repeat(100)
+                                    }) {}
+                            }
+                        }
+                    }
+                }
+            }
+            assertTrue(device.wait(Until.hasObject(By.text("简体中文 ▾")), 5000))
+            val language = device.findObject(By.text("简体中文 ▾")).visibleBounds
+            val provider = device.findObjects(By.textEndsWith(" ▾")).first { it.text != "简体中文 ▾" }.visibleBounds
+            assertTrue("Selectors must share a row", language.top < provider.bottom && provider.top < language.bottom)
+            device.findObjects(By.text("翻译邮件")).last().click()
+            assertTrue(device.wait(Until.hasObject(By.text("利率更新")), 5000))
+            listOf("译文", "对照", "原文", "在邮件中查看译文", "关闭").forEach {
+                val bounds = device.findObject(By.text(it)).visibleBounds
+                assertTrue("Visible action: $it", bounds.height() > 0 && bounds.top >= 0 && bounds.bottom <= device.displayHeight)
+            }
+            assertFalse(device.hasObject(By.clazz("android.widget.CheckBox")))
+            device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "translation-fixed-preview.png"))
+            device.findObject(By.text("原文")).click()
+            assertTrue(device.wait(Until.hasObject(By.text("Interest update")), 3000))
+        }
+    }
+
     @Test fun translationDialogShowsProviderAndLanguageWithoutSendingText() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val device = UiDevice.getInstance(instrumentation)

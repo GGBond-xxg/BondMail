@@ -219,3 +219,14 @@ internal fun parseTranslationResponse(provider: TranslationProvider, response: S
     }
     return translated?.takeIf { it.isNotBlank() } ?: throw TranslationFailure("translation_failed")
 }
+
+internal data class TranslatedMailText(val subject: String, val body: String)
+
+/** Keep subject/body separate; no delimiter can collide with actual mail content. */
+internal suspend fun translateMailText(subject: String, body: String,
+    translate: suspend (String) -> String): TranslatedMailText {
+    if (subject.isBlank() && body.isBlank()) throw TranslationFailure("translation_empty")
+    val translatedSubject = if (subject.isBlank()) subject else translate(subject)
+    val translatedBody = if (body.isBlank()) body else translate(body)
+    return TranslatedMailText(translatedSubject, translatedBody)
+}

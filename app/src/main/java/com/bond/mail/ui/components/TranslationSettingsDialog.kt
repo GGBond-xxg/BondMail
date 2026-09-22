@@ -88,10 +88,14 @@ fun TranslationSettingsDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-internal fun TranslationProviderPicker(provider: TranslationProvider, onSelect: (TranslationProvider) -> Unit) {
+internal fun TranslationProviderPicker(provider: TranslationProvider, modifier: Modifier = Modifier, enabled: Boolean = true, onSelect: (TranslationProvider) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }) { Text(tr(provider.labelKey) + " ▾") }
+    Box(modifier) {
+        OutlinedButton(onClick = { expanded = true }, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
+            Text(tr(provider.labelKey) + " ▾", maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium)
+        }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             TranslationProvider.entries.forEach { option ->
                 DropdownMenuItem(text = { Text(tr(option.labelKey)) }, onClick = { onSelect(option); expanded = false })

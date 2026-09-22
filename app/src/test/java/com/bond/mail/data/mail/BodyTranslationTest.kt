@@ -2,8 +2,40 @@ package com.bond.mail.data.mail
 
 import org.junit.Assert.*
 import org.junit.Test
+import kotlinx.coroutines.runBlocking
 
 class BodyTranslationTest {
+    @Test fun translatesSubjectAndBodyAsSeparateFields(): Unit = runBlocking {
+        val sent = mutableListOf<String>()
+        val result = translateMailText("Interest update", "Subject: unchanged delimiter\nBody") {
+            sent += it
+            "Translated: $it"
+        }
+        assertEquals(listOf("Interest update", "Subject: unchanged delimiter\nBody"), sent)
+        assertEquals("Translated: Interest update", result.subject)
+        assertEquals("Translated: Subject: unchanged delimiter\nBody", result.body)
+    }
+
+    @Test fun supportsMissingSubjectAndSubjectOnlyWithoutEmptyRequests(): Unit = runBlocking {
+        val sent = mutableListOf<String>()
+        val translate: suspend (String) -> String = { sent += it; "译文" }
+        assertEquals(TranslatedMailText("", "译文"), translateMailText("", "Body", translate))
+        assertEquals(TranslatedMailText("译文", ""), translateMailText("Subject", "", translate))
+        assertEquals(listOf("Body", "Subject"), sent)
+    }
+
+    @Test fun doesNotReturnPartialMailWhenBodyTranslationFails(): Unit = runBlocking {
+        var result: TranslatedMailText? = null
+        val failure = runCatching {
+            result = translateMailText("Subject", "Body") {
+                if (it == "Body") throw TranslationFailure("translation_network")
+                "标题"
+            }
+        }.exceptionOrNull()
+        assertNull(result)
+        assertEquals("translation_network", failure?.message)
+    }
+
     @Test fun extractsBodyWithoutScriptsOrHiddenContent() {
         val body = translationBodyText("<html><head><title>Subject</title></head><body><p>Hello</p>" +
             "<p>World &amp; friends</p><script>secret()</script><div hidden>Hidden</div></body></html>", "short")

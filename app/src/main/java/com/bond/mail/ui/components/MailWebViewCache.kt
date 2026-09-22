@@ -2250,6 +2250,7 @@ internal object MailWebViewCache {
     ): String = buildString {
         append("layout-v52|")
         append(key)
+        append("|subject=").append(header.subject.hashCode())
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|sender=").append(header.senderName.hashCode())
         append("|avatarText=").append(header.avatarText.hashCode())

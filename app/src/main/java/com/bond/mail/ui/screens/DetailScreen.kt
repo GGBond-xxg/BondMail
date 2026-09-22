@@ -204,6 +204,7 @@ fun DetailScreen(
     val latestOnMessageSnapshot by rememberUpdatedState(onMessageSnapshot)
     var moreOpen by remember { mutableStateOf(false) }
     var bilingualTranslation by remember(messageId) { mutableStateOf(false) }
+    var translatedSubject by remember(messageId) { mutableStateOf<String?>(null) }
     var inlineTranslation by remember(messageId) { mutableStateOf<String?>(null) }
     var toolsOpen by remember(messageId) { mutableStateOf(false) }
     var translationOpen by remember(messageId) { mutableStateOf(false) }
@@ -402,8 +403,8 @@ fun DetailScreen(
     ) {
         currentMailHeader.copy(attachments = emptyList())
     }
-    val mailHeader = remember(stableHeaderBase, detailAttachments) {
-        stableHeaderBase.copy(attachments = detailAttachments)
+    val mailHeader = remember(stableHeaderBase, detailAttachments, inlineTranslation, translatedSubject) {
+        stableHeaderBase.copy(attachments = detailAttachments, subject = if (inlineTranslation != null) translatedSubject?.takeIf { it.isNotBlank() } ?: stableHeaderBase.subject else stableHeaderBase.subject)
     }
     val headerLayout = rememberMailHeaderLayout(mailHeader.subject)
 
@@ -495,7 +496,7 @@ fun DetailScreen(
     val shareLabel = tr("share")
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog(messageId = messageId, initialTab = "tools_reminders") { toolsOpen = false }
     if (translationOpen) {
-        com.bond.mail.ui.components.BodyTranslationDialog(item.bodyHtml, item.bodyText, onResult = { text, bilingual -> inlineTranslation = text; bilingualTranslation = bilingual }) { translationOpen = false }
+        com.bond.mail.ui.components.BodyTranslationDialog(item.bodyHtml, item.bodyText, subject = item.subject, onResult = { title, text, bilingual -> translatedSubject = title; inlineTranslation = text; bilingualTranslation = bilingual }) { translationOpen = false }
     }
     fun share() {
         val share = Intent(Intent.ACTION_SEND).apply {
@@ -651,7 +652,7 @@ fun DetailScreen(
             }
 
             else -> {
-                val html = inlineTranslation?.let { com.bond.mail.ui.components.translatedDocument(it, item.bodyHtml, item.bodyText, bilingualTranslation, tr("translation_result"), tr("translation_original"), tr("translation_links")) } ?: item.bodyHtml
+                val html = inlineTranslation?.let { com.bond.mail.ui.components.translatedDocument(it, item.bodyHtml, item.bodyText, bilingualTranslation, tr("translation_result"), tr("translation_original"), tr("translation_links"), item.subject) } ?: item.bodyHtml
                     ?.takeIf(String::isNotBlank)
                     ?: plainTextHtml(item.bodyText)
                 MailHtmlView(

@@ -345,8 +345,8 @@
   "translation_region": "Azure 区域（按资源要求填写，如 eastasia）",
   "translation_remove_key": "删除此服务的密钥",
   "translation_save_failed": "密钥保存失败，请重试。",
-  "translate_body": "翻译正文",
-  "translation_send_note": "点击翻译会将正文文字发送给选定服务商；图片和附件不参与翻译，原邮件不变。",
+  "translate_body": "翻译邮件",
+  "translation_send_note": "点击翻译会将标题和正文文字发送给选定服务商；图片和附件不参与翻译，原邮件不变。",
   "translation_not_configured": "请先配置并保存此服务的密钥。",
   "translation_working": "正在翻译…",
   "translation_original": "查看原文",
@@ -398,7 +398,7 @@
   "send_undo": "撤销发送",
   "send_undone": "已撤销，邮件已回到草稿箱（点击收起）",
   "send_pending": "等待发送 / 发送中",
-  "translation_inline": "在正文中查看译文",
+  "translation_inline": "在邮件中查看译文",
   "translation_test": "测试连接",
   "translation_test_note": "测试会发送固定短句 Hello.，可能消耗少量翻译额度。",
   "translation_test_ok": "连接成功，翻译服务可用。",
@@ -410,5 +410,8 @@
   "translation_bilingual": "同时显示原文",
   "translation_links": "原文链接",
   "send_unknown": "发送中断，结果待确认，请检查服务器已发送箱。",
-  "translation_cache": "译文缓存"
+  "translation_cache": "译文缓存",
+  "translation_tab_result": "译文",
+  "translation_tab_compare": "对照",
+  "translation_tab_original": "原文"
 }

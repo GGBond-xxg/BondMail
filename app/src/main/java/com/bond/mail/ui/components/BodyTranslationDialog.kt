@@ -8,7 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.bond.mail.data.mail.*
 import com.bond.mail.data.security.CredentialStore
 import com.bond.mail.ui.i18n.LocalJsonStrings
@@ -16,7 +19,10 @@ import com.bond.mail.ui.i18n.tr
 import kotlinx.coroutines.*
 
 @Composable
-fun BodyTranslationDialog(html: String?, plain: String, onResult: ((String, Boolean) -> Unit)? = null, onDismiss: () -> Unit) {
+internal fun BodyTranslationDialog(html: String?, plain: String, subject: String = "",
+    onResult: ((String, String, Boolean) -> Unit)? = null,
+    translateText: (suspend (String, TranslationProvider, String) -> String)? = null,
+    onDismiss: () -> Unit) {
     val context = LocalContext.current
     val store = remember { CredentialStore(context) }
     val cache = remember { TranslationCache(context) }
@@ -30,9 +36,8 @@ fun BodyTranslationDialog(html: String?, plain: String, onResult: ((String, Bool
         "ja" to "日本語", "ko" to "한국어", "fr" to "Français", "de" to "Deutsch", "es" to "Español")
     var original by remember(html, plain) { mutableStateOf("") }
     var extracted by remember(html, plain) { mutableStateOf(false) }
-    var translated by remember(provider, target, html, plain) { mutableStateOf<String?>(null) }
-    var bilingual by remember { mutableStateOf(false) }
-    var showOriginal by remember(provider, target) { mutableStateOf(false) }
+    var translated by remember(provider, target, html, plain, subject) { mutableStateOf<TranslatedMailText?>(null) }
+    var mode by remember(provider, target) { mutableIntStateOf(0) }
     var error by remember(provider, target) { mutableStateOf<String?>(null) }
     var request by remember(provider, target) { mutableIntStateOf(0) }
     var busy by remember(provider, target) { mutableStateOf(false) }
@@ -41,66 +46,94 @@ fun BodyTranslationDialog(html: String?, plain: String, onResult: ((String, Bool
         original = withContext(Dispatchers.Default) { translationBodyText(html, plain) }
         extracted = true
     }
-    LaunchedEffect(request, provider, target, html, plain) {
+    LaunchedEffect(request, provider, target, html, plain, subject) {
         if (request == 0) return@LaunchedEffect
-        error = null
-        translated = cache.read(original, provider, target)
-        if (translated != null) { showOriginal = false; return@LaunchedEffect }
-        val credentials = store.translationCredentials(provider)
-        if (credentials == null) { error = "translation_not_configured"; return@LaunchedEffect }
-        busy = true
+        error = null; busy = true
         try {
-            translated = withTimeout(180_000) { translateBody(original, target, credentials, provider) }
-            cache.write(original, provider, target, translated.orEmpty())
-            showOriginal = false
-        } catch (_: TimeoutCancellationException) { error = "translation_failed"
+            // Commit both fields together. A partial success is cached but never presented as a
+            // completely translated email; retry reuses successful segments without another charge.
+            val result = withTimeout(180_000) {
+                translateMailText(subject, original) { text ->
+                    translateText?.invoke(text, provider, target) ?: cache.read(text, provider, target) ?: run {
+                        val credentials = store.translationCredentials(provider)
+                            ?: throw TranslationFailure("translation_not_configured")
+                        translateBody(text, target, credentials, provider).also {
+                            cache.write(text, provider, target, it)
+                        }
+                    }
+                }
+            }
+            translated = result; mode = 0
+        } catch (_: TimeoutCancellationException) { error = "translation_network"
         } catch (cancelled: CancellationException) { throw cancelled
         } catch (failure: TranslationFailure) { error = failure.reason
         } catch (_: Exception) { error = "translation_network"
         } finally { busy = false }
     }
     if (configure) TranslationSettingsDialog { configure = false; provider = store.translationProvider() }
-    AlertDialog(onDismissRequest = onDismiss,
-        title = { Text(tr("translate_body")) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (!busy) Column {
-                    TranslationProviderPicker(provider) { provider = it }
-                    Box {
-                        OutlinedButton(onClick = { languagesOpen = true }) { Text(languages[target].orEmpty() + " ▾") }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.padding(horizontal = 16.dp).widthIn(max = 600.dp).fillMaxWidth().fillMaxHeight(.9f),
+            shape = MaterialTheme.shapes.extraLarge) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(tr("translate_body"), style = MaterialTheme.typography.titleLarge)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TranslationProviderPicker(provider, Modifier.weight(1f), enabled = !busy) { provider = it }
+                    Box(Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { languagesOpen = true }, enabled = !busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
+                            Text(languages[target].orEmpty() + " ▾", maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelMedium)
+                        }
                         DropdownMenu(expanded = languagesOpen, onDismissRequest = { languagesOpen = false }) {
                             languages.forEach { (code, label) -> DropdownMenuItem(text = { Text(label) },
                                 onClick = { target = code; languagesOpen = false }) }
                         }
                     }
                 }
-                Text(tr("translation_send_note"), style = MaterialTheme.typography.bodySmall)
-                if (extracted && original.isBlank()) Text(tr("translation_empty"))
-                if (error != null) Text(tr(error!!), color = MaterialTheme.colorScheme.error)
-                if (busy) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(tr("translation_working"))
-                } else if (translated != null) {
-                    Text(tr(if (showOriginal) "translation_original" else "translation_result"),
-                        style = MaterialTheme.typography.labelLarge)
-                    SelectionContainer {
-                        Text(if (showOriginal) original else translated.orEmpty(),
-                            Modifier.heightIn(max = 350.dp).verticalScroll(rememberScrollState()))
-                    }
-                    TextButton(onClick = { showOriginal = !showOriginal }) {
-                        Text(tr(if (showOriginal) "translation_result" else "translation_original"))
+                if (translated != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("translation_tab_result", "translation_tab_compare", "translation_tab_original").forEachIndexed { index, label ->
+                        FilterChip(mode == index, { mode = index }, modifier = Modifier.weight(1f), label = {
+                            Text(tr(label), style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                        })
                     }
                 }
-                if (!busy && translated != null && onResult != null) Row { Checkbox(bilingual, { bilingual = it }); Text(tr("translation_bilingual")) }
-                if (!busy && translated != null && onResult != null) TextButton(onClick = { onResult(translated!!, bilingual); onDismiss() }) { Text(tr("translation_inline")) }
-                if (!busy) TextButton(onClick = { configure = true }) { Text(tr("translation_settings")) }
+                // Only the document scrolls. Selectors and action buttons keep their own space,
+                // including with long mail, large system fonts and a small display.
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(tr("translation_send_note"), style = MaterialTheme.typography.bodySmall)
+                    error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                    if (busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(tr("translation_working")) }
+                    val result = translated
+                    SelectionContainer {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (result != null && mode != 2) {
+                                if (result.subject.isNotBlank()) Text(result.subject, style = MaterialTheme.typography.titleMedium)
+                                Text(result.body)
+                            }
+                            if (result == null || mode != 0) {
+                                if (result != null && mode == 1) { HorizontalDivider(); Text(tr("translation_original"), style = MaterialTheme.typography.labelLarge) }
+                                if (subject.isNotBlank()) Text(subject, style = MaterialTheme.typography.titleMedium)
+                                Text(original)
+                            }
+                        }
+                    }
+                    if (extracted && original.isBlank() && subject.isBlank()) Text(tr("translation_empty"))
+                }
+                HorizontalDivider()
+                val result = translated
+                if (result != null && onResult != null) Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                    onResult(result.subject, result.body, mode == 1); onDismiss()
+                }) { Text(tr("translation_inline")) }
+                else if (result == null) Button(modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && extracted && (original.isNotBlank() || subject.isNotBlank()), onClick = { request++ }) {
+                    Text(tr(if (busy) "translation_working" else if (error == null) "translate_body" else "retry"))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(enabled = !busy, modifier = Modifier.weight(1f), onClick = { configure = true }) { Text(tr("translation_settings")) }
+                    TextButton(onClick = onDismiss) { Text(tr("close")) }
+                }
             }
-        },
-        confirmButton = {
-            if (!busy && translated == null) TextButton(enabled = original.isNotBlank(), onClick = { request++ }) {
-                Text(tr(if (error == null) "translate_body" else "retry"))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("close")) } },
-    )
+        }
+    }
 }

@@ -4,7 +4,7 @@ import org.jsoup.Jsoup
 
 /** Translation is always escaped text. Original links are retained without trusting translated markup. */
 internal fun translatedDocument(text: String, originalHtml: String?, originalText: String,
-    bilingual: Boolean, translationLabel: String, originalLabel: String, linksLabel: String): String {
+    bilingual: Boolean, translationLabel: String, originalLabel: String, linksLabel: String, originalSubject: String = ""): String {
     val doc = Jsoup.parse("<html><body></body></html>")
     doc.body().appendElement("h3").text(translationLabel)
     doc.body().appendElement("div").attr("style", "white-space:pre-wrap;overflow-wrap:anywhere").text(text)
@@ -20,6 +20,7 @@ internal fun translatedDocument(text: String, originalHtml: String?, originalTex
     if (bilingual) {
         doc.body().appendElement("hr")
         doc.body().appendElement("h3").text(originalLabel)
+        if (originalSubject.isNotBlank()) doc.body().appendElement("h4").text(originalSubject)
         // The shared message renderer still sanitizes this document and controls remote images.
         if (originalHtml.isNullOrBlank()) doc.body().appendElement("div").attr("style", "white-space:pre-wrap").text(originalText)
         else original.body().childNodes().toList().forEach { doc.body().appendChild(it.clone()) }

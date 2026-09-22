@@ -345,8 +345,8 @@
   "translation_region": "Azure 區域（按資源要求填寫，如 eastasia）",
   "translation_remove_key": "刪除此服務的金鑰",
   "translation_save_failed": "金鑰儲存失敗，請重試。",
-  "translate_body": "翻譯正文",
-  "translation_send_note": "點擊翻譯會將正文文字傳送給選定服務商；圖片和附件不參與翻譯，原郵件不變。",
+  "translate_body": "翻譯郵件",
+  "translation_send_note": "點擊翻譯會將標題和正文文字傳送給選定服務商；圖片和附件不參與翻譯，原郵件不變。",
   "translation_not_configured": "請先配置並儲存此服務的金鑰。",
   "translation_working": "正在翻譯…",
   "translation_original": "查看原文",
@@ -398,7 +398,7 @@
   "send_undo": "撤销傳送",
   "send_undone": "已撤销，郵件已回到草稿箱（點擊收起）",
   "send_pending": "等待傳送 / 傳送中",
-  "translation_inline": "在內文中檢視譯文",
+  "translation_inline": "在郵件中檢視譯文",
   "translation_test": "測試連線",
   "translation_test_note": "測試会傳送固定短句 Hello.，可能消耗少量翻譯額度。",
   "translation_test_ok": "連線成功，翻譯服务可用。",
@@ -410,5 +410,8 @@
   "translation_bilingual": "同時顯示原文",
   "translation_links": "原文連結",
   "send_unknown": "傳送中斷，結果待確认，請檢查伺服器已傳送箱。",
-  "translation_cache": "譯文快取"
+  "translation_cache": "譯文快取",
+  "translation_tab_result": "譯文",
+  "translation_tab_compare": "對照",
+  "translation_tab_original": "原文"
 }
