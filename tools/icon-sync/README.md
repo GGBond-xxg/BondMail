@@ -18,9 +18,11 @@ cannot reliably infer a sender's brand from an arbitrary email domain.
 
 Existing ASCII asset names are also matched to ICON filenames ignoring punctuation/case.
 Nonmatching names (including Chinese names) require an explicit `local` entry in the catalog;
-previously bundled overrides remain available. Original ICON files are never changed.
+previously bundled overrides remain authoritative. The sync tool preserves curated root SVGs and
+removes its own duplicate generated copies; raw ICON exports must not replace corrected marks.
+Original ICON files are never changed.
 
-Runtime order: generated local ICON overrides, existing custom assets, theSVG, Simple Icons,
+Runtime order: curated root assets, generated local ICON imports, theSVG, Simple Icons,
 then the existing initials fallback. Mono variants are preferred; the renderer applies the
 app's tint to default variants as well. Yahoo's background circle is removed explicitly.
 

@@ -9,6 +9,45 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class ContactLogoAssetTest {
+    @Test fun curatedMarksDoNotResolveToOpaqueBackgrounds() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val examples = listOf("MEXC" to "notice@notification.mexc.link", "iFAST Global Bank" to "notice@ifastgb.com", "Cloudflare" to "notice@cloudflare.com")
+        val bitmap = android.graphics.Bitmap.createBitmap(900, 320, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.rgb(20, 20, 20))
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        examples.forEachIndexed { index, (name, address) ->
+            val markup = requireNotNull(contactLogoSvgMarkup(context, name, address))
+            assertTrue("$name contains a background circle", !markup.contains("<circle"))
+            val doc = org.jsoup.Jsoup.parse(markup, "", org.jsoup.parser.Parser.xmlParser())
+            val bounds = doc.selectFirst("svg")!!.attr("viewBox").split(' ').map { it.toFloat() }
+            assertTrue("$name unexpectedly fills its square canvas: $bounds", bounds[3] < 500f)
+            val cx = index * 300f + 150f
+            paint.color = android.graphics.Color.rgb(40, 57, 84)
+            canvas.drawCircle(cx, 138f, 108f, paint)
+            val scale = 140f / maxOf(bounds[2], bounds[3])
+            canvas.save()
+            canvas.translate(cx - bounds[2] * scale / 2, 138f - bounds[3] * scale / 2)
+            canvas.scale(scale, scale)
+            canvas.translate(-bounds[0], -bounds[1])
+            paint.color = android.graphics.Color.rgb(45, 130, 250)
+            doc.select("path").forEach { path ->
+                val native = androidx.core.graphics.PathParser.createPathFromPathData(path.attr("d"))!!
+                if (path.attr("fill-rule") == "evenodd") native.fillType = android.graphics.Path.FillType.EVEN_ODD
+                canvas.drawPath(native, paint)
+            }
+            canvas.restore()
+            paint.color = android.graphics.Color.WHITE
+            paint.textSize = 23f
+            paint.textAlign = android.graphics.Paint.Align.CENTER
+            canvas.drawText(name, cx, 286f, paint)
+        }
+        java.io.File(context.getExternalFilesDir(null), "icon-regression-preview.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
+    }
+
     @Test
     fun addedBrandLogosLoadFromBundledAssets() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

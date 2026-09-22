@@ -312,6 +312,11 @@ fun contactLogoSvgMarkup(
  * domain, registrable/root domain, then BrandMatcher's key. Simple Icons bundled by the app live
  * in the nested simpleicons directory and use the same names.
  */
+internal fun contactLogoAssetPaths(names: Iterable<String>): List<String> =
+    listOf("", "local/", "thesvg/", "simpleicons/").flatMap { directory ->
+        names.map { name -> "contact_logos/$directory$name.svg" }
+    }
+
 private object ContactLogoStore {
     @Volatile private var domainAliases: Map<String, String>? = null
 
@@ -349,10 +354,9 @@ private object ContactLogoStore {
             sanitize(assetSlug(brandKey)).takeIf(String::isNotBlank)?.let(::add)
             domainAlias(context, domain)?.let(::add)
         }
-        // Search every local override before falling back to either bundled library.
-        listOf("local/", "", "thesvg/", "simpleicons/").forEach { directory ->
-            names.forEach { name ->
-                val assetPath = "contact_logos/$directory$name.svg"
+        // Curated assets have backgrounds removed for monochrome tinting. Raw imports must
+        // never shadow those corrected shapes, even when they have a more specific name.
+        contactLogoAssetPaths(names).forEach { assetPath ->
                 cache[assetPath]?.let { return it }
                 if (assetPath in missing) return@forEach
                 val parsed = runCatching {
@@ -363,7 +367,6 @@ private object ContactLogoStore {
                     return parsed
                 }
                 missing += assetPath
-            }
         }
         return null
     }

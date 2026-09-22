@@ -67,3 +67,5 @@
 见 [PRODUCTIVITY.md](PRODUCTIVITY.md) 与 [TRANSLATION.md](TRANSLATION.md)。图标采用离线打包、本地优先、theSVG 目录补充及域名别名映射；运行时不依赖国外图标 CDN。
 
 新增数据库字段、搜索构建、会话分组、译文缓存、引用折叠、提醒任务与设置 UI 分别放在独立文件中，避免继续集中到 MailRepository / MailWebViewCache。现有核心同步与布局算法仍保留，未进行大规模重写。
+
+图标热修复：v1.5.2.1 恢复已处理 SVG 的优先级，移除同步目录中的重复原始图标，防止底色被染成实心圆/方块。详见 [修复记录](CHANGELOG_v1.5.2.1.md)。

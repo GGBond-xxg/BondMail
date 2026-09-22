@@ -23,6 +23,17 @@ const domains = {};
 const report = [];
 for (const [key, entry] of Object.entries(catalog).sort()) {
   if (!/^[a-z0-9._-]+$/.test(key)) throw new Error(`Invalid asset key: ${key}`);
+  // Root assets are curated for this renderer (backgrounds removed, paths repaired).
+  // Keep them authoritative and remove only generated duplicates owned by this tool.
+  if (await exists(path.join(assets, `${key}.svg`))) {
+    for (const generated of [localOutput, output]) {
+      const duplicate = path.join(generated, `${key}.svg`);
+      if (await exists(duplicate)) await unlink(duplicate);
+    }
+    for (const domain of entry.domains) domains[domain] = key;
+    report.push({ key, source: `contact_logos/${key}.svg (curated)` });
+    continue;
+  }
   let svg, source, destination, license, upstreamUrl;
   if (entry.local && await exists(path.join(root, 'ICON', entry.local))) {
     svg = await readFile(path.join(root, 'ICON', entry.local), 'utf8');

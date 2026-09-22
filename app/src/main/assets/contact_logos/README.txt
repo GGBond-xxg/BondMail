@@ -7,7 +7,9 @@ against the avatar's purple background. The original files in ICON are unchanged
 
 Run the offline synchronization tool documented in tools/icon-sync/README.md to import
 local ICON overrides and selected theSVG package resources. domains.json supplies additional
-domain-to-asset mappings. Runtime source priority is local/, this directory, thesvg/, simpleicons/.
+domain-to-asset mappings. Runtime source priority is this curated directory, local/, thesvg/, simpleicons/.
+Curated marks have backgrounds removed for tinting. Raw ICON exports must never shadow them;
+the synchronization tool removes its own duplicate copies when a curated root asset exists.
 
 Place monochrome SVG files in this directory. Within each source the avatar resolver checks:
 
