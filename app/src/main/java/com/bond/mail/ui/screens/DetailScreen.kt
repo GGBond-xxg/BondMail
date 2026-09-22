@@ -1,6 +1,11 @@
 package com.bond.mail.ui.screens
 
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Close
+import com.bond.mail.ui.components.InlineMailTranslationState
+import com.bond.mail.ui.components.InlineTranslationSelectors
+import com.bond.mail.ui.components.rememberInlineMailTranslation
 
 import android.content.Context
 import android.content.Intent
@@ -203,11 +208,7 @@ fun DetailScreen(
     val scope = rememberCoroutineScope()
     val latestOnMessageSnapshot by rememberUpdatedState(onMessageSnapshot)
     var moreOpen by remember { mutableStateOf(false) }
-    var bilingualTranslation by remember(messageId) { mutableStateOf(false) }
-    var translatedSubject by remember(messageId) { mutableStateOf<String?>(null) }
-    var inlineTranslation by remember(messageId) { mutableStateOf<String?>(null) }
     var toolsOpen by remember(messageId) { mutableStateOf(false) }
-    var translationOpen by remember(messageId) { mutableStateOf(false) }
     var externalUrl by remember { mutableStateOf<String?>(null) }
     var bodyLoading by remember(messageId) {
         mutableStateOf(initialMessage == null || initialMessage.needsBodyRefresh())
@@ -342,6 +343,7 @@ fun DetailScreen(
     val owningAccount = remember(accounts, item.accountId) {
         accounts.firstOrNull { account -> account.id == item.accountId }
     }
+    val translation = rememberInlineMailTranslation(messageId, item.subject, item.bodyHtml, item.bodyText, item.senderAddress)
     val senderName = item.senderName.ifBlank { item.senderAddress }
     val noSubjectLabel = tr("no_subject")
     val attachmentLabel = tr("attachment")
@@ -403,8 +405,8 @@ fun DetailScreen(
     ) {
         currentMailHeader.copy(attachments = emptyList())
     }
-    val mailHeader = remember(stableHeaderBase, detailAttachments, inlineTranslation, translatedSubject) {
-        stableHeaderBase.copy(attachments = detailAttachments, subject = if (inlineTranslation != null) translatedSubject?.takeIf { it.isNotBlank() } ?: stableHeaderBase.subject else stableHeaderBase.subject)
+    val mailHeader = remember(stableHeaderBase, detailAttachments, translation.displayed) {
+        stableHeaderBase.copy(attachments = detailAttachments, subject = translation.displayed?.subject?.takeIf { it.isNotBlank() } ?: stableHeaderBase.subject)
     }
     val headerLayout = rememberMailHeaderLayout(mailHeader.subject)
 
@@ -495,9 +497,7 @@ fun DetailScreen(
 
     val shareLabel = tr("share")
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog(messageId = messageId, initialTab = "tools_reminders") { toolsOpen = false }
-    if (translationOpen) {
-        com.bond.mail.ui.components.BodyTranslationDialog(item.bodyHtml, item.bodyText, subject = item.subject, onResult = { title, text, bilingual -> translatedSubject = title; inlineTranslation = text; bilingualTranslation = bilingual }) { translationOpen = false }
-    }
+
     fun share() {
         val share = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -564,8 +564,9 @@ fun DetailScreen(
         hiddenOffset = 124.dp,
         label = "detail-bottom-chrome-slide",
     )
+    val translationBottom = com.bond.mail.ui.motion.floatingActionBottomPadding(bottomChromeVisible)
     val remoteButtonBottom by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (bottomChromeVisible) 88.dp else 14.dp,
+        targetValue = if (bottomChromeVisible) 158.dp else 88.dp,
         animationSpec = tween(
             durationMillis = BondMotionDuration.ChromeReveal,
             easing = BondMotionEasing.Standard,
@@ -652,11 +653,11 @@ fun DetailScreen(
             }
 
             else -> {
-                val html = inlineTranslation?.let { com.bond.mail.ui.components.translatedDocument(it, item.bodyHtml, item.bodyText, bilingualTranslation, tr("translation_result"), tr("translation_original"), tr("translation_links"), item.subject) } ?: item.bodyHtml
+                val html = translation.displayed?.html ?: item.bodyHtml
                     ?.takeIf(String::isNotBlank)
                     ?: plainTextHtml(item.bodyText)
                 MailHtmlView(
-                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:retry=$renderRetryToken:translation=${inlineTranslation?.hashCode()}:bilingual=$bilingualTranslation",
+                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:retry=$renderRetryToken:translation=${translation.displayed?.html?.hashCode()}",
                     html = html,
                     header = mailHeader,
                     headerLayout = headerLayout,
@@ -869,12 +870,7 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    androidx.compose.material3.TextButton(onClick = { toolsOpen = true }) { Text(tr("mail_tools_short")) }
-                    if (!bodyLoading && item.hasDisplayBody()) {
-                        BondIconButton(onClick = { if (inlineTranslation != null) inlineTranslation = null else translationOpen = true }) {
-                            Icon(Icons.Outlined.Translate, contentDescription = tr(if (inlineTranslation != null) "translation_original" else "translate_body"))
-                        }
-                    }
+                    InlineTranslationSelectors(translation)
                     BondIconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
                         Icon(
                             if (item.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
@@ -885,6 +881,7 @@ fun DetailScreen(
                         expanded = moreOpen,
                         onDismissRequest = { moreOpen = false },
                         entries = listOf(
+                            BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
                             BondMenuEntry(
                                 text = if (item.unread) tr("mark_read") else tr("mark_unread"),
                                 icon = if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,
@@ -932,6 +929,12 @@ fun DetailScreen(
             )
         }
 
+        MessageTranslationActions(
+            translation = translation,
+            enabled = !bodyLoading && !bodyLoadFailed,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                .padding(start = 12.dp, end = 12.dp, bottom = translationBottom),
+        )
         MessageActionDock(
             onReply = ::reply,
             onForward = ::forward,
@@ -1024,7 +1027,34 @@ private fun RemoteImageFloatingButton(
 }
 
 @Composable
-private fun MessageActionDock(
+internal fun MessageTranslationActions(translation: InlineMailTranslationState, enabled: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (translation.busy || translation.error != null) Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+            Text(if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
+                else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                Spacer(Modifier.weight(2f))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    if (translation.result != null) FloatingCircleAction(onClick = { translation.showOriginal = true }, modifier = Modifier.size(48.dp),
+                        containerColor = MaterialTheme.bondSurfaces.dock, contentColor = MaterialTheme.colorScheme.onSurface) {
+                        Icon(Icons.Outlined.Restore, contentDescription = tr("translation_original"))
+                    }
+                }
+            }
+            Surface(shape = CircleShape, color = MaterialTheme.bondSurfaces.dock, shadowElevation = 4.dp) {
+                BondIconButton(enabled = enabled, onClick = translation::translateOrCancel, modifier = Modifier.size(58.dp)) {
+                    if (translation.busy) Icon(Icons.Outlined.Close, contentDescription = tr("cancel"))
+                    else Icon(Icons.Outlined.Translate, contentDescription = tr("translate_body"))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun MessageActionDock(
     onReply: () -> Unit,
     onForward: () -> Unit,
     onShare: () -> Unit,

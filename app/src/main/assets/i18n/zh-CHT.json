@@ -413,5 +413,7 @@
   "translation_cache": "譯文快取",
   "translation_tab_result": "譯文",
   "translation_tab_compare": "對照",
-  "translation_tab_original": "原文"
+  "translation_tab_original": "原文",
+  "translation_target_language": "翻譯語言",
+  "translation_provider": "翻譯服務金鑰"
 }

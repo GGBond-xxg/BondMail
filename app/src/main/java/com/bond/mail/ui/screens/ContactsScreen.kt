@@ -158,14 +158,7 @@ fun ContactsScreen(
         ),
         label = "contact-list-bottom-content-padding",
     )
-    val scrollToTopBottomPadding by animateDpAsState(
-        targetValue = if (chromeVisible) 88.dp else 18.dp,
-        animationSpec = tween(
-            durationMillis = BondMotionDuration.ChromeReveal,
-            easing = BondMotionEasing.Standard,
-        ),
-        label = "contact-list-scroll-top-bottom-padding",
-    )
+    val scrollToTopBottomPadding = com.bond.mail.ui.motion.floatingActionBottomPadding(chromeVisible)
     val showScrollToTop by remember(listState) {
         derivedStateOf {
             val partiallyScrolled =

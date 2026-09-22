@@ -711,6 +711,7 @@ object BrandMatcher {
         val senderDomain = extractDomain(normalizedAddress)
         val normalizedDisplayName = normalizedName.trim()
         val contextualBrand = when {
+            normalizedDisplayName == "aleta adventure" -> Brand("bank", "BANK")
             normalizedDisplayName == "git" -> Brand("git", "GIT")
             normalizedDisplayName == "vk" -> Brand("vk", "VK")
             normalizedDisplayName.contains("gemini") && domainMatches(senderDomain, "google.com") ->

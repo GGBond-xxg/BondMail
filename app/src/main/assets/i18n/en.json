@@ -413,5 +413,7 @@
   "translation_cache": "Translation cache",
   "translation_tab_result": "Translated",
   "translation_tab_compare": "Compare",
-  "translation_tab_original": "Original"
+  "translation_tab_original": "Original",
+  "translation_target_language": "Translation language",
+  "translation_provider": "Translation provider key"
 }

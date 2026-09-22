@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun aletaAdventureUsesGenericBank() {
+        assertEquals("bank", BrandMatcher.match("Aleta Adventure", "notice@example.com").key)
+    }
     @Test
     fun requestedBrandIconsMatchOfficialSenders() {
         val cases = listOf(

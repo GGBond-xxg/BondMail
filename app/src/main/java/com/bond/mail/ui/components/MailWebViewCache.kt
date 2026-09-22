@@ -222,6 +222,9 @@ internal object MailWebViewCache {
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
         val senderIdentity = "${header.senderName} ${header.senderAddress}".lowercase()
+        if (darkMode && (senderDomain == "ifastgb.com" || senderDomain.endsWith(".ifastgb.com") || senderIdentity.contains("ifast global"))) {
+            markIfastFooter(document)
+        }
         val zaBankSender = isZaBankSender(senderDomain)
         val forceTransactionalFluid =
             isKnownMobileTransactionalSender(senderDomain) || zaBankSender
@@ -863,6 +866,15 @@ internal object MailWebViewCache {
                 width:93px!important;min-width:93px!important;max-width:93px!important;
                 height:21px!important;min-height:21px!important;max-height:21px!important;
                 padding:0!important
+              }
+              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer,
+              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer *{
+                background-color:#f4f7fa!important;color:#202124!important;
+                -webkit-text-fill-color:#202124!important;color-scheme:light!important
+              }
+              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer a,
+              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer a *{
+                color:#1267a5!important;-webkit-text-fill-color:#1267a5!important
               }
               body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body{
                 background:#ffffff!important;color:#202124!important;color-scheme:light!important;
@@ -2248,7 +2260,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v52|")
+        append("layout-v53|")
         append(key)
         append("|subject=").append(header.subject.hashCode())
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())

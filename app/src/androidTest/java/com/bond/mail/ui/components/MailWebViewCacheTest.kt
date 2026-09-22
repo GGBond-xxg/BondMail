@@ -103,9 +103,18 @@ class MailWebViewCacheTest {
         assertFalse(prepared.html.contains("open.gif"))
     }
 
+    @Test fun ifastFooterGetsReadablePaletteInDarkMode() = runBlocking {
+        val prepared = prepare("notice@ifastgb.com", "<table><tr><td>Main text</td></tr><tr><td><font color='white'>iFAST Global Bank Limited</font><p style='color:white'>London E14 9SH</p></td></tr></table>", true)
+        val document = org.jsoup.Jsoup.parse(prepared.html)
+        assertEquals(1, document.select("td.bondmail-ifast-footer").size)
+        assertTrue(prepared.html.contains("background-color:#f4f7fa!important;color:#202124!important"))
+        assertTrue(prepared.html.contains("body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer"))
+    }
+
     private suspend fun prepare(
         senderAddress: String,
         html: String,
+        darkMode: Boolean = false,
     ): PreparedMailDocument = MailWebViewCache.preparedDocument(
         key = "instrumentation-${System.nanoTime()}",
         html = html,
@@ -124,7 +133,7 @@ class MailWebViewCacheTest {
         headerSurfaceCss = "#ffffff",
         avatarBackgroundCss = "#dde7ff",
         avatarForegroundCss = "#123456",
-        darkMode = false,
+        darkMode = darkMode,
         topContentInsetCssPx = 64,
         subjectBlockHeightCssPx = 84,
         subjectFontSizeSp = 24f,
