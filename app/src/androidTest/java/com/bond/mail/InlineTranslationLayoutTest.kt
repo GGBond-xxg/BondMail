@@ -39,8 +39,18 @@ class InlineTranslationLayoutTest {
             result = TranslatedHtmlMail("离线测试", "<p>模拟译文，不使用任何密钥。</p>")
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            instrumentation.waitForIdleSync()
-            Thread.sleep(2000)
+            // MainActivity installs its content after asynchronous preload; wait for that
+            // boundary before replacing it, otherwise it can overwrite the test surface.
+            var installed = false
+            val deadline = android.os.SystemClock.uptimeMillis() + 10_000
+            while (!installed && android.os.SystemClock.uptimeMillis() < deadline) {
+                scenario.onActivity { activity ->
+                    val field = MainActivity::class.java.getDeclaredField("contentInstalled").apply { isAccessible = true }
+                    installed = field.getBoolean(activity)
+                }
+                if (!installed) Thread.sleep(100)
+            }
+            assertTrue("Main content initialized", installed)
             scenario.onActivity { activity ->
                 activity.setContent {
                     MaterialTheme {
@@ -58,7 +68,9 @@ class InlineTranslationLayoutTest {
                     }
                 }
             }
-            assertTrue(device.wait(Until.hasObject(By.desc("翻译邮件")), 5000))
+            val found = device.wait(Until.hasObject(By.desc("翻译邮件")), 5000)
+            if (!found) device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "inline-translation-test-blocked.png"))
+            assertTrue("Translation control visible; foreground=${device.currentPackageName}", found)
             val original = device.findObject(By.desc("查看原文"))
             val translate = device.findObject(By.desc("翻译邮件"))
             val delete = device.findObject(By.desc("删除"))
