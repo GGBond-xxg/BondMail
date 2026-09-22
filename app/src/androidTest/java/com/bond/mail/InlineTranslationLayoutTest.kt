@@ -63,6 +63,8 @@ class InlineTranslationLayoutTest {
             val translate = device.findObject(By.desc("翻译邮件"))
             val delete = device.findObject(By.desc("删除"))
             val initial = translate.visibleBounds
+            assertEquals(original.visibleBounds.width(), initial.width())
+            assertEquals(original.visibleBounds.height(), initial.height())
             assertEquals(initial.centerX(), delete.visibleBounds.centerX())
             assertTrue(original.visibleBounds.right < initial.left)
             assertTrue(initial.bottom < delete.visibleBounds.top)

@@ -1037,18 +1037,32 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
             Row(Modifier.weight(1f).padding(horizontal = 8.dp)) {
                 Spacer(Modifier.weight(2f))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    if (translation.result != null) FloatingCircleAction(onClick = { translation.showOriginal = true }, modifier = Modifier.size(48.dp),
-                        containerColor = MaterialTheme.bondSurfaces.dock, contentColor = MaterialTheme.colorScheme.onSurface) {
-                        Icon(Icons.Outlined.Restore, contentDescription = tr("translation_original"))
-                    }
+                    if (translation.result != null) MessageTranslationButton(
+                        icon = Icons.Outlined.Restore, label = tr("translation_original"),
+                        onClick = { translation.showOriginal = true },
+                    )
                 }
             }
-            Surface(shape = CircleShape, color = MaterialTheme.bondSurfaces.dock, shadowElevation = 4.dp) {
-                BondIconButton(enabled = enabled, onClick = translation::translateOrCancel, modifier = Modifier.size(58.dp)) {
-                    if (translation.busy) Icon(Icons.Outlined.Close, contentDescription = tr("cancel"))
-                    else Icon(Icons.Outlined.Translate, contentDescription = tr("translate_body"))
-                }
-            }
+            MessageTranslationButton(
+                icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
+                label = tr(if (translation.busy) "cancel" else "translate_body"),
+                enabled = enabled, onClick = translation::translateOrCancel,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessageTranslationButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Surface(shape = CircleShape, color = MaterialTheme.bondSurfaces.dock,
+        contentColor = MaterialTheme.colorScheme.onSurface, shadowElevation = 4.dp) {
+        BondIconButton(enabled = enabled, onClick = onClick, modifier = Modifier.size(58.dp)) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
         }
     }
 }
