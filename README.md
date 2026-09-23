@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.4](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.4)
-- 安装包：[BondMail-v1.5.4.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.4/BondMail-v1.5.4.apk)
+- 最新版本：[BondMail v1.5.5](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.5)
+- 安装包：[BondMail-v1.5.5.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.5/BondMail-v1.5.5.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -23,7 +23,7 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - 原 HTML 内翻译标题和正文，保留图片、表格和链接；支持阿里云、有道、Google、Microsoft，自填密钥、加密缓存与一键原文切换
 - 10 秒撤销发送、搜索筛选、账号签名/模板、通知分级
 - 邮箱工具：同步诊断、附件索引、按回复标识聚合会话、稍后提醒及存储清理
-- AI 邮件助手：摘要、重点/待办、回复草稿与当前邮件问答；支持自填兼容 OpenAI 接口与 Gemini API，回复由用户审核发送
+- AI 邮件助手：摘要、重点/待办、回复草稿与当前邮件问答；提供 DeepSeek、Kimi、Xiaomi MiMo、OpenAI、Gemini 预设，多配置切换、模型列表选择与自定义接口，回复由用户审核发送
 
 新功能入口与使用限制见 [邮箱效率功能](docs/PRODUCTIVITY.md)。
 
@@ -156,7 +156,9 @@ BondMail 是一个由作者提出构想、持续通过实际使用打磨的开�
 
 请选择对应网络并核对完整地址。ETH / ERC20 使用 Ethereum 网络，TRC20 使用 TRON 网络。
 
-应用内可点击“显示二维码”供另一台设备扫描，也可查看仓库中的[七种网络二维码](app/src/main/assets/sponsorship)。二维码仅编码下列地址，不包含转账金额。
+应用内可点击“二维码”供另一台设备扫描，也可查看仓库中的[七种网络二维码](app/src/main/assets/sponsorship)。二维码仅编码下列地址，不包含转账金额。
+
+复制与二维码按钮左右并排。应用内二维码跟随浅色/深色主题；若扫码软件无法识别深色二维码，可在弹层内切换标准黑白配色。仓库 PNG 保留标准配色。
 
 | 网络 | 收款地址 |
 | --- | --- |

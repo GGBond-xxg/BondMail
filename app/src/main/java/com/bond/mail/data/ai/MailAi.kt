@@ -16,7 +16,9 @@ internal enum class AiProvider(val labelKey: String) {
 }
 
 // Deliberately not a data class: keys must never appear in generated toString/log output.
-internal class AiConfig(val provider: AiProvider, val endpoint: String, val model: String, val key: String)
+internal enum class AiAuth { BEARER, API_KEY, X_API_KEY }
+internal class AiConfig(val provider: AiProvider, val endpoint: String, val model: String, val key: String,
+    val auth: AiAuth = AiAuth.BEARER, val fullEndpoint: Boolean = false, val displayName: String = "")
 internal data class AiTurn(val role: String, val text: String)
 internal class AiFailure(val reason: String) : Exception(reason)
 internal const val AI_CONTEXT_LIMIT = 40_000
@@ -45,12 +47,16 @@ internal fun aiRequestUrl(config: AiConfig): String {
         if (!Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,199}").matches(config.model)) throw AiFailure("ai_invalid_config")
         return "https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent"
     }
-    val uri = try { URI(config.endpoint.trim()) } catch (_: Exception) { throw AiFailure("ai_invalid_config") }
+    val base = aiHttpsUrl(config.endpoint)
+    return if (config.fullEndpoint || base.endsWith("/chat/completions")) base else "$base/chat/completions"
+}
+
+internal fun aiHttpsUrl(endpoint: String): String {
+    val uri = try { URI(endpoint.trim()) } catch (_: Exception) { throw AiFailure("ai_invalid_config") }
     if (uri.scheme != "https" || uri.host.isNullOrBlank() || uri.rawUserInfo != null ||
         uri.rawQuery != null || uri.rawFragment != null || uri.port !in -1..65535 || uri.port == 0)
         throw AiFailure("ai_invalid_config")
-    val base = uri.toASCIIString().trimEnd('/')
-    return if (base.endsWith("/chat/completions")) base else "$base/chat/completions"
+    return uri.toASCIIString().trimEnd('/')
 }
 
 internal fun aiMessages(subject: String, body: String, language: String, history: List<AiTurn>, task: String): List<AiTurn> {
@@ -116,6 +122,17 @@ private val aiExecutor = Executors.newFixedThreadPool(2) { runnable -> Thread(ru
 internal suspend fun requestMailAi(config: AiConfig, messages: List<AiTurn>): String {
     val url = aiRequestUrl(config)
     val payload = aiRequestBody(config, messages).toByteArray(Charsets.UTF_8)
+    return parseAiResponse(config.provider, aiHttp(config, url, payload))
+}
+
+internal fun aiAuthHeader(config: AiConfig): Pair<String, String> = when {
+    config.provider == AiProvider.GEMINI -> "x-goog-api-key" to config.key
+    config.auth == AiAuth.API_KEY -> "api-key" to config.key
+    config.auth == AiAuth.X_API_KEY -> "x-api-key" to config.key
+    else -> "Authorization" to "Bearer ${config.key}"
+}
+
+internal suspend fun aiHttp(config: AiConfig, url: String, payload: ByteArray? = null): String {
     return suspendCancellableCoroutine { continuation ->
         val activeConnection = AtomicReference<HttpURLConnection?>()
         val future = aiExecutor.submit {
@@ -123,16 +140,18 @@ internal suspend fun requestMailAi(config: AiConfig, messages: List<AiTurn>): St
                 val connection = URI(url).toURL().openConnection() as HttpURLConnection
                 activeConnection.set(connection)
                 if (!continuation.isActive) return@submit
-                connection.requestMethod = "POST"
+                connection.requestMethod = if (payload == null) "GET" else "POST"
                 connection.instanceFollowRedirects = false
                 connection.connectTimeout = 20_000
                 connection.readTimeout = 90_000
-                connection.doOutput = true
+                connection.doOutput = payload != null
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                connection.setRequestProperty(if (config.provider == AiProvider.GEMINI) "x-goog-api-key" else "Authorization",
-                    if (config.provider == AiProvider.GEMINI) config.key else "Bearer ${config.key}")
-                connection.setFixedLengthStreamingMode(payload.size)
-                connection.outputStream.use { it.write(payload) }
+                val (header, value) = aiAuthHeader(config)
+                connection.setRequestProperty(header, value)
+                if (payload != null) {
+                    connection.setFixedLengthStreamingMode(payload.size)
+                    connection.outputStream.use { it.write(payload) }
+                }
                 when (connection.responseCode) {
                     in 200..299 -> Unit
                     401, 403 -> throw AiFailure("ai_auth_failed")
@@ -150,8 +169,7 @@ internal suspend fun requestMailAi(config: AiConfig, messages: List<AiTurn>): St
                     }
                     result.toString()
                 }
-                val answer = parseAiResponse(config.provider, raw)
-                if (continuation.isActive) continuation.resume(answer)
+                if (continuation.isActive) continuation.resume(raw)
             } catch (error: Exception) {
                 if (continuation.isActive) continuation.resumeWithException(if (error is AiFailure) error else AiFailure("ai_network"))
             } finally { activeConnection.getAndSet(null)?.disconnect() }

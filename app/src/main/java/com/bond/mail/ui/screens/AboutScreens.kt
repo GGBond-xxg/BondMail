@@ -193,15 +193,10 @@ fun SponsorshipScreen(onBack: () -> Unit) {
     val copied = tr("sponsor_copied")
     var qrWallet by remember { mutableStateOf<SponsorshipWallet?>(null) }
     qrWallet?.let { wallet ->
-        val bitmap = remember(wallet.address) {
-            context.assets.open("sponsorship/${wallet.address}.png").use { android.graphics.BitmapFactory.decodeStream(it).asImageBitmap() }
-        }
         AlertDialog(onDismissRequest = { qrWallet = null }, title = { Text(wallet.network) },
             text = {
                 Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Image(bitmap, contentDescription = tr("sponsor_qr") + " · " + wallet.network,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(Color.White),
-                        filterQuality = androidx.compose.ui.graphics.FilterQuality.None)
+                    com.bond.mail.ui.components.SponsorshipQr(wallet)
                     SelectionContainer { Text(wallet.address, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
                     Text(tr("sponsor_qr_note"), style = MaterialTheme.typography.bodySmall)
                 }
@@ -223,12 +218,14 @@ fun SponsorshipScreen(onBack: () -> Unit) {
                         Text(wallet.address, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                             style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
                     }
-                    BondTextAction(text = tr("sponsor_copy_address"), onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
-                        Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
-                    })
-                    BondTextAction(text = tr("sponsor_qr"), onClick = { qrWallet = wallet })
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BondTextAction(text = tr("sponsor_copy_address"), modifier = Modifier.weight(1f), onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
+                            Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+                        })
+                        BondTextAction(text = tr("sponsor_qr_short"), modifier = Modifier.weight(1f), onClick = { qrWallet = wallet })
+                    }
                 }
             }
         }

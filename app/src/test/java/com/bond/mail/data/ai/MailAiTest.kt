@@ -45,4 +45,31 @@ class MailAiTest {
     @Test fun configToStringDoesNotExposeKey() {
         assertFalse(compatible("https://example.com", key = "unique-private-token").toString().contains("unique-private-token"))
     }
+    @Test fun presetsUseCorrectEndpointsAndMiMoHeader() {
+        val mimo = aiPresets.first { it.id == "mimo" }
+        val config = AiConfig(mimo.protocol, mimo.endpoint, mimo.models.first(), "fake-key", mimo.auth)
+        assertEquals("https://api.xiaomimimo.com/v1/chat/completions", aiRequestUrl(config))
+        assertEquals("api-key" to "fake-key", aiAuthHeader(config))
+        assertEquals("https://api.xiaomimimo.com/v1/models", aiModelsUrl(config))
+        assertTrue(aiPresets.map { it.id }.containsAll(listOf("deepseek", "kimi", "mimo", "openai", "gemini", "custom")))
+    }
+    @Test fun customFullEndpointIsNotAppendedAndModelsNeedKnownPath() {
+        val config = AiConfig(AiProvider.COMPATIBLE, "https://example.com/my-chat", "my-model", "fake-key", AiAuth.X_API_KEY, true)
+        assertEquals("https://example.com/my-chat", aiRequestUrl(config))
+        assertEquals("x-api-key" to "fake-key", aiAuthHeader(config))
+        assertThrows(AiFailure::class.java) { aiModelsUrl(config) }
+    }
+    @Test fun modelsCanBeFetchedWithoutSelectingAModelFirst() {
+        assertEquals("https://example.com/v1/models", aiModelsUrl(compatible("https://example.com/v1", model = "")))
+        assertEquals("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+            aiModelsUrl(AiConfig(AiProvider.GEMINI, "", "", "fake-key")))
+    }
+    @Test fun migrationPreservesAnUnconfiguredActiveProviderWithoutChoosingAnother() {
+        val gemini = AiConfig(AiProvider.GEMINI, "", "model", "fake-gemini-key")
+        val configs = mapOf(AiProvider.GEMINI to gemini)
+        assertNull(legacyAiProfiles(configs, AiProvider.COMPATIBLE).active)
+        val selected = legacyAiProfiles(configs, AiProvider.GEMINI).active!!
+        assertEquals("fake-gemini-key", selected.config.key)
+        assertEquals("Gemini", selected.name)
+    }
 }

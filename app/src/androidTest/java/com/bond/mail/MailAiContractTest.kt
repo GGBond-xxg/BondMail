@@ -10,6 +10,44 @@ import org.junit.runner.RunWith
 /** Offline contract checks: no API keys, network, mailbox access or billable requests. */
 @RunWith(AndroidJUnit4::class)
 class MailAiContractTest {
+    @Test fun modelListsAreParsedFilteredAndDeduplicated() {
+        val compatible = parseAiModels(AiProvider.COMPATIBLE, """{"data":[{"id":"model-b"},{"id":"model-a"},{"id":"model-a"},{"id":"bad model"}]}""")
+        assertEquals(listOf("model-a", "model-b"), compatible.models)
+        val gemini = parseAiModels(AiProvider.GEMINI, """{"models":[{"name":"models/chat-model","supportedGenerationMethods":["generateContent"]},{"name":"models/embed","supportedGenerationMethods":["embedContent"]}],"nextPageToken":"next-page"}""")
+        assertEquals(listOf("chat-model"), gemini.models)
+        assertEquals("next-page", gemini.nextToken)
+    }
+    @Test fun multipleProfilesRoundTripWithoutReplacingOtherKeys() {
+        val first = AiProfile("one", "Work", "custom", "note", AiConfig(AiProvider.COMPATIBLE, "https://example.com/v1", "model-a", "fake-key-a"), listOf("model-a", "model-b"))
+        val second = AiProfile("two", "Personal", "custom", "", AiConfig(AiProvider.COMPATIBLE, "https://example.org/custom", "model-c", "fake-key-b", AiAuth.X_API_KEY, true))
+        val restored = decodeAiProfiles(encodeAiProfiles(AiProfiles(listOf(first, second), "two")))
+        assertEquals(2, restored.entries.size)
+        assertEquals("fake-key-a", restored.entries[0].config.key)
+        assertEquals("Personal", restored.active!!.name)
+        assertEquals(AiAuth.X_API_KEY, restored.active!!.config.auth)
+        assertTrue(restored.active!!.config.fullEndpoint)
+        assertEquals(listOf("model-a", "model-b"), restored.entries[0].models)
+        assertNull(decodeAiProfiles(encodeAiProfiles(AiProfiles(listOf(first), null))).active)
+    }
+    @Test fun migratesLegacyEncryptedKeysAndDoesNotResurrectDeletedProfiles() {
+        val app = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val prefsName = "ai-migration-test-" + java.util.UUID.randomUUID()
+        val isolated = object : android.content.ContextWrapper(app) {
+            override fun getSharedPreferences(name: String?, mode: Int): android.content.SharedPreferences = app.getSharedPreferences(prefsName, mode)
+        }
+        val store = com.bond.mail.data.security.CredentialStore(isolated)
+        try {
+            store.saveAi(AiConfig(AiProvider.COMPATIBLE, "https://example.com/v1", "model", "fake-legacy-key"))
+            val migrated = store.aiProfiles()
+            assertEquals("fake-legacy-key", migrated.active!!.config.key)
+            store.saveAiProfiles(migrated)
+            assertNull(store.aiConfig(AiProvider.COMPATIBLE))
+            assertEquals("fake-legacy-key", store.activeAiConfig()!!.key)
+            store.saveAiProfiles(AiProfiles(emptyList(), null))
+            assertTrue(store.aiProfiles().entries.isEmpty())
+            assertNull(store.activeAiConfig())
+        } finally { app.getSharedPreferences(prefsName, 0).edit().clear().commit() }
+    }
     @Test fun compatibleRequestContainsTextOnlyAndNeverKey() {
         val config = AiConfig(AiProvider.COMPATIBLE, "https://example.com/v1", "test-model", "test-secret")
         val raw = aiRequestBody(config, aiMessages("Subject", "<sample>quoted mail", "zh-CN", emptyList(), "Summary"))

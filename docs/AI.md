@@ -1,6 +1,12 @@
 # AI 邮件助手
 
-从 v1.5.4 起，设置 → 同步 → AI 服务可以配置以下两种接口，密钥分别加密保存在本机：
+从 v1.5.5 起，设置 → 同步 → AI 服务采用多配置管理：添加、编辑、删除配置，并明确选择一套用于邮件助手。名称、备注、服务地址、模型和密钥独立保存，支持为同一家服务建立多个账户配置；全部加密保存在本机。旧版 v1.5.4 配置会自动读取，首次保存后完成迁移。
+
+内置 **DeepSeek、Kimi、Xiaomi MiMo、OpenAI、Gemini** 预设，自动填写官方端点及适用的认证方式；也可选择“自定义配置”。模型可从预设列表选择、根据当前密钥获取服务端列表、搜索选择，或手动输入 ID。
+
+模型刷新不上传邮件，只发送认证信息到配置的接口。预设只是官方文档中的模型示例，并不代表当前账户一定有权限；API 模型名称也不一定与聊天产品的版本标签相同。Gemini 列表仅展示支持 `generateContent` 的模型，其他兼容服务的列表可能包含非对话模型，请选文字对话模型。
+
+支持两种请求协议：
 
 | 类型 | 地址与模型 |
 | --- | --- |
@@ -8,6 +14,10 @@
 | Gemini API | 使用 Google 官方 `generateContent` 端点；填写 API Key 和该账户可用的模型 ID。 |
 
 基础地址必须包含服务商要求的路径，例如 `/v1`；不要填写网页聊天地址。模型 ID 使用服务商控制台显示的 API 名称。不同服务商对模型、地区与额度的限制不同，兼容协议不代表每个模型都已实测。
+
+自定义配置支持 OpenAI Chat Completions 或 Gemini 原生协议。兼容接口可以选择基础地址或完整请求 URL，以及 `Authorization: Bearer`、`api-key`、`x-api-key` 三种认证方式。完整自定义 URL 若不以 `/chat/completions` 结尾，无法推导模型列表路径时请手填模型。Gemini 原生协议固定使用 Google 官方端点。
+
+保存并使用配置或在列表点击“使用”才会切换服务。取消编辑不改变当前选择；删除正在使用的配置后需要重新选择，避免悄悄把后续邮件交给另一服务。配置管理参考 [CC Switch](https://github.com/farion1231/cc-switch) 的预设与自定义思路，本应用不会执行其 CLI 命令、加载环境脚本或导入工具权限。
 
 保存配置不会联网；“测试连接”只发送固定文字 `Hello`，可能消耗服务额度。应用不内置公共密钥，也不承诺免费额度。Google 账号登录与 Gemini API Key 是不同的接入方式，本版不提供通过网页登录使用 AI 的功能。中国大陆用户可以配置当地可访问的兼容服务。
 
@@ -35,5 +45,7 @@
 - 不接受重定向，不自动重试，连接与响应均设超时。
 
 接口实现依据：[OpenAI Chat Completions 官方参考](https://developers.openai.com/api/reference/resources/chat)、[Gemini generateContent 官方参考](https://ai.google.dev/api/generate-content)。
+
+预设与模型列表依据：[DeepSeek](https://api-docs.deepseek.com/api/list-models/)、[Kimi](https://platform.kimi.com/docs/get-api-key)、[Xiaomi MiMo](https://mimo.mi.com/docs/zh-CN/api/model/list-models)、[OpenAI 模型](https://developers.openai.com/api/docs/models/all)、[Gemini 模型列表](https://ai.google.dev/api/models)。
 
 本地验证使用虚构邮件和模拟返回，不调用用户密钥。真实服务的权限、网络可达性和收费额度需用自己的配置测试。
