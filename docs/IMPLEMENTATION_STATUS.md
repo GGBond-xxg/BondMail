@@ -1,4 +1,4 @@
-# BondMail v1.5.3 实现状态
+# BondMail v1.5.3.2 实现状态
 
 更新时间：2026-09-23
 技术栈：Kotlin、Jetpack Compose、Material 3、Room、DataStore、WorkManager、Android JavaMail、Google Identity Services、Microsoft MSAL
@@ -83,3 +83,7 @@
 验证：40 项 JVM 测试、5 项真机 HTML 渲染测试、1 项真机悬浮按钮布局与位移测试通过。当前手机应用无邮箱账号，未复现用户真实邮件，也未验证线上翻译授权与额度。
 
 补充：统一两颗按钮为相同 58dp 组件后，最终尺寸 UI 复查被 vivo i 管家的测试程序提示遮挡，未完成；此前按钮位置、切换和位移动画的真机检查已通过。
+
+### v1.5.3.2 赞助与文档
+
+关于页更多菜单新增赞助页面，七条公开收款地址支持完整显示、选择与复制，沿用现有返回动画和双界面样式。README 增加上手、赞助及 GPT 协作说明。翻译密钥设置跟随邮件当前服务，取消不改变服务，保存后应用所保存的选择。AI 功能仅讨论，尚未实现。

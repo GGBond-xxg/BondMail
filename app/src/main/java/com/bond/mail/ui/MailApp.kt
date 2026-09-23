@@ -171,6 +171,7 @@ import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
 import com.bond.mail.ui.screens.AccountCredentialsScreen
 import com.bond.mail.ui.screens.AboutScreen
+import com.bond.mail.ui.screens.SponsorshipScreen
 import com.bond.mail.ui.screens.AppLicenseScreen
 import com.bond.mail.ui.screens.ComposeScreen
 import com.bond.mail.ui.screens.ContactsScreen
@@ -193,6 +194,7 @@ private const val PROVIDERS = "providers"
 private const val CREDENTIALS = "credentials/{providerId}"
 private const val DETAIL = "detail/{messageId}"
 private const val ABOUT = "about"
+private const val SPONSORSHIP = "about/sponsorship"
 private const val PUSH_SETTINGS = "settings/push"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
@@ -964,6 +966,14 @@ fun MailApp(
                                     updateAvailable = updateAvailableDot,
                                     updateChecking = updateChecking,
                                     onCheckForUpdates = ::checkForUpdates,
+                                    onOpenSponsorship = {
+                                        navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
+                                            route = SPONSORSHIP,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
                                     onOpenSourceLicenses = {
                                         navigateAfterSnapshot(
                                             expectedSourceRoute = ABOUT,
@@ -991,6 +1001,14 @@ fun MailApp(
                                 )
                             }
                         }
+                    }
+
+                    composable(route = SPONSORSHIP) {
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack -> SponsorshipScreen(onBack = requestBack) }
                     }
 
                     composable(

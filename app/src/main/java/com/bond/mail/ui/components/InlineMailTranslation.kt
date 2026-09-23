@@ -74,11 +74,9 @@ internal fun rememberInlineMailTranslation(messageId: String, subject: String, h
         } catch (_: Exception) { state.error = "translation_network"
         } finally { state.busy = false }
     }
-    if (state.configure) TranslationSettingsDialog {
-        state.configure = false
-        val savedProvider = store.translationProvider()
-        if (savedProvider != state.provider) { state.reset(); state.provider = savedProvider }
-    }
+    if (state.configure) TranslationSettingsDialog(initialProvider = state.provider, onProviderSaved = { savedProvider ->
+        state.reset(); state.provider = savedProvider
+    }) { state.configure = false }
     return state
 }
 

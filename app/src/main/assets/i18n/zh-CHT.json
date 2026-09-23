@@ -415,5 +415,12 @@
   "translation_tab_compare": "對照",
   "translation_tab_original": "原文",
   "translation_target_language": "翻譯語言",
-  "translation_provider": "翻譯服務金鑰"
+  "translation_provider": "翻譯服務金鑰",
+  "sponsor_title": "贊助支持",
+  "sponsor_subtitle": "支持 BondMail 的持續維護",
+  "sponsor_intro": "如果 BondMail 對你有幫助，歡迎自願贊助支持。感謝每一份支持，所有功能均不以贊助為前提。",
+  "sponsor_network_note": "請選擇對應網路並核對完整地址。ETH / ERC20 使用 Ethereum 網路，TRC20 使用 TRON 網路。",
+  "sponsor_copy_address": "複製地址",
+  "sponsor_copied": "地址已複製",
+  "project_ai_credit": "專案構想、功能方向和使用回饋由作者主導，絕大部分程式實作、除錯與文件撰寫在 GPT 的協助下完成。"
 }

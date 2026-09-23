@@ -1,6 +1,13 @@
 package com.bond.mail.ui.screens
 
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.filled.FavoriteBorder
+import com.bond.mail.data.support.sponsorshipWallets
+import com.bond.mail.ui.theme.BondTextAction
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -79,6 +86,7 @@ fun AboutScreen(
     onOpenSourceLicenses: () -> Unit,
     onOpenAppLicense: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
+    onOpenSponsorship: () -> Unit,
 ) {
     val context = LocalContext.current
     val externalLinkOpenFailed = tr("external_link_open_failed")
@@ -101,6 +109,8 @@ fun AboutScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 10.dp),
                 )
+                Text(tr("project_ai_credit"), modifier = Modifier.padding(top = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -124,6 +134,13 @@ fun AboutScreen(
                             Toast.makeText(context, externalLinkOpenFailed, Toast.LENGTH_SHORT).show()
                         }
                     },
+                )
+                AboutDivider()
+                AboutActionRow(
+                    icon = Icons.Default.FavoriteBorder,
+                    title = tr("sponsor_title"),
+                    subtitle = tr("sponsor_subtitle"),
+                    onClick = onOpenSponsorship,
                 )
                 AboutDivider()
                 AboutActionRow(
@@ -158,6 +175,37 @@ fun AboutScreen(
                     showDot = updateAvailable,
                     onClick = onCheckForUpdates,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun SponsorshipScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val copied = tr("sponsor_copied")
+    AboutPage(title = tr("sponsor_title"), onBack = onBack) {
+        item {
+            AboutCard {
+                Text(tr("sponsor_intro"), style = MaterialTheme.typography.bodyLarge)
+                Text(tr("sponsor_network_note"), modifier = Modifier.padding(top = 10.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        sponsorshipWallets.forEach { wallet ->
+            item(key = wallet.network) {
+                AboutCard {
+                    Text(wallet.network, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    SelectionContainer {
+                        Text(wallet.address, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                    }
+                    BondTextAction(text = tr("sponsor_copy_address"), onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
+                        Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+                    })
+                }
             }
         }
     }

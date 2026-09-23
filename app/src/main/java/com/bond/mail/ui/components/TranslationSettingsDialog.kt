@@ -16,10 +16,11 @@ import org.json.JSONObject
 import kotlinx.coroutines.*
 
 @Composable
-fun TranslationSettingsDialog(onDismiss: () -> Unit) {
+internal fun TranslationSettingsDialog(initialProvider: TranslationProvider? = null,
+    onProviderSaved: (TranslationProvider) -> Unit = {}, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val store = remember { CredentialStore(context) }
-    var provider by remember { mutableStateOf(store.translationProvider()) }
+    var provider by remember(initialProvider) { mutableStateOf(initialProvider ?: store.translationProvider()) }
     val saved = remember(provider) { store.translationCredentials(provider) }
     var id by remember(provider) { mutableStateOf(saved?.id.orEmpty()) }
     var secret by remember(provider) { mutableStateOf(saved?.secret.orEmpty()) }
@@ -80,7 +81,7 @@ fun TranslationSettingsDialog(onDismiss: () -> Unit) {
                     store.save(provider.credentialKey(), JSONObject().put("id", id.trim())
                         .put("secret", secret.trim()).put("region", region.trim()).toString())
                     store.save(TRANSLATION_ACTIVE_KEY, provider.name)
-                }.onSuccess { onDismiss() }.onFailure { error = true }
+                }.onSuccess { onProviderSaved(provider); onDismiss() }.onFailure { error = true }
             }) { Text(tr("save")) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(tr("cancel")) } },

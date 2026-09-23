@@ -415,5 +415,12 @@
   "translation_tab_compare": "Compare",
   "translation_tab_original": "Original",
   "translation_target_language": "Translation language",
-  "translation_provider": "Translation provider key"
+  "translation_provider": "Translation provider key",
+  "sponsor_title": "Support BondMail",
+  "sponsor_subtitle": "Support ongoing maintenance",
+  "sponsor_intro": "If BondMail is useful to you, voluntary support is welcome. Thank you for your support. No features require a donation.",
+  "sponsor_network_note": "Choose the matching network and check the full address. ETH / ERC20 uses Ethereum; TRC20 uses TRON.",
+  "sponsor_copy_address": "Copy address",
+  "sponsor_copied": "Address copied",
+  "project_ai_credit": "The maintainer leads the product concept, feature direction, and user feedback. Most implementation, debugging, and documentation were completed with assistance from GPT."
 }
