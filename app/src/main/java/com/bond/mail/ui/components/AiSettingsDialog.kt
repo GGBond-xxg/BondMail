@@ -7,6 +7,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -21,6 +26,13 @@ import java.util.UUID
 
 @Composable
 internal fun AiSettingsDialog(credentialStore: CredentialStore? = null, onSaved: () -> Unit = {}, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        AiSettingsScreen(credentialStore, onSaved, onDismiss)
+    }
+}
+
+@Composable
+internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved: () -> Unit = {}, onBack: () -> Unit) {
     val context = LocalContext.current
     val store = remember { credentialStore ?: CredentialStore(context) }
     var loadError by remember { mutableStateOf(false) }
@@ -40,9 +52,8 @@ internal fun AiSettingsDialog(credentialStore: CredentialStore? = null, onSaved:
             if (save(AiProfiles(next, profile.id))) { editorOpen = false; error = null }
             else throw AiFailure("translation_save_failed")
         }, onDismiss = { editorOpen = false })
-        return
     }
-    AiSettingsPage(tr("ai_settings"), onDismiss, footer = {
+    AiSettingsPage(tr("ai_settings"), onBack, dialog = false, footer = {
         TextButton(enabled = !loadError, onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
     }) {
         Text(tr("ai_profiles_note"), style = MaterialTheme.typography.bodySmall)
@@ -76,14 +87,23 @@ internal fun AiSettingsDialog(credentialStore: CredentialStore? = null, onSaved:
 }
 
 @Composable
-private fun AiSettingsPage(title: String, onDismiss: () -> Unit, footer: @Composable RowScope.() -> Unit,
-    content: @Composable ColumnScope.() -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(), color = MaterialTheme.colorScheme.background) {
-            Column {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(top = 10.dp))
-                    TextButton(onClick = onDismiss) { Text(tr("close")) }
+private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean = true,
+    footer: @Composable RowScope.() -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val page: @Composable () -> Unit = {
+        Surface(
+            modifier = if (dialog) Modifier.widthIn(max = 560.dp).fillMaxWidth().fillMaxHeight(0.92f)
+                else Modifier.fillMaxSize(),
+            shape = if (dialog) MaterialTheme.shapes.extraLarge else androidx.compose.ui.graphics.RectangleShape,
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Column(if (dialog) Modifier else Modifier.systemBarsPadding()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    if (!dialog) IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
+                    }
+                    Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(8.dp))
+                    if (dialog) TextButton(onClick = onDismiss) { Text(tr("close")) }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) { content(); Spacer(Modifier.height(12.dp)) }
@@ -91,6 +111,10 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, footer: @Compos
             }
         }
     }
+    if (dialog) Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center) { page() }
+    } else page()
 }
 
 @Composable
@@ -198,13 +222,16 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
 @Composable
 private fun AiChoice(label: String, selected: String, options: List<Pair<String, String>>, enabled: Boolean, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var anchorWidth by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
     Column {
         Text(label, style = MaterialTheme.typography.labelMedium)
-        Box {
+        Box(Modifier.fillMaxWidth().onSizeChanged { anchorWidth = it.width }) {
             OutlinedButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 Text(options.firstOrNull { it.first == selected }?.second.orEmpty() + " ▾")
             }
-            DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(expanded, onDismissRequest = { expanded = false },
+                modifier = Modifier.width(with(density) { anchorWidth.toDp() })) {
                 options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(id); expanded = false }) }
             }
         }

@@ -196,6 +196,7 @@ private const val DETAIL = "detail/{messageId}"
 private const val ABOUT = "about"
 private const val SPONSORSHIP = "about/sponsorship"
 private const val PUSH_SETTINGS = "settings/push"
+private const val AI_SETTINGS = "settings/ai"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
@@ -300,6 +301,7 @@ fun MailApp(
     var pushSettingsBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
+    var aiSettingsBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var aboutChildBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
@@ -800,6 +802,14 @@ fun MailApp(
                         store = { aboutBackBackground = it },
                     )
                 },
+                onOpenAiSettings = {
+                    navigateAfterSnapshot(
+                        expectedSourceRoute = MAIN,
+                        route = AI_SETTINGS,
+                        capture = { mailboxSnapshotLayer.toImageBitmap() },
+                        store = { aiSettingsBackBackground = it },
+                    )
+                },
                 onOpenPushSettings = {
                     providersBackBackground = null
                     credentialsBackBackground = null
@@ -925,6 +935,16 @@ fun MailApp(
                                         !settings.notificationPermissionPromptDismissed
                                 },
                             )
+                        }
+                    }
+
+                    composable(route = AI_SETTINGS) {
+                        BondBackScreen(
+                            backgroundSnapshot = aiSettingsBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            com.bond.mail.ui.components.AiSettingsScreen(onBack = requestBack)
                         }
                     }
 
@@ -1232,6 +1252,7 @@ private fun MainTabs(
     onOpenNotificationSettings: () -> Unit,
     onOpenBackgroundSettings: () -> Unit,
     onOpenPushSettings: () -> Unit,
+    onOpenAiSettings: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     mainChromeVisible: Boolean,
@@ -1402,6 +1423,7 @@ private fun MainTabs(
                             onOpenNotificationSettings = onOpenNotificationSettings,
                             onOpenBackgroundSettings = onOpenBackgroundSettings,
                             onOpenPushSettings = onOpenPushSettings,
+                            onOpenAiSettings = onOpenAiSettings,
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->
