@@ -50,6 +50,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import com.bond.mail.data.support.SponsorshipWallet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -184,6 +191,22 @@ fun AboutScreen(
 fun SponsorshipScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val copied = tr("sponsor_copied")
+    var qrWallet by remember { mutableStateOf<SponsorshipWallet?>(null) }
+    qrWallet?.let { wallet ->
+        val bitmap = remember(wallet.address) {
+            context.assets.open("sponsorship/${wallet.address}.png").use { android.graphics.BitmapFactory.decodeStream(it).asImageBitmap() }
+        }
+        AlertDialog(onDismissRequest = { qrWallet = null }, title = { Text(wallet.network) },
+            text = {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Image(bitmap, contentDescription = tr("sponsor_qr") + " · " + wallet.network,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(Color.White),
+                        filterQuality = androidx.compose.ui.graphics.FilterQuality.None)
+                    SelectionContainer { Text(wallet.address, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
+                    Text(tr("sponsor_qr_note"), style = MaterialTheme.typography.bodySmall)
+                }
+            }, confirmButton = { TextButton(onClick = { qrWallet = null }) { Text(tr("close")) } })
+    }
     AboutPage(title = tr("sponsor_title"), onBack = onBack) {
         item {
             AboutCard {
@@ -205,6 +228,7 @@ fun SponsorshipScreen(onBack: () -> Unit) {
                         clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
                         Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
                     })
+                    BondTextAction(text = tr("sponsor_qr"), onClick = { qrWallet = wallet })
                 }
             }
         }
@@ -352,6 +376,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
         )
         PrivacySection(tr("privacy_local_title"), tr("privacy_local_body"))
         PrivacySection(tr("privacy_network_title"), tr("privacy_network_body"))
+        PrivacySection(tr("privacy_ai_title"), tr("privacy_ai_body"))
         PrivacySection(tr("privacy_credentials_title"), tr("privacy_credentials_body"))
         PrivacySection(tr("privacy_remote_images_title"), tr("privacy_remote_images_body"))
         PrivacySection(tr("privacy_permissions_title"), tr("privacy_permissions_body"))

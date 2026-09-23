@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.3.2](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.3.2)
-- 安装包：[BondMail-v1.5.3.2.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.3.2/BondMail-v1.5.3.2.apk)
+- 最新版本：[BondMail v1.5.4](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.4)
+- 安装包：[BondMail-v1.5.4.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.4/BondMail-v1.5.4.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -23,6 +23,7 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - 原 HTML 内翻译标题和正文，保留图片、表格和链接；支持阿里云、有道、Google、Microsoft，自填密钥、加密缓存与一键原文切换
 - 10 秒撤销发送、搜索筛选、账号签名/模板、通知分级
 - 邮箱工具：同步诊断、附件索引、按回复标识聚合会话、稍后提醒及存储清理
+- AI 邮件助手：摘要、重点/待办、回复草稿与当前邮件问答；支持自填兼容 OpenAI 接口与 Gemini API，回复由用户审核发送
 
 新功能入口与使用限制见 [邮箱效率功能](docs/PRODUCTIVITY.md)。
 
@@ -31,8 +32,11 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 1. 添加邮箱：Google / Microsoft 使用对应授权登录，其他邮箱按服务商要求使用客户端授权码或 App Password。
 2. 同步邮件：正文按需下载并保存在本机；后台同步频率、可选 CF 推送在设置中调整。
 3. 使用翻译：先在设置填写自己的服务密钥；邮件顶部选择语言和服务，右下方点击翻译，完成后可一键查看原文。
+4. 使用 AI：在设置 → AI 服务配置地址、模型和 API Key；打开邮件 → 更多 → AI 邮件助手。详见 [AI 使用说明](docs/AI.md)。
 
 邮件与账号凭据主要保存在本机，凭据和译文缓存使用 Android Keystore 加密。手动翻译会把标题及可翻译文字发送给选定服务商，图片和附件不参与翻译。详见 [翻译说明](docs/TRANSLATION.md)。
+
+AI 只在主动操作时发送原始标题、正文文字、你的要求及连续问答上下文给配置的服务；不上传图片和附件。关闭助手清空本页对话，密钥加密保存在本机。服务可用性、数据保留与费用以服务商规则为准。
 
 ## 支持的邮箱
 
@@ -151,6 +155,8 @@ BondMail 是一个由作者提出构想、持续通过实际使用打磨的开�
 如果 BondMail 对你有帮助，欢迎自愿赞助，支持项目持续维护。感谢每一份支持；所有功能均不以赞助为前提。应用内入口：**设置 → 关于我们 → 更多 → 赞助支持**。
 
 请选择对应网络并核对完整地址。ETH / ERC20 使用 Ethereum 网络，TRC20 使用 TRON 网络。
+
+应用内可点击“显示二维码”供另一台设备扫描，也可查看仓库中的[七种网络二维码](app/src/main/assets/sponsorship)。二维码仅编码下列地址，不包含转账金额。
 
 | 网络 | 收款地址 |
 | --- | --- |

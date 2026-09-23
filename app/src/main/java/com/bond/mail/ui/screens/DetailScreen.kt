@@ -209,6 +209,7 @@ fun DetailScreen(
     val latestOnMessageSnapshot by rememberUpdatedState(onMessageSnapshot)
     var moreOpen by remember { mutableStateOf(false) }
     var toolsOpen by remember(messageId) { mutableStateOf(false) }
+    var aiOpen by remember(messageId) { mutableStateOf(false) }
     var externalUrl by remember { mutableStateOf<String?>(null) }
     var bodyLoading by remember(messageId) {
         mutableStateOf(initialMessage == null || initialMessage.needsBodyRefresh())
@@ -497,6 +498,14 @@ fun DetailScreen(
 
     val shareLabel = tr("share")
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog(messageId = messageId, initialTab = "tools_reminders") { toolsOpen = false }
+    if (aiOpen) com.bond.mail.ui.components.MailAiDialog(
+        subject = item.subject, html = item.bodyHtml, plain = item.bodyText,
+        bodyReady = !bodyLoading && !bodyLoadFailed,
+        onUseReply = { draft ->
+            aiOpen = false
+            onReply(item.senderAddress, if (item.subject.startsWith("Re:", true)) item.subject else "Re: ${item.subject}", draft)
+        }, onDismiss = { aiOpen = false },
+    )
 
     fun share() {
         val share = Intent(Intent.ACTION_SEND).apply {
@@ -882,6 +891,7 @@ fun DetailScreen(
                         onDismissRequest = { moreOpen = false },
                         entries = listOf(
                             BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
+                            BondMenuEntry(text = tr("ai_title"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; aiOpen = true }),
                             BondMenuEntry(
                                 text = if (item.unread) tr("mark_read") else tr("mark_unread"),
                                 icon = if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,

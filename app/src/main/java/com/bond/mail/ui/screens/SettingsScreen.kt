@@ -132,6 +132,8 @@ fun SettingsScreen(
     var toolsOpen by remember { mutableStateOf(false) }
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog { toolsOpen = false }
     var translationSettingsOpen by remember { mutableStateOf(false) }
+    var aiSettingsOpen by remember { mutableStateOf(false) }
+    if (aiSettingsOpen) com.bond.mail.ui.components.AiSettingsDialog { aiSettingsOpen = false }
     if (translationSettingsOpen) {
         com.bond.mail.ui.components.TranslationSettingsDialog { translationSettingsOpen = false }
     }
@@ -357,6 +359,13 @@ fun SettingsScreen(
                     title = tr("translation_settings"),
                     subtitle = tr("translation_settings_summary"),
                     onClick = { translationSettingsOpen = true },
+                )
+                SettingsDivider()
+                SettingsActionRow(
+                    icon = Icons.Outlined.Translate,
+                    title = tr("ai_settings"),
+                    subtitle = tr("ai_settings_summary"),
+                    onClick = { aiSettingsOpen = true },
                 )
                 }
             }
