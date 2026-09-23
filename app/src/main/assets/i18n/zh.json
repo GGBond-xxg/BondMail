@@ -488,7 +488,5 @@
   "ai_name_required": "请输入配置名称。",
   "ai_save_activate": "保存并使用",
   "sponsor_qr_short": "二维码",
-  "sponsor_qr_standard": "无法识别？切换黑白配色",
-  "sponsor_qr_themed": "跟随应用主题",
   "ai_search_model": "搜索模型"
 }

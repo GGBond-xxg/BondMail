@@ -64,7 +64,7 @@ class AiProfilesLayoutTest {
         } finally { context.getSharedPreferences(name, 0).edit().clear().commit() }
     }
 
-    @Test fun sponsorshipActionsShareARowAndDarkQrCanToggle() {
+    @Test fun sponsorshipActionsShareARowAndQrUsesTheme() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -78,12 +78,10 @@ class AiProfilesLayoutTest {
             assertEquals(copy.centerY(), qr.visibleBounds.centerY())
             assertTrue(copy.right < qr.visibleBounds.left)
             qr.click()
-            assertTrue(device.wait(Until.hasObject(By.text("无法识别？切换黑白配色")), 5000))
+            assertTrue(device.wait(Until.hasObject(By.descStartsWith("显示二维码 · ")), 5000))
+            assertFalse(device.hasObject(By.text("无法识别？切换黑白配色")))
             device.waitForIdle()
             device.takeScreenshot(File(context.getExternalFilesDir(null), "sponsor-qr-dark.png"))
-            device.findObject(By.text("无法识别？切换黑白配色")).click()
-            assertTrue(device.wait(Until.hasObject(By.text("跟随应用主题")), 5000))
-            device.takeScreenshot(File(context.getExternalFilesDir(null), "sponsor-qr-standard.png"))
         }
     }
 

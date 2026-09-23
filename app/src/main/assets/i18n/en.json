@@ -488,7 +488,5 @@
   "ai_name_required": "Enter a configuration name.",
   "ai_save_activate": "Save and use",
   "sponsor_qr_short": "QR code",
-  "sponsor_qr_standard": "Scan failed? Use black on white",
-  "sponsor_qr_themed": "Follow app theme",
   "ai_search_model": "Search models"
 }

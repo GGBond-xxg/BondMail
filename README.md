@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.5.2](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.5.2)
-- 安装包：[BondMail-v1.5.5.2.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.5.2/BondMail-v1.5.5.2.apk)
+- 最新版本：[BondMail v1.5.5.3](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.5.3)
+- 安装包：[BondMail-v1.5.5.3.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.5.3/BondMail-v1.5.5.3.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -158,7 +158,7 @@ BondMail 是一个由作者提出构想、持续通过实际使用打磨的开�
 
 应用内可点击“二维码”供另一台设备扫描，也可查看仓库中的[七种网络二维码](app/src/main/assets/sponsorship)。二维码仅编码下列地址，不包含转账金额。
 
-复制与二维码按钮左右并排。应用内二维码跟随浅色/深色主题；若扫码软件无法识别深色二维码，可在弹层内切换标准黑白配色。仓库 PNG 保留标准配色。
+复制与二维码按钮左右并排。应用内二维码自动跟随当前主题配色。仓库 PNG 保留标准配色。
 
 | 网络 | 收款地址 |
 | --- | --- |

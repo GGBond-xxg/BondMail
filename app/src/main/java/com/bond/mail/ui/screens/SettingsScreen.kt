@@ -1,6 +1,8 @@
 package com.bond.mail.ui.screens
 
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.AutoAwesome
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -347,7 +349,7 @@ fun SettingsScreen(
                 )
                 SettingsDivider()
                 SettingsActionRow(
-                    icon = Icons.Outlined.Translate,
+                    icon = Icons.Outlined.Build,
                     title = tr("mail_tools"),
                     subtitle = tr("mail_tools_summary"),
                     onClick = { toolsOpen = true },
@@ -361,7 +363,7 @@ fun SettingsScreen(
                 )
                 SettingsDivider()
                 SettingsActionRow(
-                    icon = Icons.Outlined.Translate,
+                    icon = Icons.Outlined.AutoAwesome,
                     title = tr("ai_settings"),
                     subtitle = tr("ai_settings_summary"),
                     onClick = onOpenAiSettings,

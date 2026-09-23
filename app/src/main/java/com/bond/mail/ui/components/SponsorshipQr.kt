@@ -4,8 +4,6 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.*
@@ -19,18 +17,13 @@ internal fun SponsorshipQr(wallet: SponsorshipWallet) {
     val bitmap = remember(wallet.address) {
         context.assets.open("sponsorship/${wallet.address}.png").use { BitmapFactory.decodeStream(it).asImageBitmap() }
     }
-    var standard by remember(wallet.address) { mutableStateOf(false) }
     val surface = MaterialTheme.colorScheme.surface
-    val dark = surface.luminance() < 0.5f
-    val foreground = if (standard) Color.Black else MaterialTheme.colorScheme.onSurface
-    val background = if (standard) Color.White else surface
+    val foreground = MaterialTheme.colorScheme.onSurface
+    val background = surface
     val matrix = remember(foreground, background) { qrColorMatrix(foreground, background) }
     Image(bitmap, contentDescription = tr("sponsor_qr") + " · " + wallet.network,
         modifier = Modifier.fillMaxWidth().aspectRatio(1f), filterQuality = FilterQuality.None,
         colorFilter = ColorFilter.colorMatrix(matrix))
-    if (dark) TextButton(onClick = { standard = !standard }) {
-        Text(tr(if (standard) "sponsor_qr_themed" else "sponsor_qr_standard"))
-    }
 }
 
 // Map black modules and the white quiet zone together; keep module geometry and alpha intact.
