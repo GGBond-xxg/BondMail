@@ -30,6 +30,7 @@ fun FloatingCircleAction(
     containerColor: Color,
     contentColor: Color,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val motionEnabled = bondMotionEnabled()
@@ -37,7 +38,7 @@ fun FloatingCircleAction(
     val pressScale by rememberBondPressScale(
         interactionSource = interactionSource,
         pressedScale = 0.94f,
-        enabled = motionEnabled,
+        enabled = motionEnabled && enabled,
     )
 
     Surface(
@@ -63,6 +64,7 @@ fun FloatingCircleAction(
     ) {
         Box(
             modifier = Modifier.fillMaxSize().clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
                 onClick = onClick,

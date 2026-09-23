@@ -1043,7 +1043,8 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
             Text(if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
                 else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        // Keep the smaller action centered over the 58dp delete button below.
+        Row(Modifier.fillMaxWidth().padding(end = 5.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
             if (translation.result != null) MessageTranslationButton(
                 icon = Icons.Outlined.Restore, label = tr("translation_original"),
@@ -1065,11 +1066,14 @@ private fun MessageTranslationButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Surface(shape = CircleShape, color = MaterialTheme.bondSurfaces.dock,
-        contentColor = MaterialTheme.colorScheme.onSurface, shadowElevation = 4.dp) {
-        BondIconButton(enabled = enabled, onClick = onClick, modifier = Modifier.size(58.dp)) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        }
+    FloatingCircleAction(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(48.dp),
+        containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
+        contentColor = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.38f),
+    ) {
+        Icon(icon, contentDescription = label, modifier = Modifier.size(26.dp))
     }
 }
 
