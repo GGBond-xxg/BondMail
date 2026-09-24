@@ -4,6 +4,34 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun carriersCouriersAndHotelsUseSharedCategoryIcons() {
+        val domains = mapOf("dito.ph" to "simcard", "globe.com.ph" to "simcard",
+            "smart.com.ph" to "simcard", "gomo.ph" to "simcard", "singtel.com" to "simcard",
+            "starhub.com" to "simcard", "simba.sg" to "simcard", "dhl.com" to "expressdelivery",
+            "fedex.com" to "expressdelivery", "ups.com" to "expressdelivery",
+            "hilton.com" to "hotel", "marriott.com" to "hotel")
+        domains.forEach { (domain, key) ->
+            assertEquals(domain, key, BrandMatcher.match("Notice", "notice@$domain").key)
+            assertEquals(domain, key, BrandMatcher.match("Notice", "notice@mail.$domain").key)
+            assertEquals(domain, "unknown", BrandMatcher.match("Notice", "notice@not$domain").key)
+            assertEquals(domain, "unknown", BrandMatcher.match("Notice", "notice@$domain.example.org").key)
+        }
+        mapOf("DITO" to "simcard", "DITO Telecommunity" to "simcard", "GOMO" to "simcard",
+            "Smart Communications" to "simcard", "Globe Telecom" to "simcard",
+            "Singtel" to "simcard", "StarHub" to "simcard", "SIMBA Telecom" to "simcard",
+            "DHL Express" to "expressdelivery", "FedEx" to "expressdelivery", "UPS" to "expressdelivery",
+            "Hilton Honors" to "hotel", "Marriott Bonvoy" to "hotel").forEach { (name, key) ->
+            assertEquals(name, key, BrandMatcher.match(name, "notice@example.org").key)
+        }
+    }
+    @Test fun categoryBrandsAvoidShortWordCollisionsAndKeepSpecificIcons() {
+        listOf("Auditor", "Creditors", "Smart", "Globe", "Simba", "Startups", "Groups").forEach {
+            assertEquals(it, "unknown", BrandMatcher.match(it, "notice@example.org", "DITO DHL Hilton").key)
+        }
+        assertEquals("sfexpress", BrandMatcher.match("顺丰速运", "notice@sf-express.com").key)
+        assertEquals("chinamobile", BrandMatcher.match("中国移动", "notice@10086.cn").key)
+    }
+
     @Test fun newBrandsAndServiceCategoriesPreferSpecificMarks() {
         mapOf("MUJI" to "muji", "无印良品" to "muji", "UNIQLO Store" to "uniqlo",
             "优衣库" to "uniqlo", "Decathlon Sports" to "decathlon", "迪卡侬" to "decathlon",

@@ -679,6 +679,14 @@ object BrandMatcher {
     )
 
     private val simCardDomains = setOf(
+        "dito.ph",
+        "globe.com.ph",
+        "smart.com.ph",
+        "gomo.ph",
+        "singtel.com",
+        "starhub.com",
+        "simba.sg",
+
         "airalo.com",
         "alosim.com",
         "clubsim.com.hk",
@@ -692,6 +700,12 @@ object BrandMatcher {
         "three.com.hk",
         "ubigi.com",
     )
+
+    private val carrierName = Regex("(?<![a-z0-9])(dito|gomo|singtel|starhub|smart communications|globe telecom|globeone|simba telecom)(?![a-z0-9])")
+    private val deliveryDomains = setOf("dhl.com", "fedex.com", "ups.com")
+    private val deliveryBrandName = Regex("(?<![a-z0-9])(dhl|fedex|ups)(?![a-z0-9])|联邦快递|聯邦快遞")
+    private val hotelDomains = setOf("hilton.com", "marriott.com")
+    private val hotelBrandName = Regex("(?<![a-z0-9])(hilton|marriott)(?![a-z0-9])|希尔顿|希爾頓|万豪|萬豪")
 
     private val simCardNameTokens = listOf(
         "3hk",
@@ -806,6 +820,7 @@ object BrandMatcher {
                 airlineNameTokens.any(normalizedName::contains) -> Brand("airplane", "AIR")
 
             simCardDomains.any { domainMatches(senderDomain, it) } ||
+                carrierName.containsMatchIn(normalizedDisplayName) ||
                 simCardNameTokens.any(normalizedName::contains) -> Brand("simcard", "SIM")
 
             senderDomain.endsWith(".bank") || normalizedName == "bank" ||
@@ -814,8 +829,12 @@ object BrandMatcher {
             sportsName.containsMatchIn(normalizedDisplayName) -> Brand("sports", "SPORT")
             clothesName.containsMatchIn(normalizedDisplayName) -> Brand("clothes", "WEAR")
 
-            hotelName.containsMatchIn(normalizedDisplayName) -> Brand("hotel", "HOTEL")
-            deliveryName.containsMatchIn(normalizedDisplayName) -> Brand("expressdelivery", "EXP")
+            hotelDomains.any { domainMatches(senderDomain, it) } ||
+                hotelBrandName.containsMatchIn(normalizedDisplayName) ||
+                hotelName.containsMatchIn(normalizedDisplayName) -> Brand("hotel", "HOTEL")
+            deliveryDomains.any { domainMatches(senderDomain, it) } ||
+                deliveryBrandName.containsMatchIn(normalizedDisplayName) ||
+                deliveryName.containsMatchIn(normalizedDisplayName) -> Brand("expressdelivery", "EXP")
             shoppingName.containsMatchIn(normalizedDisplayName) -> Brand("shopping", "SHOP")
 
             else -> Brand("unknown", fallback)

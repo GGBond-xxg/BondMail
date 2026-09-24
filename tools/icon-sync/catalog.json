@@ -256,7 +256,10 @@
   },
   "hotel": {
     "local": "Hotel.svg",
-    "domains": []
+    "domains": [
+      "hilton.com",
+      "marriott.com"
+    ]
   },
   "muji": {
     "local": "MUJI.svg",
@@ -282,6 +285,33 @@
   },
   "expressdelivery": {
     "local": "ExpressDelivery.svg",
-    "domains": []
+    "domains": [
+      "dhl.com",
+      "fedex.com",
+      "ups.com"
+    ]
+  },
+  "simcard": {
+    "domains": [
+      "airalo.com",
+      "alosim.com",
+      "clubsim.com.hk",
+      "dito.ph",
+      "esim.net",
+      "getnomad.app",
+      "gigsky.com",
+      "globe.com.ph",
+      "gomo.ph",
+      "hkcsl.com",
+      "maya.net",
+      "simba.sg",
+      "singtel.com",
+      "smart.com.ph",
+      "smartone.com",
+      "sosimhk.com",
+      "starhub.com",
+      "three.com.hk",
+      "ubigi.com"
+    ]
   }
 }

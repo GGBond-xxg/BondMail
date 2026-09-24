@@ -218,6 +218,7 @@ internal object MailWebViewCache {
         // LIGHT BondMail window cannot receive a partial black canvas merely because ColorOS
         // entered night mode. BondMail applies its own complete dark transformation below.
         disableSenderDarkMode(document)
+        repairDitoBodyReadability(document, header.senderAddress, darkMode)
         trimTrailingNonVisualSections(document)
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
