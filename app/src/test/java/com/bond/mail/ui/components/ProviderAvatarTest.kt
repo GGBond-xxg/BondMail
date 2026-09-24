@@ -15,9 +15,9 @@ class ProviderAvatarTest {
 
     @Test
     fun pickerProvidersResolveTheirBrandInsteadOfInitials() {
-        mapOf("qq" to "qq.com", "gmail" to "gmail.com", "yahoo" to "yahoo").forEach { (id, key) ->
+        mapOf("qq" to "qq.com", "gmail" to "gmail.com", "yahoo" to "yahoo", "163" to "163.com", "126" to "126.com", "outlook" to "outlook.com", "m365" to "outlook.com", "icloud" to "icloud").forEach { (id, key) ->
             val provider = ProviderRegistry.byId(id)
-            assertEquals(key, BrandMatcher.match(provider.label, provider.avatarAddress()).key)
+            assertEquals(key, BrandMatcher.match("", provider.avatarAddress()).key)
         }
     }
 }

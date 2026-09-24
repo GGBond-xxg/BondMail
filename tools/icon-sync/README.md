@@ -21,6 +21,8 @@ Nonmatching names (including Chinese names) require an explicit `local` entry in
 previously bundled overrides remain authoritative. The sync tool preserves curated root SVGs and
 removes its own duplicate generated copies; raw ICON exports must not replace corrected marks.
 Original ICON files are never changed.
+After syncing, duplicate SVG basenames are removed in runtime priority order, including
+obsolete Simple Icons fallbacks. Attribution and license files are retained.
 
 Runtime order: curated root assets, generated local ICON imports, theSVG, Simple Icons,
 then the existing initials fallback. Mono variants are preferred; the renderer applies the

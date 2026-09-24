@@ -4,6 +4,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun zaGroupAndMailboxAliasesUseCanonicalBrands() {
+        assertEquals("za bank", BrandMatcher.match("Notice", "notice@za.group").key)
+        assertEquals("za bank", BrandMatcher.match("Notice", "notice@mail.za.group").key)
+        assertEquals("unknown", BrandMatcher.match("Notice", "notice@notza.group").key)
+        mapOf("foxmail.com" to "qq.com", "googlemail.com" to "gmail.com", "me.com" to "icloud",
+            "mac.com" to "icloud", "hotmail.com" to "outlook.com", "live.com" to "outlook.com",
+            "msn.com" to "outlook.com", "outlook.cl" to "outlook.com").forEach { (domain, key) ->
+            assertEquals(domain, key, BrandMatcher.match("User", "user@$domain").key)
+        }
+    }
+
     @Test fun privyPlasmaMailUsesSubjectWithoutChangingOtherPrivyMail() {
         assertEquals("plasmaone", BrandMatcher.match("no-reply@privy.io", "no-reply@privy.io", "Your login code for Plasma One").key)
         assertEquals("unknown", BrandMatcher.match("no-reply@privy.io", "no-reply@privy.io", "Your login code for another app").key)

@@ -11,6 +11,7 @@ object BrandMatcher {
     }
 
     private val rules = linkedMapOf(
+        "za.group" to Brand("za bank", "ZA"),
         "google-gemini" to Brand("gemini", "GM"),
         "google gemini" to Brand("gemini", "GM"),
         "gemini by google" to Brand("gemini", "GM"),
@@ -736,7 +737,7 @@ object BrandMatcher {
             null
         }
         val fallback = senderName.trim().firstOrNull()?.uppercase() ?: senderAddress.firstOrNull()?.uppercase() ?: "?"
-        val brand = contextualBrand ?: entry?.value ?: when {
+        val resolved = contextualBrand ?: entry?.value ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||
                 exchangeNameTokens.any(normalizedName::contains) -> Brand("exchange", "EX")
@@ -751,6 +752,18 @@ object BrandMatcher {
                 bankNameTokens.any(normalizedName::contains) -> Brand("bank", "BANK")
 
             else -> Brand("unknown", fallback)
+        }
+        val brand = when (resolved.key) {
+            "google" -> if (domainMatches(senderDomain, "googlemail.com")) Brand("gmail.com", "G") else resolved
+            "outlook", "hotmail.com", "live.com" -> Brand("outlook.com", "O")
+            "unknown" -> when {
+                domainMatches(senderDomain, "foxmail.com") -> Brand("qq.com", "QQ")
+                domainMatches(senderDomain, "googlemail.com") -> Brand("gmail.com", "G")
+                domainMatches(senderDomain, "me.com") || domainMatches(senderDomain, "mac.com") -> Brand("icloud", "AP")
+                domainMatches(senderDomain, "msn.com") -> Brand("outlook.com", "O")
+                else -> resolved
+            }
+            else -> resolved
         }
         return brand.also { cache[cacheKey] = it }
     }

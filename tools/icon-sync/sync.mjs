@@ -56,6 +56,15 @@ for (const [key, entry] of Object.entries(catalog).sort()) {
   for (const domain of entry.domains) domains[domain] = key;
   report.push({ key, source, license, upstreamUrl });
 }
+// Keep one SVG per asset key in the same priority order as the Android loader.
+// License/attribution files are retained in every source directory.
+const seen = new Set();
+for (const directory of [assets, localOutput, output, path.join(assets, 'simpleicons')]) {
+  for (const name of (await readdir(directory).catch(() => [])).filter(n => n.endsWith('.svg'))) {
+    if (seen.has(name)) await unlink(path.join(directory, name));
+    else seen.add(name);
+  }
+}
 await writeFile(path.join(assets, 'domains.json'), JSON.stringify(domains, null, 2) + '\n');
 await writeFile(path.join(output, 'sources.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(`Synced ${report.length} icons and ${Object.keys(domains).length} domains; existing overrides preserved.`);

@@ -13,6 +13,14 @@
   "outlook.com": "microsoftoutlook",
   "hotmail.com": "microsoftoutlook",
   "live.com": "microsoftoutlook",
+  "outlook.cl": "microsoftoutlook",
+  "outlook.jp": "microsoftoutlook",
+  "outlook.co.jp": "microsoftoutlook",
+  "hotmail.co.jp": "microsoftoutlook",
+  "live.jp": "microsoftoutlook",
+  "msn.com": "microsoftoutlook",
+  "163.com": "neteasemail",
+  "126.com": "neteasemail",
   "proton.me": "protonmail",
   "protonmail.com": "protonmail",
   "pm.me": "protonmail",
@@ -28,6 +36,7 @@
   "ymail.com": "yahoo",
   "yandex.com": "yandex",
   "yandex.ru": "yandex",
+  "za.group": "zabank",
   "zoho.com": "zohomail",
   "zohomail.com": "zohomail"
 }

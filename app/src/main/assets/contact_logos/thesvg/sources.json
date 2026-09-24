@@ -465,9 +465,7 @@
   },
   {
     "key": "microsoftoutlook",
-    "source": "@thesvg/icons/microsoft-outlook (default)",
-    "license": "MIT",
-    "upstreamUrl": "https://www.microsoft.com/microsoft-365/outlook/email-and-calendar-software-application"
+    "source": "contact_logos/microsoftoutlook.svg (curated)"
   },
   {
     "key": "moovit",
@@ -484,6 +482,10 @@
   {
     "key": "nasdaq",
     "source": "contact_logos/nasdaq.svg (curated)"
+  },
+  {
+    "key": "neteasemail",
+    "source": "contact_logos/neteasemail.svg (curated)"
   },
   {
     "key": "netflix",

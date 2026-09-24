@@ -1,16 +1,125 @@
 {
-  "gmail": { "slug": "gmail", "local": "Gmail.svg", "domains": ["gmail.com", "googlemail.com"] },
-  "qq": { "slug": "qq", "local": "QQ.svg", "domains": ["qq.com", "foxmail.com"] },
-  "yahoo": { "slug": "yahoo-badge", "local": "Yahoo.svg", "removeBackgroundCircle": true, "domains": ["yahoo.com", "yahoo.com.cn", "yahoo.co.jp", "ymail.com"] },
-  "icloud": { "slug": "icloud", "domains": ["icloud.com", "me.com", "mac.com"] },
-  "microsoftoutlook": { "slug": "microsoft-outlook", "domains": ["outlook.com", "hotmail.com", "live.com"] },
-  "protonmail": { "slug": "proton-mail", "domains": ["proton.me", "protonmail.com", "pm.me"] },
-  "tuta": { "slug": "tuta", "domains": ["tuta.com", "tutanota.com", "tuta.io"] },
-  "zohomail": { "slug": "zohomail", "domains": ["zoho.com", "zohomail.com"] },
-  "gmx": { "slug": "gmx", "local": "Gmx.svg", "domains": ["gmx.com", "gmx.net", "gmx.de"] },
-  "maildotcom": { "slug": "maildotcom", "domains": ["mail.com"] },
-  "maildotru": { "slug": "maildotru", "domains": ["mail.ru"] },
-  "webdotde": { "slug": "webdotde", "domains": ["web.de"] },
-  "hey": { "slug": "hey", "domains": ["hey.com"] },
-  "yandex": { "slug": "yandex", "domains": ["yandex.com", "yandex.ru"] }
+  "gmail": {
+    "slug": "gmail",
+    "local": "Gmail.svg",
+    "domains": [
+      "gmail.com",
+      "googlemail.com"
+    ]
+  },
+  "qq": {
+    "slug": "qq",
+    "local": "QQ.svg",
+    "domains": [
+      "qq.com",
+      "foxmail.com"
+    ]
+  },
+  "yahoo": {
+    "slug": "yahoo-badge",
+    "local": "Yahoo.svg",
+    "removeBackgroundCircle": true,
+    "domains": [
+      "yahoo.com",
+      "yahoo.com.cn",
+      "yahoo.co.jp",
+      "ymail.com"
+    ]
+  },
+  "icloud": {
+    "slug": "icloud",
+    "domains": [
+      "icloud.com",
+      "me.com",
+      "mac.com"
+    ]
+  },
+  "microsoftoutlook": {
+    "slug": "microsoft-outlook",
+    "domains": [
+      "outlook.com",
+      "hotmail.com",
+      "live.com",
+      "outlook.cl",
+      "outlook.jp",
+      "outlook.co.jp",
+      "hotmail.co.jp",
+      "live.jp",
+      "msn.com"
+    ]
+  },
+  "protonmail": {
+    "slug": "proton-mail",
+    "domains": [
+      "proton.me",
+      "protonmail.com",
+      "pm.me"
+    ]
+  },
+  "tuta": {
+    "slug": "tuta",
+    "domains": [
+      "tuta.com",
+      "tutanota.com",
+      "tuta.io"
+    ]
+  },
+  "zohomail": {
+    "slug": "zohomail",
+    "domains": [
+      "zoho.com",
+      "zohomail.com"
+    ]
+  },
+  "gmx": {
+    "slug": "gmx",
+    "local": "Gmx.svg",
+    "domains": [
+      "gmx.com",
+      "gmx.net",
+      "gmx.de"
+    ]
+  },
+  "maildotcom": {
+    "slug": "maildotcom",
+    "domains": [
+      "mail.com"
+    ]
+  },
+  "maildotru": {
+    "slug": "maildotru",
+    "domains": [
+      "mail.ru"
+    ]
+  },
+  "webdotde": {
+    "slug": "webdotde",
+    "domains": [
+      "web.de"
+    ]
+  },
+  "hey": {
+    "slug": "hey",
+    "domains": [
+      "hey.com"
+    ]
+  },
+  "yandex": {
+    "slug": "yandex",
+    "domains": [
+      "yandex.com",
+      "yandex.ru"
+    ]
+  },
+  "neteasemail": {
+    "domains": [
+      "163.com",
+      "126.com"
+    ]
+  },
+  "zabank": {
+    "domains": [
+      "za.group"
+    ]
+  }
 }
