@@ -4,6 +4,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun retailBrandsAndGenericCategories() {
+        mapOf("NIKE Sports" to "nike", "New Balance" to "newbalance", "Puma" to "puma",
+            "Ralph Lauren" to "ralphlauren", "森马" to "semir", "斯凯奇" to "skechers",
+            "亚瑟士" to "asics", "安踏" to "anta", "鸿星尔克" to "erke", "回力" to "warrior",
+            "李宁" to "lining", "匹克" to "peaksport", "特步" to "xtep", "贵人鸟" to "guirenniao",
+            "Lululemon" to "lululemon", "Under Armour" to "underarmour", "361度" to "361sport",
+            "Acer" to "acer", "Adidas" to "adidas", "Alienware" to "alienware", "AT&T" to "att",
+            "AutoCAD" to "autocad", "Bata" to "bata", "城市服饰" to "clothes",
+            "Example Clothing" to "clothes", "Example Sportswear" to "sports", "中乔体育" to "sports",
+            "中国乔丹" to "sports", "Qiaodan" to "sports").forEach { (name, key) ->
+            assertEquals(name, key, BrandMatcher.match(name, "news@example.org").key)
+        }
+    }
+    @Test fun shortRetailNamesDoNotMatchOtherWordsOrBody() {
+        listOf("Santa", "Racer", "CE", "Order 361", "Air Jordan", "Transportation", "Lining update").forEach {
+            assertEquals(it, "unknown", BrandMatcher.match(it, "news@example.org", "Nike sports clothes").key)
+        }
+        assertEquals("unknown", BrandMatcher.match("Notice", "news@notnike.com").key)
+        assertEquals("unknown", BrandMatcher.match("Notice", "news@nike.com.example.org").key)
+        assertEquals("nike", BrandMatcher.match("Notice", "news@mail.nike.com").key)
+        assertEquals("anta", BrandMatcher.match("Notice", "news@anta.com").key)
+        assertEquals("asics", BrandMatcher.match("Notice", "news@asics.com").key)
+    }
+
     @Test fun zaGroupAndMailboxAliasesUseCanonicalBrands() {
         assertEquals("za bank", BrandMatcher.match("Notice", "notice@za.group").key)
         assertEquals("za bank", BrandMatcher.match("Notice", "notice@mail.za.group").key)

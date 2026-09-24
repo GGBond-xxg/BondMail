@@ -565,6 +565,54 @@ object BrandMatcher {
         "outlook" to Brand("outlook", "O"), "yahoo" to Brand("yahoo", "Y"),
     )
 
+    // Curated retail/technology names; never search the message body for branding.
+    private val retailDomains = mapOf(
+        "newbalance.com" to Brand("newbalance", "NEW"),
+        "nike.com" to Brand("nike", "NIK"),
+        "adidas.com" to Brand("adidas", "ADI"),
+        "ralphlauren.com" to Brand("ralphlauren", "RAL"),
+        "asics.com" to Brand("asics", "ASI"),
+        "anta.com" to Brand("anta", "ANT"),
+        "semir.com" to Brand("semir", "SEM"),
+        "skechers.com" to Brand("skechers", "SKE"),
+        "erke.com" to Brand("erke", "ERK"),
+        "xtep.com" to Brand("xtep", "XTE"),
+        "lululemon.com" to Brand("lululemon", "LUL"),
+        "underarmour.com" to Brand("underarmour", "UND"),
+        "acer.com" to Brand("acer", "ACE"),
+        "att.com" to Brand("att", "ATT"),
+        "bata.com" to Brand("bata", "BAT"),
+        "epeaksport.com" to Brand("peaksport", "PEA"),
+    )
+
+    private val retailBrands = listOf(
+        Regex("(?<![a-z0-9])new balance(?![a-z0-9])|(?<![a-z0-9])newbalance(?![a-z0-9])|新百伦") to Brand("newbalance", "NEW"),
+        Regex("(?<![a-z0-9])nike(?![a-z0-9])|耐克") to Brand("nike", "NIK"),
+        Regex("(?<![a-z0-9])puma(?![a-z0-9])|彪马") to Brand("puma", "PUM"),
+        Regex("(?<![a-z0-9])ralph lauren(?![a-z0-9])|(?<![a-z0-9])ralphlauren(?![a-z0-9])|拉夫劳伦") to Brand("ralphlauren", "RAL"),
+        Regex("(?<![a-z0-9])semir(?![a-z0-9])|森马") to Brand("semir", "SEM"),
+        Regex("(?<![a-z0-9])skechers(?![a-z0-9])|斯凯奇") to Brand("skechers", "SKE"),
+        Regex("(?<![a-z0-9])asics(?![a-z0-9])|亚瑟士|阿西斯") to Brand("asics", "ASI"),
+        Regex("(?<![a-z0-9])anta(?![a-z0-9])|安踏") to Brand("anta", "ANT"),
+        Regex("(?<![a-z0-9])erke(?![a-z0-9])|鸿星尔克") to Brand("erke", "ERK"),
+        Regex("回力") to Brand("warrior", "WAR"),
+        Regex("(?<![a-z0-9])li\\-ning(?![a-z0-9])|(?<![a-z0-9])li ning(?![a-z0-9])|李宁") to Brand("lining", "LIN"),
+        Regex("(?<![a-z0-9])peak sport(?![a-z0-9])|匹克") to Brand("peaksport", "PEA"),
+        Regex("(?<![a-z0-9])xtep(?![a-z0-9])|特步") to Brand("xtep", "XTE"),
+        Regex("贵人鸟") to Brand("guirenniao", "GUI"),
+        Regex("(?<![a-z0-9])lululemon(?![a-z0-9])") to Brand("lululemon", "LUL"),
+        Regex("(?<![a-z0-9])under armour(?![a-z0-9])|(?<![a-z0-9])underarmour(?![a-z0-9])|安德玛") to Brand("underarmour", "UND"),
+        Regex("361°|361度|(?<![a-z0-9])361 degrees(?![a-z0-9])|(?<![a-z0-9])361sport(?![a-z0-9])") to Brand("361sport", "361"),
+        Regex("(?<![a-z0-9])acer(?![a-z0-9])|宏碁") to Brand("acer", "ACE"),
+        Regex("(?<![a-z0-9])adidas(?![a-z0-9])|阿迪达斯") to Brand("adidas", "ADI"),
+        Regex("(?<![a-z0-9])alienware(?![a-z0-9])|外星人") to Brand("alienware", "ALI"),
+        Regex("(?<![a-z0-9])at\\&t(?![a-z0-9])") to Brand("att", "ATT"),
+        Regex("(?<![a-z0-9])autocad(?![a-z0-9])") to Brand("autocad", "AUT"),
+        Regex("(?<![a-z0-9])bata(?![a-z0-9])") to Brand("bata", "BAT"),
+    )
+    private val sportsName = Regex("(?<![a-z0-9])(sports?|sportswear|fitness|athletics)(?![a-z0-9])|运动|運動|体育|體育|健身|中乔|中喬|乔丹|喬丹|(?<![a-z0-9])qiaodan(?![a-z0-9])")
+    private val clothesName = Regex("(?<![a-z0-9])(clothes|clothing|apparel|fashion|garments)(?![a-z0-9])|服装|服裝|服饰|服飾|时装|時裝")
+
     private val airlineDomains = setOf(
         "aa.com",
         "airasia.com",
@@ -737,7 +785,9 @@ object BrandMatcher {
             null
         }
         val fallback = senderName.trim().firstOrNull()?.uppercase() ?: senderAddress.firstOrNull()?.uppercase() ?: "?"
-        val resolved = contextualBrand ?: entry?.value ?: when {
+        val retailBrand = retailDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
+            ?: retailBrands.firstOrNull { (pattern, _) -> pattern.containsMatchIn(normalizedDisplayName) }?.second
+        val resolved = contextualBrand ?: retailBrand ?: entry?.value ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||
                 exchangeNameTokens.any(normalizedName::contains) -> Brand("exchange", "EX")
@@ -750,6 +800,9 @@ object BrandMatcher {
 
             senderDomain.endsWith(".bank") || normalizedName == "bank" ||
                 bankNameTokens.any(normalizedName::contains) -> Brand("bank", "BANK")
+
+            sportsName.containsMatchIn(normalizedDisplayName) -> Brand("sports", "SPORT")
+            clothesName.containsMatchIn(normalizedDisplayName) -> Brand("clothes", "WEAR")
 
             else -> Brand("unknown", fallback)
         }

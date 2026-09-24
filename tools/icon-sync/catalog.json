@@ -121,5 +121,137 @@
     "domains": [
       "za.group"
     ]
+  },
+  "newbalance": {
+    "local": "NewBalance.svg",
+    "domains": [
+      "newbalance.com"
+    ]
+  },
+  "nike": {
+    "local": "Nike.svg",
+    "domains": [
+      "nike.com"
+    ]
+  },
+  "puma": {
+    "local": "Puma.svg",
+    "domains": []
+  },
+  "ralphlauren": {
+    "local": "RalphLauren.svg",
+    "domains": [
+      "ralphlauren.com"
+    ]
+  },
+  "semir": {
+    "local": "Semir.svg",
+    "domains": [
+      "semir.com"
+    ]
+  },
+  "skechers": {
+    "local": "Skechers.svg",
+    "domains": [
+      "skechers.com"
+    ]
+  },
+  "asics": {
+    "local": "阿西斯.svg",
+    "domains": [
+      "asics.com"
+    ]
+  },
+  "anta": {
+    "local": "安踏.svg",
+    "domains": [
+      "anta.com"
+    ]
+  },
+  "erke": {
+    "local": "鸿星尔克.svg",
+    "domains": [
+      "erke.com"
+    ]
+  },
+  "warrior": {
+    "local": "回力.svg",
+    "domains": []
+  },
+  "lining": {
+    "local": "李宁.svg",
+    "domains": []
+  },
+  "peaksport": {
+    "local": "匹克.svg",
+    "domains": [
+      "epeaksport.com"
+    ]
+  },
+  "xtep": {
+    "local": "特步.svg",
+    "domains": [
+      "xtep.com"
+    ]
+  },
+  "guirenniao": {
+    "local": "贵人鸟.svg",
+    "domains": []
+  },
+  "lululemon": {
+    "local": "Lululemon.svg",
+    "domains": [
+      "lululemon.com"
+    ]
+  },
+  "underarmour": {
+    "local": "UnderArmour.svg",
+    "domains": [
+      "underarmour.com"
+    ]
+  },
+  "361sport": {
+    "local": "361.svg",
+    "domains": []
+  },
+  "acer": {
+    "local": "Acer.svg",
+    "domains": [
+      "acer.com"
+    ]
+  },
+  "adidas": {
+    "local": "Adidas.svg",
+    "domains": [
+      "adidas.com"
+    ]
+  },
+  "alienware": {
+    "local": "Alienware.svg",
+    "domains": []
+  },
+  "att": {
+    "local": "Atandt.svg",
+    "domains": [
+      "att.com"
+    ]
+  },
+  "autocad": {
+    "local": "Autocad.svg",
+    "domains": []
+  },
+  "bata": {
+    "local": "Bata.svg",
+    "domains": [
+      "bata.com"
+    ]
+  },
+  "clothes": {
+    "local": "Clothes.svg",
+    "domains": []
+  },
+  "sports": {
+    "local": "Sports.svg",
+    "domains": []
   }
 }
