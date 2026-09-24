@@ -34,3 +34,12 @@ Package updates are deliberate, not an automatic fetch of latest code on every G
 
 Source: https://github.com/glincker/thesvg . Tooling is MIT; individual brand marks retain
 their respective rights. See the bundled LICENSE and THIRD_PARTY_NOTICES.md.
+
+## Generic category registry
+
+`categories.json` records checked brand domains, bounded name aliases, exact-only ambiguous names,
+and source URLs. `node tools/icon-sync/sync.mjs` generates `GenericSenderCategories.kt` and merges
+category domain aliases into `contact_logos/domains.json`. Commit both generated files.
+Existing category SVGs are reused. Dedicated domain icons win; known category domains precede
+loose name matching (e.g. Maya banking versus Maya Mobile eSIM). These are visual associations,
+not sender authentication. Do not add shared mail-delivery domains to a brand category.

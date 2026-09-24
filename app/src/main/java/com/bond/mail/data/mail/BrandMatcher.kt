@@ -811,7 +811,18 @@ object BrandMatcher {
         val fallback = senderName.trim().firstOrNull()?.uppercase() ?: senderAddress.firstOrNull()?.uppercase() ?: "?"
         val retailBrand = retailDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
             ?: retailBrands.firstOrNull { (pattern, _) -> pattern.containsMatchIn(normalizedDisplayName) }?.second
-        val resolved = contextualBrand ?: retailBrand ?: entry?.value ?: when {
+        // Explicit domains beat loose name aliases (Maya Bank vs Maya Mobile, for example).
+        // Dedicated domain icons still beat generic category icons.
+        val dedicatedDomain = rules.entries.firstOrNull { (key, _) ->
+            domainRuleRegex.matches(key) && domainMatches(senderDomain, key)
+        }?.value ?: retailDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
+        val categoryDomain = GenericSenderCategories.byDomain(senderDomain) ?: when {
+            simCardDomains.any { domainMatches(senderDomain, it) } -> Brand("simcard", "SIM")
+            exchangeDomains.any { domainMatches(senderDomain, it) } -> Brand("exchange", "EX")
+            else -> null
+        }
+        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: retailBrand ?: entry?.value ?:
+            GenericSenderCategories.byName(normalizedDisplayName) ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||
                 exchangeNameTokens.any(normalizedName::contains) -> Brand("exchange", "EX")

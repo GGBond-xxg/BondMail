@@ -1,0 +1,452 @@
+[
+  {
+    "category": "bank",
+    "brand": "Maya",
+    "domains": [
+      "maya.ph",
+      "mayabank.ph"
+    ],
+    "names": [
+      "maya bank",
+      "paymaya",
+      "maya philippines"
+    ],
+    "exactNames": [
+      "maya"
+    ],
+    "sources": [
+      "https://maya.ph/",
+      "https://mayabank.ph/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "GoTyme",
+    "domains": [
+      "gotyme.com.ph"
+    ],
+    "names": [
+      "gotyme"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://gotyme.com.ph/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "Tonik",
+    "domains": [
+      "tonikbank.com"
+    ],
+    "names": [
+      "tonik"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://tonikbank.com/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "CIMB",
+    "domains": [
+      "cimbbank.com.ph"
+    ],
+    "names": [
+      "cimb"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://cimbbank.com.ph/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "BDO",
+    "domains": [
+      "bdo.com.ph"
+    ],
+    "names": [
+      "bdo unibank"
+    ],
+    "exactNames": [
+      "bdo"
+    ],
+    "sources": [
+      "https://bdo.com.ph/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "BPI",
+    "domains": [
+      "bpi.com.ph"
+    ],
+    "names": [
+      "bank of the philippine islands"
+    ],
+    "exactNames": [
+      "bpi"
+    ],
+    "sources": [
+      "https://bpi.com.ph/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "RCBC",
+    "domains": [
+      "rcbc.com"
+    ],
+    "names": [
+      "rcbc"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://rcbc.com/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "DBS",
+    "domains": [
+      "dbs.com"
+    ],
+    "names": [
+      "dbs bank",
+      "星展"
+    ],
+    "exactNames": [
+      "dbs"
+    ],
+    "sources": [
+      "https://dbs.com/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "OCBC",
+    "domains": [
+      "ocbc.com"
+    ],
+    "names": [
+      "ocbc",
+      "华侨银行",
+      "華僑銀行"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://ocbc.com/"
+    ]
+  },
+  {
+    "category": "bank",
+    "brand": "UOB",
+    "domains": [
+      "uob.com.sg"
+    ],
+    "names": [
+      "uob",
+      "大华银行",
+      "大華銀行"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://uob.com.sg/"
+    ]
+  },
+  {
+    "category": "simcard",
+    "brand": "Saily",
+    "domains": [
+      "saily.com"
+    ],
+    "names": [
+      "saily"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://saily.com/"
+    ]
+  },
+  {
+    "category": "simcard",
+    "brand": "M1",
+    "domains": [
+      "m1.com.sg"
+    ],
+    "names": [
+      "m1 singapore"
+    ],
+    "exactNames": [
+      "m1"
+    ],
+    "sources": [
+      "https://m1.com.sg/"
+    ]
+  },
+  {
+    "category": "simcard",
+    "brand": "giga",
+    "domains": [
+      "giga.com.sg"
+    ],
+    "names": [
+      "giga mobile"
+    ],
+    "exactNames": [
+      "giga",
+      "giga!"
+    ],
+    "sources": [
+      "https://giga.com.sg/"
+    ]
+  },
+  {
+    "category": "simcard",
+    "brand": "GOMO Singapore",
+    "domains": [
+      "gomo.sg"
+    ],
+    "names": [
+      "gomo"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://gomo.sg/"
+    ]
+  },
+  {
+    "category": "simcard",
+    "brand": "Maya Mobile",
+    "domains": [
+      "maya.net"
+    ],
+    "names": [
+      "maya mobile",
+      "maya esim"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://maya.net/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "Reebok",
+    "domains": [
+      "reebok.com"
+    ],
+    "names": [
+      "reebok",
+      "锐步",
+      "銳步"
+    ],
+    "exactNames": [
+      "reebok"
+    ],
+    "sources": [
+      "https://reebok.com/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "HOKA",
+    "domains": [
+      "hoka.com"
+    ],
+    "names": [
+      "hoka"
+    ],
+    "exactNames": [
+      "hoka"
+    ],
+    "sources": [
+      "https://hoka.com/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "Brooks",
+    "domains": [
+      "brooksrunning.com"
+    ],
+    "names": [
+      "brooks running",
+      "布鲁克斯"
+    ],
+    "exactNames": [
+      "brooks"
+    ],
+    "sources": [
+      "https://brooksrunning.com/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "FILA",
+    "domains": [
+      "fila.com"
+    ],
+    "names": [
+      "fila",
+      "斐乐",
+      "斐樂"
+    ],
+    "exactNames": [
+      "fila"
+    ],
+    "sources": [
+      "https://fila.com/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "Converse",
+    "domains": [
+      "converse.com"
+    ],
+    "names": [
+      "converse shoes",
+      "匡威"
+    ],
+    "exactNames": [
+      "converse"
+    ],
+    "sources": [
+      "https://converse.com/"
+    ]
+  },
+  {
+    "category": "sports",
+    "brand": "Vans",
+    "domains": [
+      "vans.com"
+    ],
+    "names": [
+      "vans shoes",
+      "范斯"
+    ],
+    "exactNames": [
+      "vans"
+    ],
+    "sources": [
+      "https://vans.com/"
+    ]
+  },
+  {
+    "category": "clothes",
+    "brand": "ZARA",
+    "domains": [
+      "zara.com"
+    ],
+    "names": [
+      "zara"
+    ],
+    "exactNames": [
+      "zara"
+    ],
+    "sources": [
+      "https://zara.com/"
+    ]
+  },
+  {
+    "category": "clothes",
+    "brand": "H&M",
+    "domains": [
+      "hm.com"
+    ],
+    "names": [
+      "h&m",
+      "hennes & mauritz"
+    ],
+    "exactNames": [
+      "h&m"
+    ],
+    "sources": [
+      "https://hm.com/"
+    ]
+  },
+  {
+    "category": "clothes",
+    "brand": "Gap",
+    "domains": [
+      "gap.com"
+    ],
+    "names": [
+      "gap clothing",
+      "gap store"
+    ],
+    "exactNames": [
+      "gap"
+    ],
+    "sources": [
+      "https://gap.com/"
+    ]
+  },
+  {
+    "category": "clothes",
+    "brand": "Levis",
+    "domains": [
+      "levi.com"
+    ],
+    "names": [
+      "levi's",
+      "levi’s",
+      "levis",
+      "李维斯",
+      "李維斯"
+    ],
+    "exactNames": [
+      "levis"
+    ],
+    "sources": [
+      "https://levi.com/"
+    ]
+  },
+  {
+    "category": "clothes",
+    "brand": "Mango",
+    "domains": [
+      "mango.com"
+    ],
+    "names": [
+      "mango fashion"
+    ],
+    "exactNames": [
+      "mango"
+    ],
+    "sources": [
+      "https://mango.com/"
+    ]
+  },
+  {
+    "category": "exchange",
+    "brand": "Bitpanda",
+    "domains": [
+      "bitpanda.com"
+    ],
+    "names": [
+      "bitpanda"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://bitpanda.com/"
+    ]
+  },
+  {
+    "category": "exchange",
+    "brand": "Bitunix",
+    "domains": [
+      "bitunix.com"
+    ],
+    "names": [
+      "bitunix"
+    ],
+    "exactNames": [],
+    "sources": [
+      "https://bitunix.com/"
+    ]
+  }
+]
