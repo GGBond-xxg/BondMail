@@ -68,11 +68,9 @@ fun brandAvatarPalette(
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
     val background = if (monet) {
-        when (tone) {
-            0 -> scheme.primaryContainer
-            1 -> scheme.secondaryContainer
-            else -> scheme.tertiaryContainer
-        }
+        // One container pair for every themed avatar: MIUIX's primary container is
+        // much brighter than the other containers and caused mixed styles in one list.
+        scheme.secondaryContainer
     } else {
         fixedBrandColor(brand.key) ?: when (tone) {
             0 -> scheme.primary
@@ -81,11 +79,7 @@ fun brandAvatarPalette(
         }
     }
     val foreground = if (monet) {
-        when (tone) {
-            0 -> scheme.onPrimaryContainer
-            1 -> scheme.onSecondaryContainer
-            else -> scheme.onTertiaryContainer
-        }
+        scheme.onSecondaryContainer
     } else if (brand.key in DARK_FOREGROUND_BRANDS) {
         Color(0xFF102A1D)
     } else if (background.luminance() > 0.52f) {

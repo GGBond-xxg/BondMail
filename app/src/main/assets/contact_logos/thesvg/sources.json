@@ -260,6 +260,10 @@
     "source": "contact_logos/dazhongdianping.svg (curated)"
   },
   {
+    "key": "decathlon",
+    "source": "contact_logos/decathlon.svg (curated)"
+  },
+  {
     "key": "deepai",
     "source": "contact_logos/deepai.svg (curated)"
   },
@@ -322,6 +326,10 @@
   {
     "key": "expedia",
     "source": "contact_logos/expedia.svg (curated)"
+  },
+  {
+    "key": "expressdelivery",
+    "source": "contact_logos/expressdelivery.svg (curated)"
   },
   {
     "key": "ferrari",
@@ -400,6 +408,10 @@
   {
     "key": "hostelworld",
     "source": "contact_logos/hostelworld.svg (curated)"
+  },
+  {
+    "key": "hotel",
+    "source": "contact_logos/hotel.svg (curated)"
   },
   {
     "key": "hotels.com",
@@ -530,6 +542,10 @@
   {
     "key": "motorola",
     "source": "contact_logos/motorola.svg (curated)"
+  },
+  {
+    "key": "muji",
+    "source": "contact_logos/muji.svg (curated)"
   },
   {
     "key": "n26",
@@ -674,6 +690,10 @@
     "source": "contact_logos/sfexpress.svg (curated)"
   },
   {
+    "key": "shopping",
+    "source": "contact_logos/shopping.svg (curated)"
+  },
+  {
     "key": "simcard",
     "source": "contact_logos/simcard.svg (curated)"
   },
@@ -746,6 +766,10 @@
   {
     "key": "underarmour",
     "source": "contact_logos/underarmour.svg (curated)"
+  },
+  {
+    "key": "uniqlo",
+    "source": "contact_logos/uniqlo.svg (curated)"
   },
   {
     "key": "visa",

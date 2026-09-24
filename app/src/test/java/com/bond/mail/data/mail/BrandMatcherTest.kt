@@ -4,6 +4,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun newBrandsAndServiceCategoriesPreferSpecificMarks() {
+        mapOf("MUJI" to "muji", "无印良品" to "muji", "UNIQLO Store" to "uniqlo",
+            "优衣库" to "uniqlo", "Decathlon Sports" to "decathlon", "迪卡侬" to "decathlon",
+            "Example Hotel" to "hotel", "城市酒店" to "hotel", "Example Parcel" to "expressdelivery",
+            "城市快递" to "expressdelivery", "Example Shopping" to "shopping", "城市商城" to "shopping",
+            "Example Clothing Store" to "clothes", "NIKE Store" to "nike").forEach { (name, key) ->
+            assertEquals(name, key, BrandMatcher.match(name, "info@example.org").key)
+        }
+        listOf("muji", "uniqlo", "decathlon").forEach {
+            assertEquals(it, BrandMatcher.match("Notice", "info@mail.$it.com").key)
+            assertEquals("unknown", BrandMatcher.match("Notice", "info@not$it.com").key)
+        }
+        listOf("Workshop", "Restore", "Mallory", "Hotelling", "Express yourself").forEach {
+            assertEquals(it, "unknown", BrandMatcher.match(it, "info@example.org", "Hotel shopping parcel").key)
+        }
+    }
+
     @Test fun retailBrandsAndGenericCategories() {
         mapOf("NIKE Sports" to "nike", "New Balance" to "newbalance", "Puma" to "puma",
             "Ralph Lauren" to "ralphlauren", "森马" to "semir", "斯凯奇" to "skechers",

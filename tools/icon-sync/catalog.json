@@ -253,5 +253,35 @@
   "sports": {
     "local": "Sports.svg",
     "domains": []
+  },
+  "hotel": {
+    "local": "Hotel.svg",
+    "domains": []
+  },
+  "muji": {
+    "local": "MUJI.svg",
+    "domains": [
+      "muji.com"
+    ]
+  },
+  "shopping": {
+    "local": "Shopping.svg",
+    "domains": []
+  },
+  "uniqlo": {
+    "local": "UNIQLO.svg",
+    "domains": [
+      "uniqlo.com"
+    ]
+  },
+  "decathlon": {
+    "local": "Decathlon.svg",
+    "domains": [
+      "decathlon.com"
+    ]
+  },
+  "expressdelivery": {
+    "local": "ExpressDelivery.svg",
+    "domains": []
   }
 }

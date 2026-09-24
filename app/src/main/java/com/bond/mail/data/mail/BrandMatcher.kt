@@ -567,6 +567,9 @@ object BrandMatcher {
 
     // Curated retail/technology names; never search the message body for branding.
     private val retailDomains = mapOf(
+        "muji.com" to Brand("muji", "MUJI"),
+        "uniqlo.com" to Brand("uniqlo", "UQ"),
+        "decathlon.com" to Brand("decathlon", "DEC"),
         "newbalance.com" to Brand("newbalance", "NEW"),
         "nike.com" to Brand("nike", "NIK"),
         "adidas.com" to Brand("adidas", "ADI"),
@@ -586,6 +589,9 @@ object BrandMatcher {
     )
 
     private val retailBrands = listOf(
+        Regex("(?<![a-z0-9])muji(?![a-z0-9])|无印良品|無印良品") to Brand("muji", "MUJI"),
+        Regex("(?<![a-z0-9])uniqlo(?![a-z0-9])|优衣库|優衣庫") to Brand("uniqlo", "UQ"),
+        Regex("(?<![a-z0-9])decathlon(?![a-z0-9])|迪卡侬|迪卡儂") to Brand("decathlon", "DEC"),
         Regex("(?<![a-z0-9])new balance(?![a-z0-9])|(?<![a-z0-9])newbalance(?![a-z0-9])|新百伦") to Brand("newbalance", "NEW"),
         Regex("(?<![a-z0-9])nike(?![a-z0-9])|耐克") to Brand("nike", "NIK"),
         Regex("(?<![a-z0-9])puma(?![a-z0-9])|彪马") to Brand("puma", "PUM"),
@@ -612,6 +618,10 @@ object BrandMatcher {
     )
     private val sportsName = Regex("(?<![a-z0-9])(sports?|sportswear|fitness|athletics)(?![a-z0-9])|运动|運動|体育|體育|健身|中乔|中喬|乔丹|喬丹|(?<![a-z0-9])qiaodan(?![a-z0-9])")
     private val clothesName = Regex("(?<![a-z0-9])(clothes|clothing|apparel|fashion|garments)(?![a-z0-9])|服装|服裝|服饰|服飾|时装|時裝")
+
+    private val hotelName = Regex("(?<![a-z0-9])(hotels?|resorts?|hostels?)(?![a-z0-9])|酒店|旅馆|旅館|民宿")
+    private val deliveryName = Regex("(?<![a-z0-9])(courier|parcel|express delivery)(?![a-z0-9])|快递|快遞|物流|速运|速運")
+    private val shoppingName = Regex("(?<![a-z0-9])(shopping|shop|store|mall)(?![a-z0-9])|商城|商店|购物|購物")
 
     private val airlineDomains = setOf(
         "aa.com",
@@ -803,6 +813,10 @@ object BrandMatcher {
 
             sportsName.containsMatchIn(normalizedDisplayName) -> Brand("sports", "SPORT")
             clothesName.containsMatchIn(normalizedDisplayName) -> Brand("clothes", "WEAR")
+
+            hotelName.containsMatchIn(normalizedDisplayName) -> Brand("hotel", "HOTEL")
+            deliveryName.containsMatchIn(normalizedDisplayName) -> Brand("expressdelivery", "EXP")
+            shoppingName.containsMatchIn(normalizedDisplayName) -> Brand("shopping", "SHOP")
 
             else -> Brand("unknown", fallback)
         }
