@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Monochrome Outlook mark: an outlined envelope and negative-space O. -->
+  <path fill-rule="evenodd" d="M18 8H28Q30 8 30 10V25Q30 27 28 27H18V25H28V12L22 17L18 14V11L22 14L27 10H18Z"/>
+  <path fill-rule="evenodd" d="M2 5H17V28H2ZM9.5 10C6.4 10 4.5 12.4 4.5 16.5S6.4 23 9.5 23S14.5 20.6 14.5 16.5S12.6 10 9.5 10ZM9.5 12.5C11.1 12.5 12 14 12 16.5S11.1 20.5 9.5 20.5S7 19 7 16.5S7.9 12.5 9.5 12.5Z"/>
+</svg>

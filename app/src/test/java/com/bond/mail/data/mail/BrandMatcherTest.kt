@@ -4,6 +4,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun privyPlasmaMailUsesSubjectWithoutChangingOtherPrivyMail() {
+        assertEquals("plasmaone", BrandMatcher.match("no-reply@privy.io", "no-reply@privy.io", "Your login code for Plasma One").key)
+        assertEquals("unknown", BrandMatcher.match("no-reply@privy.io", "no-reply@privy.io", "Your login code for another app").key)
+        assertEquals("unknown", BrandMatcher.match("Sender", "notice@notprivy.io", "Your login code for Plasma One").key)
+        assertEquals("plasmaone", BrandMatcher.match("Plasma", "no-reply@auth.privy.io", "PLASMA login").key)
+    }
+
     @Test fun aletaAdventureUsesGenericBank() {
         assertEquals("bank", BrandMatcher.match("Aleta Adventure", "notice@example.com").key)
     }

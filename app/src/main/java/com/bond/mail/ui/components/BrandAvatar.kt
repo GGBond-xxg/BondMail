@@ -60,9 +60,10 @@ fun brandAvatarPalette(
     senderName: String,
     senderAddress: String,
     monet: Boolean,
+    messageSubject: String = "",
 ): BrandAvatarPalette {
-    val brand = remember(senderName, senderAddress) {
-        BrandMatcher.match(senderName, senderAddress)
+    val brand = remember(senderName, senderAddress, messageSubject) {
+        BrandMatcher.match(senderName, senderAddress, messageSubject)
     }
     val scheme = MaterialTheme.colorScheme
     val tone = remember(brand.key) { brand.key.hashCode().absoluteValue % 3 }
@@ -101,16 +102,17 @@ fun BrandAvatar(
     senderAddress: String,
     size: Dp = 48.dp,
     monet: Boolean = true,
+    messageSubject: String = "",
 ) {
     val context = LocalContext.current
-    val brand = remember(senderName, senderAddress) {
-        BrandMatcher.match(senderName, senderAddress)
+    val brand = remember(senderName, senderAddress, messageSubject) {
+        BrandMatcher.match(senderName, senderAddress, messageSubject)
     }
     val logo = remember(brand.key, senderAddress) {
         ContactLogoStore.load(context, brand.key, senderAddress)
     }
     val scheme = MaterialTheme.colorScheme
-    val palette = brandAvatarPalette(senderName, senderAddress, monet)
+    val palette = brandAvatarPalette(senderName, senderAddress, monet, messageSubject)
     val background = palette.background
     val foreground = palette.foreground
 
@@ -167,6 +169,7 @@ fun ContactAvatar(
     customText: String?,
     size: Dp = 48.dp,
     monet: Boolean = true,
+    messageSubject: String = "",
 ) {
     val glyph = customText?.trim().takeUnless { it.isNullOrBlank() }
     if (glyph == null) {
@@ -175,11 +178,12 @@ fun ContactAvatar(
             senderAddress = email,
             size = size,
             monet = monet,
+            messageSubject = messageSubject,
         )
         return
     }
 
-    val palette = brandAvatarPalette(name, email, monet)
+    val palette = brandAvatarPalette(name, email, monet, messageSubject)
     Box(
         modifier = Modifier
             .size(size)

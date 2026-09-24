@@ -2452,6 +2452,7 @@ private fun MailSenderHeaderContent(
             customText = header.customAvatarText,
             size = 46.dp,
             monet = header.monetBrandIcons,
+            messageSubject = header.subject,
         )
         Column(
             modifier = Modifier.weight(1f),

@@ -177,6 +177,7 @@ fun MessageCard(
                             customText = contactAvatarText,
                             size = avatarSize,
                             monet = monetBrandIcons,
+                            messageSubject = if (outgoing) "" else message.subject,
                         )
                         if (account != null) {
                             AccountBadge(

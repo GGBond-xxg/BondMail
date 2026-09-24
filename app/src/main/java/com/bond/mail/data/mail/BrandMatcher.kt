@@ -701,9 +701,13 @@ object BrandMatcher {
 
     private val domainRuleRegex = Regex("^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,}$")
 
+    private val plasmaSubjectRegex = Regex("\\bplasma(?:\\s+one)?\\b", RegexOption.IGNORE_CASE)
+
     @Synchronized
-    fun match(senderName: String, senderAddress: String): Brand {
-        val cacheKey = "$senderName|$senderAddress".lowercase()
+    fun match(senderName: String, senderAddress: String, messageSubject: String = ""): Brand {
+        val plasmaViaPrivy = domainMatches(extractDomain(senderAddress.lowercase()), "privy.io") &&
+            plasmaSubjectRegex.containsMatchIn(messageSubject.take(1000))
+        val cacheKey = "$senderName|$senderAddress|$plasmaViaPrivy".lowercase()
         cache[cacheKey]?.let { return it }
         val normalizedName = senderName.lowercase()
         val normalizedAddress = senderAddress.lowercase()
@@ -711,6 +715,7 @@ object BrandMatcher {
         val senderDomain = extractDomain(normalizedAddress)
         val normalizedDisplayName = normalizedName.trim()
         val contextualBrand = when {
+            plasmaViaPrivy -> Brand("plasmaone", "P1")
             normalizedDisplayName == "aleta adventure" -> Brand("bank", "BANK")
             normalizedDisplayName == "git" -> Brand("git", "GIT")
             normalizedDisplayName == "vk" -> Brand("vk", "VK")

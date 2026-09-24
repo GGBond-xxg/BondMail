@@ -6,6 +6,9 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.Transaction
+import kotlinx.coroutines.flow.map
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -76,6 +79,10 @@ interface FolderDao {
     suspend fun deleteForAccount(accountId: String)
 }
 
+// Large fields must never cross CursorWindow as a whole row (including cached legacy mail).
+private const val MESSAGE_METADATA_COLUMNS = "id, accountId, folderType, remoteFolder, remoteUid, internetMessageId, inReplyTo, referencesHeader, senderName, senderAddress, recipients, cc, subject, preview, receivedAt, unread, starred, hasAttachments, bodyLoaded, bodyParserVersion, htmlContentHash, remoteImageAllowed, deliveryState, '' AS bodyText, NULL AS bodyHtml, '[]' AS attachmentsJson"
+private const val MESSAGE_CHUNK_BYTES = 64 * 1024
+
 @Dao
 interface MessageDao {
     @androidx.room.RawQuery(observedEntities = [MessageEntity::class])
@@ -106,22 +113,28 @@ interface MessageDao {
     """)
     suspend fun folderRowSnapshot(accountId: String?, folderType: String): List<MessageListRow>
 
-    @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
-    fun observeById(id: String): Flow<MessageEntity?>
+    @Query("SELECT id FROM messages WHERE id = :id LIMIT 1")
+    fun observeMessageId(id: String): Flow<String?>
+
+    fun observeById(id: String): Flow<MessageEntity?> = observeMessageId(id).map { key -> key?.let { byId(it) } }
 
     @Query("""
-        SELECT * FROM messages
+        SELECT """ + MESSAGE_METADATA_COLUMNS + """ FROM messages
         WHERE accountId = :accountId
           AND folderType = :folderType
           AND deliveryState = 'REMOTE'
           AND LOWER(TRIM(senderAddress)) = LOWER(TRIM(:senderAddress))
         ORDER BY receivedAt DESC
     """)
-    suspend fun senderFolderSnapshot(
+    suspend fun senderFolderMetadataSnapshot(
         accountId: String,
         folderType: String,
         senderAddress: String,
     ): List<MessageEntity>
+
+    @Transaction
+    suspend fun senderFolderSnapshot(accountId: String, folderType: String, senderAddress: String): List<MessageEntity> =
+        senderFolderMetadataSnapshot(accountId, folderType, senderAddress).map { hydrate(it) }
 
     @Query("""
         SELECT id, accountId, folderType, senderName, senderAddress, recipients, subject, preview, receivedAt, unread, starred, deliveryState, NULL AS localTaskId
@@ -159,14 +172,46 @@ interface MessageDao {
     """)
     suspend fun unreadRowSnapshot(accountId: String?): List<MessageListRow>
 
-    @Query("SELECT * FROM messages WHERE id = :id LIMIT 1")
-    suspend fun byId(id: String): MessageEntity?
+    @Query("SELECT " + MESSAGE_METADATA_COLUMNS + " FROM messages WHERE id = :id LIMIT 1")
+    suspend fun metadataById(id: String): MessageEntity?
 
-    @Query("SELECT * FROM messages WHERE accountId = :accountId AND folderType = :folderType ORDER BY remoteUid DESC")
-    suspend fun folderEntitySnapshot(accountId: String, folderType: String): List<MessageEntity>
+    @Transaction
+    suspend fun byId(id: String): MessageEntity? = metadataById(id)?.let { hydrate(it) }
 
-    @Query("SELECT * FROM messages WHERE id IN (:ids)")
-    suspend fun byIds(ids: List<String>): List<MessageEntity>
+    @Query("SELECT substr(CAST(CASE :field WHEN 'text' THEN bodyText WHEN 'html' THEN bodyHtml WHEN 'attachments' THEN attachmentsJson END AS BLOB), :offset, :size) FROM messages WHERE id = :id")
+    suspend fun largeFieldChunk(id: String, field: String, offset: Long, size: Int): ByteArray?
+
+    private suspend fun readLargeField(id: String, field: String): String? {
+        var offset = 1L // SQLite substr uses a one-based byte offset for BLOB values.
+        val bytes = ByteArrayOutputStream()
+        while (true) {
+            val chunk = largeFieldChunk(id, field, offset, MESSAGE_CHUNK_BYTES) ?: return null
+            bytes.write(chunk)
+            if (chunk.size < MESSAGE_CHUNK_BYTES) break
+            offset += chunk.size
+        }
+        // Decode once, so UTF-8 code points split across chunks are preserved.
+        return bytes.toString(Charsets.UTF_8.name())
+    }
+
+    private suspend fun hydrate(row: MessageEntity): MessageEntity = row.copy(
+        bodyText = readLargeField(row.id, "text").orEmpty(),
+        bodyHtml = readLargeField(row.id, "html"),
+        attachmentsJson = readLargeField(row.id, "attachments") ?: "[]",
+    )
+
+    @Query("SELECT " + MESSAGE_METADATA_COLUMNS + " FROM messages WHERE accountId = :accountId AND folderType = :folderType ORDER BY remoteUid DESC")
+    suspend fun folderMetadataSnapshot(accountId: String, folderType: String): List<MessageEntity>
+
+    @Transaction
+    suspend fun folderEntitySnapshot(accountId: String, folderType: String): List<MessageEntity> =
+        folderMetadataSnapshot(accountId, folderType).map { hydrate(it) }
+
+    @Query("SELECT " + MESSAGE_METADATA_COLUMNS + " FROM messages WHERE id IN (:ids)")
+    suspend fun metadataByIds(ids: List<String>): List<MessageEntity>
+
+    @Transaction
+    suspend fun byIds(ids: List<String>): List<MessageEntity> = metadataByIds(ids).map { hydrate(it) }
 
     @Query("SELECT EXISTS(SELECT 1 FROM messages WHERE id = :id)")
     suspend fun exists(id: String): Boolean
@@ -218,7 +263,7 @@ interface MessageDao {
     )
 
     @Query("""
-        SELECT * FROM messages
+        SELECT """ + MESSAGE_METADATA_COLUMNS + """ FROM messages
         WHERE accountId = :accountId
           AND folderType = :folderType
           AND deliveryState = 'REMOTE'
@@ -226,11 +271,15 @@ interface MessageDao {
         ORDER BY remoteUid DESC
         LIMIT 1
     """)
-    suspend fun remoteByInternetMessageId(
+    suspend fun remoteMetadataByInternetMessageId(
         accountId: String,
         folderType: String,
         normalizedInternetMessageId: String,
     ): MessageEntity?
+
+    @Transaction
+    suspend fun remoteByInternetMessageId(accountId: String, folderType: String, normalizedInternetMessageId: String): MessageEntity? =
+        remoteMetadataByInternetMessageId(accountId, folderType, normalizedInternetMessageId)?.let { hydrate(it) }
 
     @Query("""
         UPDATE messages
