@@ -357,5 +357,11 @@
   "developer": {
     "local": "Developer.svg",
     "domains": []
+  },
+  "meta": {
+    "local": "Meta.svg",
+    "domains": [
+      "meta.com"
+    ]
   }
 }

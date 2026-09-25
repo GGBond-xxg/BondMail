@@ -66,3 +66,7 @@ Generic Wallet, Social, Gaming, Entertainment, Education, Food, Transport, Healt
 and Developer marks: user-supplied ICON/*.svg exports from SVG Repo. Source geometry is
 preserved; inherited fill, stroke, and fill-rule are made explicit for the local renderer.
 Original ICON files are not modified. These categories are selected manually.
+
+Meta: user-supplied ICON/Meta.svg. Path geometry is preserved; gradient paints are
+normalized to a single tint for the current app theme. meta.com and exact Meta names
+use this mark; Facebook and Instagram keep their dedicated icons.

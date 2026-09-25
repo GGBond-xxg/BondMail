@@ -4,6 +4,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun metaMatchesItsDomainAndExactNameWithoutTakingOverOtherBrands() {
+        assertEquals("meta", BrandMatcher.match("Notice", "notice@mail.meta.com").key)
+        assertEquals("meta", BrandMatcher.match("Meta", "notice@example.org").key)
+        assertEquals("meta", BrandMatcher.match("Meta Platforms", "notice@example.org").key)
+        assertEquals("unknown", BrandMatcher.match("Metaverse", "notice@notmeta.com").key)
+        assertEquals("unknown", BrandMatcher.match("MetaMask", "notice@meta.com.example.org").key)
+        assertEquals("facebook", BrandMatcher.match("Facebook", "notice@facebook.com").key)
+        assertEquals("instagram", BrandMatcher.match("Instagram", "notice@instagram.com").key)
+    }
+
     @Test fun carriersCouriersAndHotelsUseSharedCategoryIcons() {
         val domains = mapOf("dito.ph" to "simcard", "globe.com.ph" to "simcard",
             "smart.com.ph" to "simcard", "gomo.ph" to "simcard", "singtel.com" to "simcard",

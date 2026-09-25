@@ -11,6 +11,7 @@ object BrandMatcher {
     }
 
     private val rules = linkedMapOf(
+        "meta.com" to Brand("meta", "M"),
         "za.group" to Brand("za bank", "ZA"),
         "google-gemini" to Brand("gemini", "GM"),
         "google gemini" to Brand("gemini", "GM"),
@@ -821,7 +822,8 @@ object BrandMatcher {
             exchangeDomains.any { domainMatches(senderDomain, it) } -> Brand("exchange", "EX")
             else -> null
         }
-        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: retailBrand ?: entry?.value ?:
+        val metaName = if (normalizedDisplayName in setOf("meta", "meta platforms")) Brand("meta", "M") else null
+        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: retailBrand ?: entry?.value ?: metaName ?:
             GenericSenderCategories.byName(normalizedDisplayName) ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||
