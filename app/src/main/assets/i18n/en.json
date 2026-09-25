@@ -511,5 +511,15 @@
   "sender_icon_hotel": "Hotel",
   "sender_icon_expressdelivery": "Delivery",
   "sender_icon_airplane": "Airline",
-  "sender_icon_aidef": "AI / Artificial intelligence"
+  "sender_icon_aidef": "AI / Artificial intelligence",
+  "sender_icon_wallet": "Payments / Wallet",
+  "sender_icon_social": "Social",
+  "sender_icon_gaming": "Gaming",
+  "sender_icon_entertainment": "Entertainment",
+  "sender_icon_education": "Education / Learning",
+  "sender_icon_food": "Food / Dining",
+  "sender_icon_transport": "Ground transport",
+  "sender_icon_health": "Health / Medical",
+  "sender_icon_jobs": "Jobs / Work",
+  "sender_icon_developer": "Software / Developer tools"
 }

@@ -317,5 +317,45 @@
   "aidef": {
     "local": "AIDef.svg",
     "domains": []
+  },
+  "wallet": {
+    "local": "Wallet.svg",
+    "domains": []
+  },
+  "social": {
+    "local": "Social.svg",
+    "domains": []
+  },
+  "gaming": {
+    "local": "Gaming.svg",
+    "domains": []
+  },
+  "entertainment": {
+    "local": "Entertainment.svg",
+    "domains": []
+  },
+  "education": {
+    "local": "Education.svg",
+    "domains": []
+  },
+  "food": {
+    "local": "Food.svg",
+    "domains": []
+  },
+  "transport": {
+    "local": "Transport.svg",
+    "domains": []
+  },
+  "health": {
+    "local": "Health.svg",
+    "domains": []
+  },
+  "jobs": {
+    "local": "Jobs.svg",
+    "domains": []
+  },
+  "developer": {
+    "local": "Developer.svg",
+    "domains": []
   }
 }

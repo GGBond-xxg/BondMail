@@ -276,6 +276,10 @@
     "source": "contact_logos/deepseek.svg (curated)"
   },
   {
+    "key": "developer",
+    "source": "contact_logos/developer.svg (curated)"
+  },
+  {
     "key": "didi",
     "source": "contact_logos/didi.svg (curated)"
   },
@@ -316,8 +320,16 @@
     "source": "contact_logos/eastwestbank.svg (curated)"
   },
   {
+    "key": "education",
+    "source": "contact_logos/education.svg (curated)"
+  },
+  {
     "key": "elililly",
     "source": "contact_logos/elililly.svg (curated)"
+  },
+  {
+    "key": "entertainment",
+    "source": "contact_logos/entertainment.svg (curated)"
   },
   {
     "key": "erke",
@@ -344,12 +356,20 @@
     "source": "contact_logos/firstrade.svg (curated)"
   },
   {
+    "key": "food",
+    "source": "contact_logos/food.svg (curated)"
+  },
+  {
     "key": "ford",
     "source": "contact_logos/ford.svg (curated)"
   },
   {
     "key": "gamebanana",
     "source": "contact_logos/gamebanana.svg (curated)"
+  },
+  {
+    "key": "gaming",
+    "source": "contact_logos/gaming.svg (curated)"
   },
   {
     "key": "gemini",
@@ -394,6 +414,10 @@
   {
     "key": "guirenniao",
     "source": "contact_logos/guirenniao.svg (curated)"
+  },
+  {
+    "key": "health",
+    "source": "contact_logos/health.svg (curated)"
   },
   {
     "key": "hey",
@@ -454,6 +478,10 @@
   {
     "key": "intel",
     "source": "contact_logos/intel.svg (curated)"
+  },
+  {
+    "key": "jobs",
+    "source": "contact_logos/jobs.svg (curated)"
   },
   {
     "key": "johnsonandjohnson",
@@ -710,6 +738,10 @@
     "source": "contact_logos/skhynix.svg (curated)"
   },
   {
+    "key": "social",
+    "source": "contact_logos/social.svg (curated)"
+  },
+  {
     "key": "spacex",
     "source": "contact_logos/spacex.svg (curated)"
   },
@@ -754,6 +786,10 @@
     "source": "contact_logos/trainline.svg (curated)"
   },
   {
+    "key": "transport",
+    "source": "contact_logos/transport.svg (curated)"
+  },
+  {
     "key": "tsmc",
     "source": "contact_logos/tsmc.svg (curated)"
   },
@@ -794,6 +830,10 @@
   {
     "key": "volkswagen",
     "source": "contact_logos/volkswagen.svg (curated)"
+  },
+  {
+    "key": "wallet",
+    "source": "contact_logos/wallet.svg (curated)"
   },
   {
     "key": "walmart",

@@ -15,7 +15,7 @@ import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.BondAlertDialog
 import com.bond.mail.ui.theme.BondTextAction
 
-internal val manualIconCategories = listOf("aidef", "bank", "simcard", "exchange", "sports", "clothes", "shopping", "hotel", "expressdelivery", "airplane")
+internal val manualIconCategories = listOf("aidef", "bank", "simcard", "exchange", "sports", "clothes", "shopping", "hotel", "expressdelivery", "airplane", "wallet", "social", "gaming", "entertainment", "education", "food", "transport", "health", "jobs", "developer")
 
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {

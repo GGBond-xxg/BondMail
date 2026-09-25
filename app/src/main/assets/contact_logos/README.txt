@@ -61,3 +61,8 @@ AIDef generic AI chip: user-supplied ICON/AIDef.svg (SVG Repo export).
 The curated aidef.svg preserves the source geometry and puts evenodd on the path so both
 Compose and HTML keep the AI lettering transparent while applying the current theme tint.
 This generic mark is selected manually; existing dedicated AI brand logos stay unchanged.
+
+Generic Wallet, Social, Gaming, Entertainment, Education, Food, Transport, Health, Jobs,
+and Developer marks: user-supplied ICON/*.svg exports from SVG Repo. Source geometry is
+preserved; inherited fill, stroke, and fill-rule are made explicit for the local renderer.
+Original ICON files are not modified. These categories are selected manually.

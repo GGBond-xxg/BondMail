@@ -511,5 +511,15 @@
   "sender_icon_hotel": "酒店",
   "sender_icon_expressdelivery": "快递",
   "sender_icon_airplane": "航空",
-  "sender_icon_aidef": "AI / 人工智能"
+  "sender_icon_aidef": "AI / 人工智能",
+  "sender_icon_wallet": "支付 / 钱包",
+  "sender_icon_social": "社交",
+  "sender_icon_gaming": "游戏",
+  "sender_icon_entertainment": "影音",
+  "sender_icon_education": "教育 / 学习",
+  "sender_icon_food": "餐饮",
+  "sender_icon_transport": "地面出行",
+  "sender_icon_health": "医疗 / 健康",
+  "sender_icon_jobs": "招聘 / 工作",
+  "sender_icon_developer": "软件 / 开发工具"
 }
