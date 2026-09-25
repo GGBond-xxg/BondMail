@@ -8,6 +8,11 @@ import android.graphics.BitmapFactory
 import android.graphics.RectF
 import android.util.Base64
 import android.util.Xml
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.*
+import com.bond.mail.data.settings.MailPresentationStore
+import com.bond.mail.data.settings.SenderPresentationRules
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -90,6 +95,7 @@ fun brandAvatarPalette(
     return BrandAvatarPalette(background, foreground)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BrandAvatar(
     senderName: String,
@@ -97,13 +103,19 @@ fun BrandAvatar(
     size: Dp = 48.dp,
     monet: Boolean = true,
     messageSubject: String = "",
+    onAvatarClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val brand = remember(senderName, senderAddress, messageSubject) {
-        BrandMatcher.match(senderName, senderAddress, messageSubject)
+    val store = remember(context) { MailPresentationStore.get(context) }
+    val overrides by store.values.collectAsState()
+    val manual = SenderPresentationRules.resolve(overrides, "icon", senderAddress)
+    var categoryOpen by remember(senderAddress) { mutableStateOf(false) }
+    if (categoryOpen) SenderIconDialog(senderAddress) { categoryOpen = false }
+    val brand = remember(senderName, senderAddress, messageSubject, manual) {
+        manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress, messageSubject)
     }
-    val logo = remember(brand.key, senderAddress) {
-        ContactLogoStore.load(context, brand.key, senderAddress)
+    val logo = remember(brand.key, senderAddress, manual) {
+        ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "")
     }
     val scheme = MaterialTheme.colorScheme
     val palette = brandAvatarPalette(senderName, senderAddress, monet, messageSubject)
@@ -115,7 +127,8 @@ fun BrandAvatar(
             .size(size)
             .clip(CircleShape)
             .background(background)
-            .border(1.dp, scheme.outlineVariant, CircleShape),
+            .border(1.dp, scheme.outlineVariant, CircleShape)
+            .then(if (onAvatarClick != null) Modifier.combinedClickable(onClick = onAvatarClick, onLongClick = { categoryOpen = true }) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (logo?.raster != null && monet) {
@@ -156,6 +169,7 @@ fun BrandAvatar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ContactAvatar(
     name: String,
@@ -164,8 +178,13 @@ fun ContactAvatar(
     size: Dp = 48.dp,
     monet: Boolean = true,
     messageSubject: String = "",
+    onAvatarClick: (() -> Unit)? = null,
 ) {
-    val glyph = customText?.trim().takeUnless { it.isNullOrBlank() }
+    var categoryOpen by remember(email) { mutableStateOf(false) }
+    if (categoryOpen) SenderIconDialog(email) { categoryOpen = false }
+    val iconOverrides by MailPresentationStore.get(LocalContext.current).values.collectAsState()
+    val manualIcon = SenderPresentationRules.resolve(iconOverrides, "icon", email)
+    val glyph = customText?.takeIf { manualIcon == null }?.trim().takeUnless { it.isNullOrBlank() }
     if (glyph == null) {
         BrandAvatar(
             senderName = name,
@@ -173,6 +192,7 @@ fun ContactAvatar(
             size = size,
             monet = monet,
             messageSubject = messageSubject,
+            onAvatarClick = onAvatarClick,
         )
         return
     }
@@ -183,7 +203,8 @@ fun ContactAvatar(
             .size(size)
             .clip(CircleShape)
             .background(palette.background)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .then(if (onAvatarClick != null) Modifier.combinedClickable(onClick = onAvatarClick, onLongClick = { categoryOpen = true }) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -297,8 +318,9 @@ fun contactLogoSvgMarkup(
     senderName: String,
     senderAddress: String,
 ): String? {
-    val brand = BrandMatcher.match(senderName, senderAddress)
-    val logo = ContactLogoStore.load(context, brand.key, senderAddress) ?: return null
+    val manual = MailPresentationStore.get(context).icon(senderAddress)
+    val brand = manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
+    val logo = ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "") ?: return null
     if (logo.markupElements.isEmpty()) return null
     return """<svg viewBox="${logo.contentLeft} ${logo.contentTop} ${logo.contentWidth} ${logo.contentHeight}" aria-hidden="true">${logo.markupElements.joinToString("")}</svg>"""
 }

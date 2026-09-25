@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.5.9](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.5.9)
-- 安装包：[BondMail-v1.5.5.9.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.5.9/BondMail-v1.5.5.9.apk)
+- 最新版本：[BondMail v1.5.6](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.6)
+- 安装包：[BondMail-v1.5.6.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.6/BondMail-v1.5.6.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -16,6 +16,8 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - 多邮箱账户收信、发信、草稿、已发送与联系人管理
 - Gmail OAuth 2.0、Microsoft MSAL，以及通用 IMAP/SMTP 授权码登录
 - 邮件正文、附件信息、内嵌图片与 HTML 移动端适配
+- 正文显示模式：自动、原始排版、浅色正文、纯文本，可记住发件人偏好
+- 长按邮件列表头像手动分类，可按邮箱地址或域名设置银行、运营商、交易所、运动、服饰等图标
 - 本地 Room 缓存、增量同步、后台收信与新邮件通知
 - Material 3 与 MIUIX 样式切换，支持浅色、深色和跟随系统
 - 简体中文、繁体中文与英文 JSON 多语言
@@ -33,6 +35,8 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 2. 同步邮件：正文按需下载并保存在本机；后台同步频率、可选 CF 推送在设置中调整。
 3. 使用翻译：先在设置填写自己的服务密钥；邮件顶部选择语言和服务，右下方点击翻译，完成后可一键查看原文。
 4. 使用 AI：在设置 → AI 服务配置地址、模型和 API Key；打开邮件 → 更多 → AI 邮件助手。详见 [AI 使用说明](docs/AI.md)。
+
+正文显示与头像分类的入口、规则范围和恢复方法见 [阅读与图标设置](docs/MAIL_PRESENTATION.md)。
 
 邮件与账号凭据主要保存在本机，凭据和译文缓存使用 Android Keystore 加密。手动翻译会把标题及可翻译文字发送给选定服务商，图片和附件不参与翻译。详见 [翻译说明](docs/TRANSLATION.md)。
 

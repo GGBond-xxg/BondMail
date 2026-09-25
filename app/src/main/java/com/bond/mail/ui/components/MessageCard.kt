@@ -178,6 +178,7 @@ fun MessageCard(
                             size = avatarSize,
                             monet = monetBrandIcons,
                             messageSubject = if (outgoing) "" else message.subject,
+                            onAvatarClick = onOpen,
                         )
                         if (account != null) {
                             AccountBadge(

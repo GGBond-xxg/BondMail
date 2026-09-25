@@ -1,5 +1,13 @@
 package com.bond.mail.ui.screens
 
+import com.bond.mail.data.settings.MailPresentationStore
+import com.bond.mail.data.settings.SenderPresentationRules
+import com.bond.mail.data.settings.MailDisplayMode
+import com.bond.mail.ui.components.SenderIconDialog
+import com.bond.mail.ui.components.MailDisplayModeDialog
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Category
+
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Close
@@ -346,6 +354,18 @@ fun DetailScreen(
     }
     val translation = rememberInlineMailTranslation(messageId, item.subject, item.bodyHtml, item.bodyText, item.senderAddress)
     val senderName = item.senderName.ifBlank { item.senderAddress }
+    val presentationStore = remember(context) { MailPresentationStore.get(context) }
+    val presentationValues by presentationStore.values.collectAsState()
+    val savedMode = SenderPresentationRules.resolve(presentationValues, "display", item.senderAddress)
+    var displayMode by remember(messageId, savedMode) {
+        mutableStateOf(MailDisplayMode.entries.firstOrNull { it.name == savedMode } ?: MailDisplayMode.AUTO)
+    }
+    var displayModeOpen by remember(messageId) { mutableStateOf(false) }
+    var senderIconOpen by remember(messageId) { mutableStateOf(false) }
+    val manualSenderIcon = SenderPresentationRules.resolve(presentationValues, "icon", item.senderAddress)
+    if (displayModeOpen) MailDisplayModeDialog(item.senderAddress, displayMode, { displayMode = it }) { displayModeOpen = false }
+    if (senderIconOpen) SenderIconDialog(item.senderAddress) { senderIconOpen = false }
+
     val noSubjectLabel = tr("no_subject")
     val attachmentLabel = tr("attachment")
     val detailAttachments = remember(item.attachmentsJson, item.hasAttachments, attachmentLabel) {
@@ -359,8 +379,8 @@ fun DetailScreen(
             contact.email.equals(item.senderAddress.trim(), ignoreCase = true)
         }
     }
-    val customContactAvatar = savedContact?.avatarText?.trim().takeUnless { it.isNullOrBlank() }
-    val avatarSvg = remember(senderName, item.senderAddress, customContactAvatar) {
+    val customContactAvatar = savedContact?.takeIf { manualSenderIcon == null }?.avatarText?.trim().takeUnless { it.isNullOrBlank() }
+    val avatarSvg = remember(senderName, item.senderAddress, customContactAvatar, manualSenderIcon) {
         if (customContactAvatar == null) {
             contactLogoSvgMarkup(context, senderName, item.senderAddress)
         } else {
@@ -400,14 +420,15 @@ fun DetailScreen(
     // Attachments may still arrive with the body and are kept separately below.
     val stableHeaderBase = remember(
         messageId,
+        avatarSvg,
         customContactAvatar,
         settings.dynamicColor,
         settings.monetBrandIcons,
     ) {
         currentMailHeader.copy(attachments = emptyList())
     }
-    val mailHeader = remember(stableHeaderBase, detailAttachments, translation.displayed) {
-        stableHeaderBase.copy(attachments = detailAttachments, subject = translation.displayed?.subject?.takeIf { it.isNotBlank() } ?: stableHeaderBase.subject)
+    val mailHeader = remember(stableHeaderBase, detailAttachments, translation.displayed, displayMode) {
+        stableHeaderBase.copy(displayMode = displayMode, attachments = detailAttachments, subject = translation.displayed?.subject?.takeIf { it.isNotBlank() } ?: stableHeaderBase.subject)
     }
     val headerLayout = rememberMailHeaderLayout(mailHeader.subject)
 
@@ -666,7 +687,7 @@ fun DetailScreen(
                     ?.takeIf(String::isNotBlank)
                     ?: plainTextHtml(item.bodyText)
                 MailHtmlView(
-                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:retry=$renderRetryToken:translation=${translation.displayed?.html?.hashCode()}",
+                    cacheKey = "${item.id}:${item.htmlContentHash ?: MimeParser.hash(item.bodyText)}:${item.bodyParserVersion}:mode=$displayMode:icon=${mailHeader.avatarSvg.hashCode()}:retry=$renderRetryToken:translation=${translation.displayed?.html?.hashCode()}",
                     html = html,
                     header = mailHeader,
                     headerLayout = headerLayout,
@@ -890,6 +911,8 @@ fun DetailScreen(
                         expanded = moreOpen,
                         onDismissRequest = { moreOpen = false },
                         entries = listOf(
+                            BondMenuEntry(text = tr("mail_display_title"), icon = Icons.Outlined.Tune, onClick = { moreOpen = false; displayModeOpen = true }),
+                            BondMenuEntry(text = tr("sender_icon_title"), icon = Icons.Outlined.Category, onClick = { moreOpen = false; senderIconOpen = true }),
                             BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
                             BondMenuEntry(text = tr("ai_title"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; aiOpen = true }),
                             BondMenuEntry(

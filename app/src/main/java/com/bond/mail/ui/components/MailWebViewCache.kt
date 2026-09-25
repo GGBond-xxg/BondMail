@@ -1,5 +1,6 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.data.settings.MailDisplayMode
 import android.util.LruCache
 import com.bond.mail.data.mail.MailAttachmentCodec
 import com.bond.mail.data.mail.MailAttachmentInfo
@@ -13,6 +14,7 @@ import org.jsoup.nodes.TextNode
 import java.net.URI
 
 internal data class MailWebHeader(
+    val displayMode: MailDisplayMode = MailDisplayMode.AUTO,
     val subject: String,
     val senderName: String,
     val senderAddress: String,
@@ -189,7 +191,7 @@ internal object MailWebViewCache {
         )
         documents.get(cacheKey)?.let { return it }
 
-        val document = Jsoup.parse(html)
+        val document = Jsoup.parse(displayModeHtml(html, header.displayMode))
         collapseQuotedHistory(document)
         // Record responsive intent before replacing the sender's viewport declaration. Many
         // transactional messages keep a 600 px fallback table for Outlook but include real phone
@@ -217,13 +219,13 @@ internal object MailWebViewCache {
         // user-selected Compose theme. Disable sender dark media rules in both app themes so a
         // LIGHT BondMail window cannot receive a partial black canvas merely because ColorOS
         // entered night mode. BondMail applies its own complete dark transformation below.
-        disableSenderDarkMode(document)
-        repairDitoBodyReadability(document, header.senderAddress, darkMode)
+        if (header.displayMode != MailDisplayMode.ORIGINAL) disableSenderDarkMode(document)
+        repairDitoBodyReadability(document, header.senderAddress, darkMode && header.displayMode == MailDisplayMode.AUTO)
         trimTrailingNonVisualSections(document)
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
         val senderIdentity = "${header.senderName} ${header.senderAddress}".lowercase()
-        if (darkMode && (senderDomain == "ifastgb.com" || senderDomain.endsWith(".ifastgb.com") || senderIdentity.contains("ifast global"))) {
+        if (header.displayMode == MailDisplayMode.AUTO && darkMode && (senderDomain == "ifastgb.com" || senderDomain.endsWith(".ifastgb.com") || senderIdentity.contains("ifast global"))) {
             markIfastFooter(document)
         }
         val zaBankSender = isZaBankSender(senderDomain)
@@ -292,7 +294,7 @@ internal object MailWebViewCache {
         )
 
         val body = document.body()
-        if (darkMode) {
+        if (darkMode && header.displayMode == MailDisplayMode.AUTO) {
             body.addClass("bondmail-dark-mode")
             val nativeDarkCanvas = hasNativeDarkCanvas(document)
             if (nativeDarkCanvas) {
@@ -311,7 +313,7 @@ internal object MailWebViewCache {
         if (appleSender) {
             body.addClass("bondmail-apple-mail")
         }
-        if (darkMode && immigrationSender) {
+        if (header.displayMode == MailDisplayMode.AUTO && darkMode && immigrationSender) {
             body.addClass("bondmail-repair-inherited-light-text")
         }
         normalizeEmojiPresentation(document)
@@ -456,6 +458,7 @@ internal object MailWebViewCache {
         // Build one Gmail-style content card: subject on the page background, then the sender
         // row and original message body on a raised content surface. Keeping both loading and final
         // layouts structurally identical also removes the visible font-weight jump on first open.
+        if (header.displayMode == MailDisplayMode.LIGHT) applyLightMailCanvas(document)
         wrapMessageCard(body, header)
         val contentHeightHint = estimateContentHeightHint(
             document = document,
@@ -737,7 +740,7 @@ internal object MailWebViewCache {
                 position:relative!important;z-index:1!important;display:block!important;width:100%!important;
                 min-width:0!important;max-width:100%!important;margin:0!important;
                 padding:0!important;box-sizing:border-box!important;
-                background:transparent!important;color:$foregroundCss!important;
+                background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "transparent!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
                 overflow:visible!important;border-radius:0!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
@@ -2263,6 +2266,7 @@ internal object MailWebViewCache {
     ): String = buildString {
         append("layout-v53|")
         append(key)
+        append("|display=").append(header.displayMode)
         append("|subject=").append(header.subject.hashCode())
         append("|domain=").append(header.senderAddress.substringAfterLast('@', "").lowercase())
         append("|sender=").append(header.senderName.hashCode())
@@ -2289,6 +2293,11 @@ internal object MailWebViewCache {
     private fun wrapMessageCard(body: Element, header: MailWebHeader) {
         val originalNodes = body.childNodes().toList()
         val messageBody = Element("div").attr("id", "bondmail-message-body")
+        when (header.displayMode) {
+            MailDisplayMode.LIGHT -> messageBody.attr("style", "background:#fff!important;color:#202124!important;color-scheme:light!important")
+            MailDisplayMode.ORIGINAL -> messageBody.attr("style", "background:#fff;color:#202124;" + body.attr("style"))
+            else -> Unit
+        }
         originalNodes.forEach { node ->
             node.remove()
             messageBody.appendChild(node)
