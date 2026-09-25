@@ -56,3 +56,8 @@ https://simpleicons.org/
 https://github.com/simple-icons/simple-icons
 
 Bundled Simple Icons were refreshed from the official simple-icons npm package v16.21.0.
+
+AIDef generic AI chip: user-supplied ICON/AIDef.svg (SVG Repo export).
+The curated aidef.svg preserves the source geometry and puts evenodd on the path so both
+Compose and HTML keep the AI lettering transparent while applying the current theme tint.
+This generic mark is selected manually; existing dedicated AI brand logos stay unchanged.

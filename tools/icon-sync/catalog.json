@@ -313,5 +313,9 @@
       "three.com.hk",
       "ubigi.com"
     ]
+  },
+  "aidef": {
+    "local": "AIDef.svg",
+    "domains": []
   }
 }
