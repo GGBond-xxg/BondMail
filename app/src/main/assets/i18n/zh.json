@@ -521,5 +521,11 @@
   "sender_icon_transport": "地面出行",
   "sender_icon_health": "医疗 / 健康",
   "sender_icon_jobs": "招聘 / 工作",
-  "sender_icon_developer": "软件 / 开发工具"
+  "sender_icon_developer": "软件 / 开发工具",
+  "ai_disclaimer_title": "AI 使用免责声明",
+  "ai_disclaimer_subtitle": "生成内容仅供参考，发送前请核对",
+  "ai_disclaimer_body": "AI 摘要、解释和回复草稿由你选择的第三方模型生成，可能出现事实错误、遗漏、误解或不当表达，不代表 BondMail 开发者的观点或承诺。\n\n请在采用或发送前核对原邮件、收件人、事实、金额、日期及措辞。应用不会自动发送 AI 回复，最终是否采用、修改或发送由你决定。\n\n在适用法律允许的范围内，开发者不保证 AI 输出的准确性、完整性或适用性，对因依赖、采用或发送 AI 输出而产生的损失不承担责任。本声明不排除或限制依法不得免除的责任，也不影响用户依法享有的权利。\n\n使用 AI 会将邮件标题、正文文字及你的输入发送给你配置的服务商；图片和附件不参与。服务商的数据处理、可用性和费用适用其自身条款。请确认你有权向该服务提供相关内容。",
+  "acknowledgements_title": "感谢声明",
+  "acknowledgements_subtitle": "感谢测试、反馈与资源支持",
+  "acknowledgements_body": "感谢为 BondMail 提供测试、问题反馈、图标素材、开源代码与资源支持的朋友及社区。\n\n个人名称、账号及具体支持事项，仅在获得本人确认后展示。资源支持不代表对 AI 输出准确性、服务质量或项目内容的背书。"
 }
