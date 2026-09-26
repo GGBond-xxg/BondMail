@@ -1638,11 +1638,8 @@ private fun MailHtmlView(
                         }
                         webViewClient = object : WebViewClient() {
                             override fun onPageCommitVisible(view: WebView?, url: String?) {
-                                // The sanitized HTML and CSS are local and already paintable here.
-                                // Android guarantees that stale pixels are no longer being drawn at
-                                // this point. Start navigation immediately instead of waiting for a
-                                // second visual-state callback and two more frames. Remote images can
-                                // continue decoding while the page moves in from the right.
+                                // Commit prevents stale-document pixels, but cold Chromium may
+                                // not have submitted this document's first composed frame yet.
                                 mainDocumentCommitted = true
                                 requestReveal(view, committedVisible = true)
                             }
@@ -1739,10 +1736,8 @@ private fun MailHtmlView(
                                     if (view != null) {
                                         MailWebViewPool.markContentCommitted(view, committedContentKey)
                                     }
-                                    // This page is still one full screen to the right. Commit the
-                                    // exact WebView pixels synchronously; the outer reader motion is
-                                    // the only visual reveal and therefore cannot expose a preview
-                                    // document between frames.
+                                    // The drawable document has now crossed the visual-state fence
+                                    // and stable frames. Release the placeholder and opening gate.
                                     view?.showMailDocumentImmediately()
                                     pageVisible = true
                                     placeholderVisible = false
@@ -1757,6 +1752,11 @@ private fun MailHtmlView(
                                         return@schedule
                                     }
                                     holder.revealScheduledGeneration = generation
+                                    // Make Chromium drawable underneath the native placeholder first.
+                                    // Only hand off the placeholder/start navigation after it has had
+                                    // two frames to submit the new document, not in the same frame
+                                    // that alpha changes from zero to one.
+                                    view?.showMailDocumentImmediately()
                                     val revealAfterStableFrames = Runnable {
                                         if (view == null) {
                                             revealCommittedPage()
@@ -1774,15 +1774,8 @@ private fun MailHtmlView(
                                     return
                                 }
 
-                                if (committedVisible) {
-                                    revealCommittedPage()
-                                    return
-                                }
-
-                                // onPageFinished still does not guarantee that the compositor has
-                                // submitted the final pixels. Wait for a visual-state callback and
-                                // two frames; remote-resource mail gets a small additional settle
-                                // window while the useful plain-text preview remains visible below.
+                                // Both commit and finish callbacks must cross the same visual-state
+                                // fence. This waits for local HTML, not remote image downloads.
                                 runCatching {
                                     view.postVisualStateCallback(
                                         generation,
@@ -1937,7 +1930,7 @@ private fun MailHtmlView(
 
         if (placeholderAlpha > 0.001f) {
             MailDocumentPlaceholder(
-                showProgress = false,
+                showProgress = true,
                 expandedBody = document?.contentHeightHint != MailContentHeightHint.SHORT,
                 header = header,
                 headerLayout = headerLayout,
