@@ -1,5 +1,7 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondSecondaryButton
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import com.bond.mail.ui.motion.bondMotionEnabled
@@ -79,13 +81,16 @@ private fun AiSettingsContent(credentialStore: CredentialStore?, onSaved: () -> 
             else throw AiFailure("translation_save_failed")
         }, onDismiss = { editorOpen = false })
     }
+    val skillsPressResetter = rememberBondPressResetter()
     AiSettingsPage(tr("ai_settings"), onBack, dialog = false, footer = {
-        TextButton(enabled = !loadError, onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
-    }) {
-        val pressResetter = rememberBondPressResetter()
-        key(pressResetter.epoch) {
-            OutlinedButton(onClick = { pressResetter.resetThen(onOpenReplySkills) }) { Text(tr("ai_skills_title")) }
+        key(skillsPressResetter.epoch) {
+            BondSecondaryButton(modifier = Modifier.weight(1f),
+                onClick = { skillsPressResetter.resetThen(onOpenReplySkills) }) { Text(tr("ai_skills_title")) }
         }
+        Spacer(Modifier.width(12.dp))
+        com.bond.mail.ui.theme.BondPrimaryButton(modifier = Modifier.weight(1f), enabled = !loadError,
+            onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
+    }) {
         Text(tr("ai_profiles_note"), style = MaterialTheme.typography.bodySmall)
         if (loadError) Text(tr("ai_profiles_load_error"), color = MaterialTheme.colorScheme.error)
         if (profiles.entries.isEmpty() && !loadError) Text(tr("ai_not_configured"))
@@ -219,8 +224,8 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
         OutlinedTextField(secret, { secret = it; status = null }, label = { Text("API Key") }, enabled = !busy,
             visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { picker = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.weight(1f)) { Text(tr("ai_select_model")) }
-            OutlinedButton(onClick = {
+            BondSecondaryButton(onClick = { picker = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.weight(1f)) { Text(tr("ai_select_model")) }
+            BondSecondaryButton(onClick = {
                 val snapshot = config()
                 runAction { models = fetchAiModels(snapshot); if (selectableAiModels(models).isEmpty()) "ai_models_empty" else "ai_models_loaded" }
             }, enabled = !busy && secret.isNotBlank(), modifier = Modifier.weight(1f)) { Text(tr("ai_fetch_models")) }
@@ -270,7 +275,7 @@ private fun AiChoice(label: String, selected: String, options: List<Pair<String,
     Column {
         Text(label, style = MaterialTheme.typography.labelMedium)
         Box(Modifier.fillMaxWidth().onSizeChanged { anchorWidth = it.width }) {
-            OutlinedButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+            BondSecondaryButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 Text(options.firstOrNull { it.first == selected }?.second.orEmpty() + " ▾")
             }
             DropdownMenu(expanded, onDismissRequest = { expanded = false },

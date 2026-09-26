@@ -1,5 +1,7 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondSecondaryButton
+
 import android.content.Intent
 import android.webkit.WebView
 import androidx.compose.foundation.horizontalScroll
@@ -85,7 +87,7 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
                     TextButton(onClick = onDismiss) { Text(tr("close")) }
                 }
                 Box {
-                    OutlinedButton(onClick = { tabsOpen = true }) { Text(tr(tab) + " ▾") }
+                    BondSecondaryButton(onClick = { tabsOpen = true }) { Text(tr(tab) + " ▾") }
                     DropdownMenu(expanded = tabsOpen, onDismissRequest = { tabsOpen = false }) {
                         listOf("tools_sync", "tools_accounts", "tools_attachments", "tools_threads", "tools_reminders", "tools_storage").forEach { key ->
                             DropdownMenuItem(text = { Text(tr(key)) }, onClick = { tab = key; status = null; tabsOpen = false })

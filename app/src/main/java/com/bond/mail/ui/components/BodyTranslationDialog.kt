@@ -1,5 +1,7 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondSecondaryButton
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -79,7 +81,7 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TranslationProviderPicker(provider, Modifier.weight(1f), enabled = !busy) { provider = it }
                     Box(Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { languagesOpen = true }, enabled = !busy,
+                        BondSecondaryButton(onClick = { languagesOpen = true }, enabled = !busy,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
                             Text(languages[target].orEmpty() + " ▾", maxLines = 2, overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelMedium)

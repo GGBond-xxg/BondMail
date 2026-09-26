@@ -191,10 +191,10 @@ internal fun ReplySkillsScreen(onChanged: () -> Unit = {}, onDismiss: () -> Unit
         title = { Text(tr("ai_skill_import")) }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(tr("ai_skill_preview_note"))
-                OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = {
+                BondSecondaryButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = {
                     importing = false; picker.launch(arrayOf("text/*", "application/octet-stream"))
                 }) { Text(tr("ai_skill_file")) }
-                OutlinedButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = {
+                BondSecondaryButton(enabled = !busy, modifier = Modifier.fillMaxWidth(), onClick = {
                     importing = false; linkImport = true; url = ""
                 }) { Text(tr("ai_skill_from_link")) }
             }

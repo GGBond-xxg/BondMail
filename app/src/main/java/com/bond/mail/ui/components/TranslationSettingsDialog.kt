@@ -1,5 +1,7 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondSecondaryButton
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -92,7 +94,7 @@ internal fun TranslationSettingsDialog(initialProvider: TranslationProvider? = n
 internal fun TranslationProviderPicker(provider: TranslationProvider, modifier: Modifier = Modifier, enabled: Boolean = true, onSelect: (TranslationProvider) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
-        OutlinedButton(onClick = { expanded = true }, enabled = enabled,
+        BondSecondaryButton(onClick = { expanded = true }, enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
             Text(tr(provider.labelKey) + " ▾", maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelMedium)

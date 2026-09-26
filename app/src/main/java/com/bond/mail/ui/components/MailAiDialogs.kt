@@ -1,5 +1,7 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondSecondaryButton
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -81,18 +83,18 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
                     if (!ready) Text(tr(if (subject.length + body.length > AI_CONTEXT_LIMIT) "ai_mail_too_long" else "ai_body_unavailable"),
                         color = MaterialTheme.colorScheme.error)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
+                        BondSecondaryButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
                             onClick = { ask(strings.text("ai_summary_prompt")) }) { Text(tr("ai_summary")) }
-                        OutlinedButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
+                        BondSecondaryButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
                             onClick = { ask(strings.text("ai_tasks_prompt")) }) { Text(tr("ai_tasks")) }
                     }
-                    OutlinedButton(enabled = !busy, onClick = { skillsOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                    BondSecondaryButton(enabled = !busy, onClick = { skillsOpen = true }, modifier = Modifier.fillMaxWidth()) {
                         Text(tr("ai_skills_title") + ": " + (activeSkill?.name ?: tr("ai_skills_none")))
                     }
                     OutlinedTextField(question, { question = it.take(AI_QUESTION_LIMIT) }, enabled = !busy,
                         label = { Text(tr("ai_question")) }, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
+                        BondSecondaryButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
                             onClick = { ask(strings.text("ai_reply_prompt") + question, draft = true) }) { Text(tr("ai_reply")) }
                         FilledTonalButton(modifier = Modifier.weight(1f), enabled = ready && !busy && question.isNotBlank(),
                             onClick = { ask(question, conversation = true) }) { Text(tr("ai_ask")) }

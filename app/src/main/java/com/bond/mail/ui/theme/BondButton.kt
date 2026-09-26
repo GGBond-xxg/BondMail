@@ -33,7 +33,8 @@ fun BondPrimaryButton(
             content = content,
         )
         UiStyle.MIUIX -> CompositionLocalProvider(
-            LocalContentColor provides MiuixTheme.colorScheme.onPrimary,
+            LocalContentColor provides if (enabled) MiuixTheme.colorScheme.onPrimary
+                else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
         ) {
             MiuixButton(
                 onClick = onClick,
@@ -47,7 +48,7 @@ fun BondPrimaryButton(
     }
 }
 
-/** Secondary/outlined action facade with MIUIX's native sink response. */
+/** Visible secondary action: Material tonal fill or MIUIX native filled button. */
 @Composable
 fun BondSecondaryButton(
     onClick: () -> Unit,
@@ -58,16 +59,17 @@ fun BondSecondaryButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> androidx.compose.material3.OutlinedButton(
+        UiStyle.MATERIAL3 -> androidx.compose.material3.FilledTonalButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
-            shape = shape ?: MaterialButtonDefaults.outlinedShape,
+            shape = shape ?: MaterialButtonDefaults.filledTonalShape,
             contentPadding = contentPadding ?: MaterialButtonDefaults.ContentPadding,
             content = content,
         )
         UiStyle.MIUIX -> CompositionLocalProvider(
-            LocalContentColor provides MiuixTheme.colorScheme.onSurface,
+            LocalContentColor provides if (enabled) MiuixTheme.colorScheme.onSurface
+                else MiuixTheme.colorScheme.onSurface.copy(alpha = 0.38f),
         ) {
             MiuixButton(
                 onClick = onClick,
