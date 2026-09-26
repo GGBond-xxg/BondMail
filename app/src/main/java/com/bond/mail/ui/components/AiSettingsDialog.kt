@@ -133,6 +133,7 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
     var model by remember { mutableStateOf(initial?.config?.model ?: preset.models.firstOrNull().orEmpty()) }
     var secret by remember { mutableStateOf(initial?.config?.key.orEmpty()) }
     var models by remember { mutableStateOf((initial?.models.orEmpty() + preset.models).distinct()) }
+    val visibleModels = remember(models) { selectableAiModels(models) }
     var picker by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -193,12 +194,13 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
             OutlinedButton(onClick = { picker = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.weight(1f)) { Text(tr("ai_select_model")) }
             OutlinedButton(onClick = {
                 val snapshot = config()
-                runAction { models = fetchAiModels(snapshot); "ai_models_loaded" }
+                runAction { models = fetchAiModels(snapshot); if (selectableAiModels(models).isEmpty()) "ai_models_empty" else "ai_models_loaded" }
             }, enabled = !busy && secret.isNotBlank(), modifier = Modifier.weight(1f)) { Text(tr("ai_fetch_models")) }
         }
         OutlinedTextField(model, { model = it; status = null }, label = { Text(tr("ai_model_manual")) },
             enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())
         Text(tr("ai_models_note"), style = MaterialTheme.typography.bodySmall)
+        Text(tr("ai_models_filter_note"), style = MaterialTheme.typography.bodySmall)
         Text(tr("ai_test_note"), style = MaterialTheme.typography.bodySmall)
         TextButton(enabled = !busy && secret.isNotBlank() && model.isNotBlank(), onClick = {
             val snapshot = config()
@@ -213,8 +215,18 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(search, { search = it }, label = { Text(tr("ai_search_model")) }, singleLine = true)
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(models.filter { it.contains(search, ignoreCase = true) }, key = { it }) { option ->
-                        TextButton(onClick = { model = option; picker = false }, modifier = Modifier.fillMaxWidth()) { Text(option) }
+                    val matches = visibleModels.filter { it.contains(search, ignoreCase = true) }
+                    if (matches.isEmpty()) item { Text(tr("ai_models_no_match")) }
+                    items(matches, key = { it }) { option ->
+                        TextButton(onClick = { model = option; picker = false }, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(option)
+                                if (aiModelCapability(option) == AiModelCapability.UNVERIFIED) {
+                                    Text(tr("ai_model_unverified"), style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
             }
