@@ -527,5 +527,21 @@
   "ai_disclaimer_body": "AI 摘要、解釋和回覆草稿由你選擇的第三方模型生成，可能出現事實錯誤、遺漏、誤解或不當表達，不代表 BondMail 開發者的觀點或承諾。\n\n請在採用或傳送前核對原郵件、收件人、事實、金額、日期及措辭。應用程式不會自動傳送 AI 回覆，最終是否採用、修改或傳送由你決定。\n\n在適用法律允許的範圍內，開發者不保證 AI 輸出的準確性、完整性或適用性，對因依賴、採用或傳送 AI 輸出而產生的損失不承擔責任。本聲明不排除或限制依法不得免除的責任，也不影響使用者依法享有的權利。\n\n使用 AI 會將郵件標題、正文文字及你的輸入傳送給你設定的服務商；圖片和附件不參與。服務商的資料處理、可用性和費用適用其自身條款。請確認你有權向該服務提供相關內容。",
   "acknowledgements_title": "感謝聲明",
   "acknowledgements_subtitle": "感謝測試、回饋與資源支持",
-  "acknowledgements_body": "感謝為 BondMail 提供測試、問題回饋、圖示素材、開源程式碼與資源支持的朋友及社群。\n\n個人名稱、帳號及具體支持事項，僅在獲得本人確認後展示。資源支持不代表對 AI 輸出準確性、服務品質或專案內容的背書。"
+  "acknowledgements_body": "感謝為 BondMail 提供測試、問題回饋、圖示素材、開源程式碼與資源支持的朋友及社群。\n\n個人名稱、帳號及具體支持事項，僅在獲得本人確認後展示。資源支持不代表對 AI 輸出準確性、服務品質或專案內容的背書。",
+  "ai_skills_title": "回覆技能",
+  "ai_skills_note": "可選：僅用於生成回覆。支援 UTF-8 的 .md / .txt / SKILL.md，最多 8,000 字、32 KB，每台裝置最多 20 個。技能文字會隨回覆請求傳送給目前 AI 服務。只讀取文字，不執行腳本、工具或附屬檔案。連結匯入儲存本機副本，之後不會自動連網更新。",
+  "ai_skills_none": "不使用技能",
+  "ai_skills_none_active": "不使用技能（目前）",
+  "ai_skill_name": "技能名稱",
+  "ai_skill_content": "預覽 / 編輯技能內容",
+  "ai_skill_active": "目前使用",
+  "ai_skill_file": "從檔案匯入",
+  "ai_skill_url": "HTTPS 文字連結或 GitHub 檔案連結",
+  "ai_skill_fetch": "取得並預覽",
+  "ai_skill_save_use": "儲存並使用",
+  "ai_skill_too_long": "技能過長：最多 8,000 字、32 KB。",
+  "ai_skill_invalid": "請使用非空 UTF-8 Markdown 或純文字技能，不能匯入網頁、壓縮檔或二進位檔案。",
+  "ai_skill_url_invalid": "請填寫無帳號、查詢參數或片段的 HTTPS 文字直連，或 GitHub 檔案的 blob 連結。",
+  "ai_skill_import_failed": "匯入失敗，請檢查檔案或連結。連結需直接返回文字，不支援登入或重新導向。",
+  "ai_skill_load_failed": "技能讀取失敗，請關閉後重試。"
 }

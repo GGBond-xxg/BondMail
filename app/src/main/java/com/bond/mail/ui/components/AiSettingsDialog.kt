@@ -35,6 +35,8 @@ internal fun AiSettingsDialog(credentialStore: CredentialStore? = null, onSaved:
 internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved: () -> Unit = {}, onBack: () -> Unit) {
     val context = LocalContext.current
     val store = remember { credentialStore ?: CredentialStore(context) }
+    var skillsOpen by remember { mutableStateOf(false) }
+    if (skillsOpen) ReplySkillsDialog(onChanged = onSaved, onDismiss = { skillsOpen = false })
     var loadError by remember { mutableStateOf(false) }
     var profiles by remember { mutableStateOf(runCatching { store.aiProfiles() }.getOrElse {
         loadError = true; AiProfiles(emptyList(), null)
@@ -56,6 +58,7 @@ internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved:
     AiSettingsPage(tr("ai_settings"), onBack, dialog = false, footer = {
         TextButton(enabled = !loadError, onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
     }) {
+        OutlinedButton(onClick = { skillsOpen = true }) { Text(tr("ai_skills_title")) }
         Text(tr("ai_profiles_note"), style = MaterialTheme.typography.bodySmall)
         if (loadError) Text(tr("ai_profiles_load_error"), color = MaterialTheme.colorScheme.error)
         if (profiles.entries.isEmpty() && !loadError) Text(tr("ai_not_configured"))

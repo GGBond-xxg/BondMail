@@ -527,5 +527,21 @@
   "ai_disclaimer_body": "AI 摘要、解释和回复草稿由你选择的第三方模型生成，可能出现事实错误、遗漏、误解或不当表达，不代表 BondMail 开发者的观点或承诺。\n\n请在采用或发送前核对原邮件、收件人、事实、金额、日期及措辞。应用不会自动发送 AI 回复，最终是否采用、修改或发送由你决定。\n\n在适用法律允许的范围内，开发者不保证 AI 输出的准确性、完整性或适用性，对因依赖、采用或发送 AI 输出而产生的损失不承担责任。本声明不排除或限制依法不得免除的责任，也不影响用户依法享有的权利。\n\n使用 AI 会将邮件标题、正文文字及你的输入发送给你配置的服务商；图片和附件不参与。服务商的数据处理、可用性和费用适用其自身条款。请确认你有权向该服务提供相关内容。",
   "acknowledgements_title": "感谢声明",
   "acknowledgements_subtitle": "感谢测试、反馈与资源支持",
-  "acknowledgements_body": "感谢为 BondMail 提供测试、问题反馈、图标素材、开源代码与资源支持的朋友及社区。\n\n个人名称、账号及具体支持事项，仅在获得本人确认后展示。资源支持不代表对 AI 输出准确性、服务质量或项目内容的背书。"
+  "acknowledgements_body": "感谢为 BondMail 提供测试、问题反馈、图标素材、开源代码与资源支持的朋友及社区。\n\n个人名称、账号及具体支持事项，仅在获得本人确认后展示。资源支持不代表对 AI 输出准确性、服务质量或项目内容的背书。",
+  "ai_skills_title": "回复技能",
+  "ai_skills_note": "可选：仅用于生成回复。支持 UTF-8 的 .md / .txt / SKILL.md，最多 8,000 字、32 KB，每台设备最多 20 个。技能文字会随回复请求发送给当前 AI 服务。只读取文字，不执行脚本、工具或附属文件。链接导入保存本地副本，后续不会自动联网更新。",
+  "ai_skills_none": "不使用技能",
+  "ai_skills_none_active": "不使用技能（当前）",
+  "ai_skill_name": "技能名称",
+  "ai_skill_content": "预览 / 编辑技能内容",
+  "ai_skill_active": "当前使用",
+  "ai_skill_file": "从文件导入",
+  "ai_skill_url": "HTTPS 文本链接或 GitHub 文件链接",
+  "ai_skill_fetch": "获取并预览",
+  "ai_skill_save_use": "保存并使用",
+  "ai_skill_too_long": "技能过长：最多 8,000 字、32 KB。",
+  "ai_skill_invalid": "请使用非空 UTF-8 Markdown 或纯文本技能，不能导入网页、压缩包或二进制文件。",
+  "ai_skill_url_invalid": "请填写无账号、查询参数或片段的 HTTPS 文本直链，或 GitHub 文件的 blob 链接。",
+  "ai_skill_import_failed": "导入失败，请检查文件或链接。链接需直接返回文本，不支持登录或重定向。",
+  "ai_skill_load_failed": "技能读取失败，请关闭后重试。"
 }

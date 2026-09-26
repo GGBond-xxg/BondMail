@@ -51,3 +51,22 @@
 预设与模型列表依据：[DeepSeek](https://api-docs.deepseek.com/api/list-models/)、[Kimi](https://platform.kimi.com/docs/get-api-key)、[Xiaomi MiMo](https://mimo.mi.com/docs/zh-CN/api/model/list-models)、[OpenAI 模型](https://developers.openai.com/api/docs/models/all)、[Gemini 模型列表](https://ai.google.dev/api/models)。
 
 本地验证使用虚构邮件和模拟返回，不调用用户密钥。真实服务的权限、网络可达性和收费额度需用自己的配置测试。
+
+## 可选回复技能
+
+设置 → AI 服务 → 回复技能，或打开邮件 → AI 邮件助手 → 回复技能。默认不使用；点击“不使用技能”可随时关闭，删除当前技能也会回到不使用。
+
+支持本地 UTF-8 `.md`、`.txt`、`SKILL.md`，以及公开 HTTPS 文本直链和 GitHub `blob` 文件链接（自动转换为 raw 地址）。普通网页、登录链接、重定向、压缩包及完整技能目录暂不支持。带 YAML front matter 的 SKILL.md 会去除元信息，保留正文。导入后必须预览、填写名称并点击“保存并使用”；可再次编辑或删除。最多 20 个技能，每个最多 8,000 字符、32 KB。
+
+技能作为回复语气、格式与表达规则，仅在点击“生成回复”时随请求发送给当前 AI 服务；摘要、待办和普通提问不主动附加技能。技能在本机加密保存，链接只在主动导入时读取，之后使用已保存副本。不会执行技能中的命令、脚本、工具，也不会自动读取它引用的文件或访问链接。生成内容仍需审核后发送。
+
+示例 SKILL.md 正文：
+
+```markdown
+# 商务回复
+使用简洁、礼貌的中文。先回应核心问题，再列出需要对方补充的信息。
+不要擅自承诺日期、费用或处理结果；不确定的信息用占位符标明。
+只输出邮件回复正文。
+```
+
+可导入的示例：[商务回复](reply-skills/business-reply.md)、[礼貌拒绝](reply-skills/polite-decline.md)。示例不会自动启用。

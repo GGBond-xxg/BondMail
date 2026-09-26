@@ -30,6 +30,9 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
     val store = remember { CredentialStore(context) }
     var revision by remember { mutableIntStateOf(0) }
     val config = remember(revision) { loadConfig(store) }
+    var skillsOpen by remember { mutableStateOf(false) }
+    var skillsRevision by remember { mutableIntStateOf(0) }
+    val activeSkill = remember(skillsRevision, revision) { runCatching { store.replySkills().active }.getOrNull() }
     var settings by remember { mutableStateOf(false) }
     val body = remember(html, plain) { translationBodyText(html, plain) }
     var question by remember { mutableStateOf("") }
@@ -50,7 +53,7 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
         busy = true; status = null
         job = scope.launch {
             try {
-                val messages = aiMessages(subject, body, language, previous, task)
+                val messages = aiMessages(subject, body, language, previous, task, if (draft) activeSkill?.content else null)
                 val answer = withTimeout(120_000) { generate(selected, messages) }
                 history = previous + listOf(AiTurn("user", task), AiTurn("assistant", answer))
                 answers = (if (conversation) answers else emptyList()) + AiAnswer(task, answer, draft)
@@ -83,6 +86,9 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
                         OutlinedButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
                             onClick = { ask(strings.text("ai_tasks_prompt")) }) { Text(tr("ai_tasks")) }
                     }
+                    OutlinedButton(enabled = !busy, onClick = { skillsOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text(tr("ai_skills_title") + ": " + (activeSkill?.name ?: tr("ai_skills_none")))
+                    }
                     OutlinedTextField(question, { question = it.take(AI_QUESTION_LIMIT) }, enabled = !busy,
                         label = { Text(tr("ai_question")) }, minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -114,6 +120,7 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
             }
         }
     }
+    if (skillsOpen) ReplySkillsDialog(onChanged = { skillsRevision++ }, onDismiss = { skillsOpen = false })
     if (settings) AiSettingsDialog(onSaved = { reset(); revision++ }, onDismiss = { settings = false })
 }
 
