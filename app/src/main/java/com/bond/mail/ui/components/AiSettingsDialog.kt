@@ -36,7 +36,10 @@ internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved:
     val context = LocalContext.current
     val store = remember { credentialStore ?: CredentialStore(context) }
     var skillsOpen by remember { mutableStateOf(false) }
-    if (skillsOpen) ReplySkillsDialog(onChanged = onSaved, onDismiss = { skillsOpen = false })
+    if (skillsOpen) {
+        ReplySkillsScreen(onChanged = onSaved, onDismiss = { skillsOpen = false })
+        return
+    }
     var loadError by remember { mutableStateOf(false) }
     var profiles by remember { mutableStateOf(runCatching { store.aiProfiles() }.getOrElse {
         loadError = true; AiProfiles(emptyList(), null)
