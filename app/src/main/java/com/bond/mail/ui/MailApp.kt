@@ -198,6 +198,7 @@ private const val ABOUT = "about"
 private const val SPONSORSHIP = "about/sponsorship"
 private const val PUSH_SETTINGS = "settings/push"
 private const val AI_SETTINGS = "settings/ai"
+private const val REPLY_SKILLS = "settings/ai/reply-skills"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
@@ -251,6 +252,8 @@ fun MailApp(
     val mailboxSnapshotLayer = rememberGraphicsLayer()
     val providersSnapshotLayer = rememberGraphicsLayer()
     val aboutSnapshotLayer = rememberGraphicsLayer()
+    val aiSettingsSnapshotLayer = rememberGraphicsLayer()
+    var replySkillsBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     val updateChecker = remember { AppUpdateChecker() }
     val updatePromptStore = remember(context) { UpdatePromptStore(context.applicationContext) }
     val updateInstaller = remember(context) { AppUpdateInstaller(context.applicationContext) }
@@ -941,13 +944,35 @@ fun MailApp(
                         }
                     }
 
+                    composable(route = REPLY_SKILLS) {
+                        BondBackScreen(
+                            backgroundSnapshot = replySkillsBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack ->
+                            com.bond.mail.ui.components.ReplySkillsScreen(onDismiss = requestBack)
+                        }
+                    }
+
                     composable(route = AI_SETTINGS) {
                         BondBackScreen(
                             backgroundSnapshot = aiSettingsBackBackground,
                             motionEnabled = motionEnabled,
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
-                            com.bond.mail.ui.components.AiSettingsScreen(onBack = requestBack)
+                            Box(Modifier.fillMaxSize().drawWithContent {
+                                aiSettingsSnapshotLayer.record { this@drawWithContent.drawContent() }
+                                drawLayer(aiSettingsSnapshotLayer)
+                            }) {
+                                com.bond.mail.ui.components.AiSettingsScreen(onBack = requestBack, onOpenReplySkills = {
+                                    navigateAfterSnapshot(
+                                        expectedSourceRoute = AI_SETTINGS,
+                                        route = REPLY_SKILLS,
+                                        capture = { aiSettingsSnapshotLayer.toImageBitmap() },
+                                        store = { replySkillsBackBackground = it },
+                                    )
+                                })
+                            }
                         }
                     }
 

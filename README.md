@@ -5,8 +5,8 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.7.2](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.7.2)
-- 安装包：[BondMail-v1.5.7.2.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.7.2/BondMail-v1.5.7.2.apk)
+- 最新版本：[BondMail v1.5.7.3](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.7.3)
+- 安装包：[BondMail-v1.5.7.3.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.7.3/BondMail-v1.5.7.3.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
@@ -26,7 +26,7 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - 10 秒撤销发送、搜索筛选、账号签名/模板、通知分级
 - 邮箱工具：同步诊断、附件索引、按回复标识聚合会话、稍后提醒及存储清理
 - 可选回复技能：从本地 Markdown / 文本文件或 HTTPS 链接导入，预览后使用，也可选择不使用
-- AI 邮件助手：摘要、重点/待办、回复草稿与当前邮件问答；提供 DeepSeek、Kimi、Xiaomi MiMo、OpenAI、Gemini 预设，多配置切换、模型列表选择与自定义接口，回复由用户审核发送
+- AI 邮件助手：摘要、重点/待办、回复草稿与当前邮件问答；提供 DeepSeek、Kimi、Xiaomi MiMo、OpenAI、Gemini、硅基流动预设，多配置切换、模型列表选择与自定义接口，回复由用户审核发送
 
 新功能入口与使用限制见 [邮箱效率功能](docs/PRODUCTIVITY.md)。
 

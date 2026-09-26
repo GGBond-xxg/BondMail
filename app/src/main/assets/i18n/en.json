@@ -470,6 +470,7 @@
   "ai_delete_profile": "Delete this configuration and its key?",
   "ai_active_profile": "Currently active",
   "ai_activate": "Use",
+  "ai_siliconflow": "SiliconFlow",
   "ai_custom": "Custom configuration",
   "ai_preset": "Provider preset",
   "ai_profile_name": "Configuration name",

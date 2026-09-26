@@ -1,5 +1,10 @@
 package com.bond.mail.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.BondMotionDuration
+import com.bond.mail.ui.motion.rememberBondPressResetter
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,14 +37,30 @@ internal fun AiSettingsDialog(credentialStore: CredentialStore? = null, onSaved:
 }
 
 @Composable
-internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved: () -> Unit = {}, onBack: () -> Unit) {
+internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved: () -> Unit = {},
+    onBack: () -> Unit, onOpenReplySkills: (() -> Unit)? = null) {
+    if (onOpenReplySkills != null) {
+        AiSettingsContent(credentialStore, onSaved, onBack, onOpenReplySkills)
+    } else {
+        // The mail assistant hosts settings in a dialog, outside the app NavHost.
+        var skillsOpen by remember { mutableStateOf(false) }
+        val duration = if (bondMotionEnabled()) BondMotionDuration.SharedAxis else 0
+        AnimatedContent(targetState = skillsOpen, transitionSpec = {
+            val direction = if (targetState) 1 else -1
+            (slideInHorizontally(tween(duration)) { it * direction } + fadeIn(tween(duration))) togetherWith
+                (slideOutHorizontally(tween(duration)) { -it * direction / 4 } + fadeOut(tween(duration)))
+        }, label = "ai-reply-skills-navigation") { skills ->
+            if (skills) ReplySkillsScreen(onChanged = onSaved, onDismiss = { skillsOpen = false })
+            else AiSettingsContent(credentialStore, onSaved, onBack, { skillsOpen = true })
+        }
+    }
+}
+
+@Composable
+private fun AiSettingsContent(credentialStore: CredentialStore?, onSaved: () -> Unit,
+    onBack: () -> Unit, onOpenReplySkills: () -> Unit) {
     val context = LocalContext.current
     val store = remember { credentialStore ?: CredentialStore(context) }
-    var skillsOpen by remember { mutableStateOf(false) }
-    if (skillsOpen) {
-        ReplySkillsScreen(onChanged = onSaved, onDismiss = { skillsOpen = false })
-        return
-    }
     var loadError by remember { mutableStateOf(false) }
     var profiles by remember { mutableStateOf(runCatching { store.aiProfiles() }.getOrElse {
         loadError = true; AiProfiles(emptyList(), null)
@@ -61,7 +82,10 @@ internal fun AiSettingsScreen(credentialStore: CredentialStore? = null, onSaved:
     AiSettingsPage(tr("ai_settings"), onBack, dialog = false, footer = {
         TextButton(enabled = !loadError, onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
     }) {
-        OutlinedButton(onClick = { skillsOpen = true }) { Text(tr("ai_skills_title")) }
+        val pressResetter = rememberBondPressResetter()
+        key(pressResetter.epoch) {
+            OutlinedButton(onClick = { pressResetter.resetThen(onOpenReplySkills) }) { Text(tr("ai_skills_title")) }
+        }
         Text(tr("ai_profiles_note"), style = MaterialTheme.typography.bodySmall)
         if (loadError) Text(tr("ai_profiles_load_error"), color = MaterialTheme.colorScheme.error)
         if (profiles.entries.isEmpty() && !loadError) Text(tr("ai_not_configured"))
@@ -126,6 +150,7 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean
 @Composable
 private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, onDismiss: () -> Unit) {
     val customLabel = tr("ai_custom")
+    val siliconFlowLabel = tr("ai_siliconflow")
     var preset by remember { mutableStateOf(aiPresets.firstOrNull { it.id == initial?.presetId } ?: aiPresets.first()) }
     var name by remember { mutableStateOf(initial?.name ?: preset.label) }
     var note by remember { mutableStateOf(initial?.note.orEmpty()) }
@@ -166,9 +191,9 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
             catch (_: Exception) { status = "translation_save_failed" }
         }) { Text(tr("ai_save_activate")) }
     }) {
-        AiChoice(tr("ai_preset"), preset.id, aiPresets.map { it.id to it.label.ifBlank { customLabel } }, !busy) { id ->
+        AiChoice(tr("ai_preset"), preset.id, aiPresets.map { it.id to if (it.id == "siliconflow") siliconFlowLabel else it.label.ifBlank { customLabel } }, !busy) { id ->
             preset = aiPresets.first { it.id == id }
-            name = preset.label.ifBlank { customLabel }; protocol = preset.protocol; endpoint = preset.endpoint
+            name = if (preset.id == "siliconflow") siliconFlowLabel else preset.label.ifBlank { customLabel }; protocol = preset.protocol; endpoint = preset.endpoint
             auth = preset.auth; fullUrl = false; model = preset.models.firstOrNull().orEmpty(); models = preset.models
             secret = ""; status = null
         }

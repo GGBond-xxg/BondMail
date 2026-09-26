@@ -15,6 +15,7 @@ internal val aiPresets = listOf(
     AiPreset("mimo", "Xiaomi MiMo", "https://api.xiaomimimo.com/v1", listOf("mimo-v2.6-flash", "mimo-v2.6-pro", "mimo-v2.5"), auth = AiAuth.API_KEY),
     AiPreset("openai", "OpenAI", "https://api.openai.com/v1", listOf("gpt-5.4-mini", "gpt-5.4", "gpt-5.5")),
     AiPreset("gemini", "Gemini", "https://generativelanguage.googleapis.com/v1beta", emptyList(), AiProvider.GEMINI),
+    AiPreset("siliconflow", "SiliconFlow", "https://api.siliconflow.cn/v1", emptyList()),
     AiPreset("custom", "", "", emptyList()),
 )
 

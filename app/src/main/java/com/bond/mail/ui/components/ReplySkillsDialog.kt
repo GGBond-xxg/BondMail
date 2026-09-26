@@ -1,5 +1,11 @@
 package com.bond.mail.ui.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import com.bond.mail.ui.motion.bondMotionEnabled
+import com.bond.mail.ui.motion.BondMotionDuration
+import kotlinx.coroutines.flow.first
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,8 +38,19 @@ import java.util.UUID
 
 @Composable
 internal fun ReplySkillsDialog(onChanged: () -> Unit = {}, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        ReplySkillsScreen(onChanged, onDismiss)
+    val visible = remember { MutableTransitionState(false) }
+    val duration = if (bondMotionEnabled()) BondMotionDuration.SharedAxis else 0
+    LaunchedEffect(Unit) {
+        visible.targetState = true
+        snapshotFlow { visible.isIdle && !visible.currentState && !visible.targetState }.first { it }
+        onDismiss()
+    }
+    Dialog(onDismissRequest = { visible.targetState = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        AnimatedVisibility(visibleState = visible,
+            enter = slideInHorizontally(tween(duration)) { it } + fadeIn(tween(duration)),
+            exit = slideOutHorizontally(tween(duration)) { it } + fadeOut(tween(duration))) {
+            ReplySkillsScreen(onChanged, onDismiss = { visible.targetState = false })
+        }
     }
 }
 

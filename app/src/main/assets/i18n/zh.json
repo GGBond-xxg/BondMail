@@ -470,6 +470,7 @@
   "ai_delete_profile": "删除此配置及其密钥？",
   "ai_active_profile": "当前使用",
   "ai_activate": "使用",
+  "ai_siliconflow": "硅基流动",
   "ai_custom": "自定义配置",
   "ai_preset": "服务商预设",
   "ai_profile_name": "配置名称",
