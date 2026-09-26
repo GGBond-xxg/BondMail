@@ -179,6 +179,7 @@ import com.bond.mail.ui.screens.DetailScreen
 import com.bond.mail.ui.screens.HomeScreen
 import com.bond.mail.ui.screens.OpenSourceLicensesScreen
 import com.bond.mail.ui.screens.PrivacyPolicyScreen
+import com.bond.mail.ui.screens.AboutNoticeScreen
 import com.bond.mail.ui.screens.ProviderPickerScreen
 import com.bond.mail.ui.screens.PushSettingsScreen
 import com.bond.mail.ui.screens.SettingsScreen
@@ -200,6 +201,8 @@ private const val AI_SETTINGS = "settings/ai"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
 private const val PRIVACY_POLICY = "about/privacy"
+private const val DISCLAIMER = "about/disclaimer"
+private const val ACKNOWLEDGEMENTS = "about/acknowledgements"
 private const val DETAIL_SNAPSHOT_LIMIT = 16
 private const val COLLAPSED_ACCOUNT_LIMIT = 3
 
@@ -1010,6 +1013,22 @@ fun MailApp(
                                             store = { aboutChildBackBackground = it },
                                         )
                                     },
+                                    onOpenDisclaimer = {
+                                        navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
+                                            route = DISCLAIMER,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
+                                    onOpenAcknowledgements = {
+                                        navigateAfterSnapshot(
+                                            expectedSourceRoute = ABOUT,
+                                            route = ACKNOWLEDGEMENTS,
+                                            capture = { aboutSnapshotLayer.toImageBitmap() },
+                                            store = { aboutChildBackBackground = it },
+                                        )
+                                    },
                                     onOpenPrivacyPolicy = {
                                         navigateAfterSnapshot(
                                             expectedSourceRoute = ABOUT,
@@ -1053,6 +1072,22 @@ fun MailApp(
                         ) { requestBack ->
                             AppLicenseScreen(onBack = requestBack)
                         }
+                    }
+
+                    composable(route = DISCLAIMER) {
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack -> AboutNoticeScreen("ai_disclaimer", onBack = requestBack) }
+                    }
+
+                    composable(route = ACKNOWLEDGEMENTS) {
+                        BondBackScreen(
+                            backgroundSnapshot = aboutChildBackBackground,
+                            motionEnabled = motionEnabled,
+                            onBackCommitted = ::popBackStackOnce,
+                        ) { requestBack -> AboutNoticeScreen("acknowledgements", onBack = requestBack) }
                     }
 
                     composable(

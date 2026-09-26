@@ -1,6 +1,5 @@
 package com.bond.mail.ui.screens
 
-import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -52,7 +51,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.asImageBitmap
@@ -96,16 +94,11 @@ fun AboutScreen(
     onOpenAppLicense: () -> Unit,
     onOpenPrivacyPolicy: () -> Unit,
     onOpenSponsorship: () -> Unit,
+    onOpenDisclaimer: () -> Unit,
+    onOpenAcknowledgements: () -> Unit,
 ) {
     val context = LocalContext.current
     val externalLinkOpenFailed = tr("external_link_open_failed")
-    var notice by rememberSaveable { mutableStateOf<String?>(null) }
-    notice?.let { selected ->
-        BackHandler { notice = null }
-        AboutNoticeScreen(selected, onBack = { notice = null })
-        return
-    }
-
     AboutPage(
         title = tr("about"),
         onBack = onBack,
@@ -163,14 +156,14 @@ fun AboutScreen(
                     icon = Icons.Default.Description,
                     title = tr("ai_disclaimer_title"),
                     subtitle = tr("ai_disclaimer_subtitle"),
-                    onClick = { notice = "ai_disclaimer" },
+                    onClick = onOpenDisclaimer,
                 )
                 AboutDivider()
                 AboutActionRow(
                     icon = Icons.Default.FavoriteBorder,
                     title = tr("acknowledgements_title"),
                     subtitle = tr("acknowledgements_subtitle"),
-                    onClick = { notice = "acknowledgements" },
+                    onClick = onOpenAcknowledgements,
                 )
                 AboutDivider()
                 AboutActionRow(
@@ -211,7 +204,7 @@ fun AboutScreen(
 }
 
 @Composable
-private fun AboutNoticeScreen(kind: String, onBack: () -> Unit) {
+fun AboutNoticeScreen(kind: String, onBack: () -> Unit) {
     AboutPage(title = tr("${kind}_title"), onBack = onBack) {
         item {
             AboutCard {
