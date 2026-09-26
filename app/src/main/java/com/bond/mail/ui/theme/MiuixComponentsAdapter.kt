@@ -318,37 +318,41 @@ fun MiuixActionSetting(
     showDot: Boolean = false,
     onClick: () -> Unit,
 ) {
-    SuperArrow(
-        title = title,
-        summary = summary,
-        leftAction = {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier.padding(end = 14.dp).size(24.dp),
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                )
-                if (showDot) {
-                    androidx.compose.foundation.layout.Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(7.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(androidx.compose.material3.MaterialTheme.colorScheme.error),
+    // Reset the MIUIX pressed overlay before navigation pauses the outgoing screen.
+    val pressResetter = com.bond.mail.ui.motion.rememberBondPressResetter()
+    androidx.compose.runtime.key(pressResetter.epoch) {
+        SuperArrow(
+            title = title,
+            summary = summary,
+            leftAction = {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.padding(end = 14.dp).size(24.dp),
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
                     )
+                    if (showDot) {
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(7.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(androidx.compose.material3.MaterialTheme.colorScheme.error),
+                        )
+                    }
                 }
-            }
-        },
-        onClick = onClick,
-        // SuperArrow draws its pressed overlay across its full bounds. Clip that overlay here so
-        // action rows inside larger cards use the same rounded feedback as a standalone setting.
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(SmoothRoundedCornerShape(20.dp)),
-    )
+            },
+            onClick = { pressResetter.resetThen(onClick) },
+            // SuperArrow draws its pressed overlay across its full bounds. Clip that overlay here so
+            // action rows inside larger cards use the same rounded feedback as a standalone setting.
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(SmoothRoundedCornerShape(20.dp)),
+        )
+    }
 }
 
 @Composable
