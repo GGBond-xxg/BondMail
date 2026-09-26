@@ -183,7 +183,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private const val MAIL_OPEN_READY_TIMEOUT_MS = 450L
+private const val MAIL_OPEN_READY_TIMEOUT_MS = 1500L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -316,20 +316,6 @@ fun DetailScreen(
         scope.launch {
             container.settings.setAttachmentDownloadTreeUri(treeUri.toString())
             downloadAttachmentTo(index, treeUri)
-        }
-    }
-    LaunchedEffect(
-        messageId,
-        item?.id,
-        item?.hasDisplayBody(),
-        bodyLoading,
-    ) {
-        if (item == null || (bodyLoading && !item.hasDisplayBody())) {
-            // The native loading document is already meaningful destination content. Let it draw
-            // once, then start the reader transition immediately instead of keeping the reader
-            // off-screen for the generic WebView timeout and exposing an empty background frame.
-            withFrameNanos { }
-            reportFirstContentReady()
         }
     }
     if (item == null) {
@@ -1469,7 +1455,10 @@ private fun MailHtmlView(
                     MailWebViewPool.acquire(context, requestedContentKey).apply {
                         animate().cancel()
                         val retainedPage = MailWebViewPool.retainedContentKey(this) == requestedContentKey
-                        alpha = if (retainedPage) 1f else 0f
+                        // Keep the native surface drawable from attachment. The opaque Compose
+                        // placeholder masks it; toggling native alpha during parent translation
+                        // can expose an untransformed blank surface on some vendor WebViews.
+                        alpha = 1f
                         translationY = 0f
                         setBackgroundColor(background)
                         isVerticalScrollBarEnabled = true
@@ -1479,6 +1468,9 @@ private fun MailHtmlView(
                         overScrollMode = View.OVER_SCROLL_NEVER
                         isNestedScrollingEnabled = false
                         setLayerType(View.LAYER_TYPE_NONE, null)
+                        // The reader is translated off-screen until ready. Chromium otherwise
+                        // defers rasterizing its tiles until navigation has already started.
+                        settings.offscreenPreRaster = true
                         settings.javaScriptEnabled = false
                         settings.domStorageEnabled = false
                         settings.allowFileAccess = false
@@ -1908,7 +1900,7 @@ private fun MailHtmlView(
                         // network policy. Keep its current pixels on screen until Chromium commits
                         // the replacement; hiding here produced a completely blank mail view.
                         if (messageChanged || !holder.hasCommittedContent) {
-                            webView.hideMailDocument()
+                            webView.showMailDocumentImmediately()
                         } else {
                             webView.showMailDocumentImmediately()
                         }

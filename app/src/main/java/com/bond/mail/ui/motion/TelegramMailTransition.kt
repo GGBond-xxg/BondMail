@@ -326,6 +326,10 @@ private fun BondBackTransition(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
+                    // AndroidView can attach before its translated parent has a render-node
+                    // position. Keep the whole destination hidden while it is waiting at the
+                    // right edge; Chromium's offscreen preraster still prepares its native tiles.
+                    alpha = if (animateOpening && openingProgress.value <= 0f) 0f else 1f
                     val interactiveProgress = backProgress.value.coerceIn(0f, 1f)
                     val cardProgress = 1f - (1f - interactiveProgress) *
                         (1f - interactiveProgress) *

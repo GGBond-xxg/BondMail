@@ -136,6 +136,8 @@ internal object MailWebViewPool {
         runCatching { view.setOnTouchListener(null) }
         runCatching { view.setOnScrollChangeListener(null) }
         runCatching { view.isNestedScrollingEnabled = false }
+        // Only the attached reader needs raster tiles while it waits off-screen.
+        runCatching { view.settings.offscreenPreRaster = false }
         (view.parent as? ViewGroup)?.removeView(view)
         val appContext = view.context.applicationContext
         (view.context as? MutableContextWrapper)?.baseContext = appContext
