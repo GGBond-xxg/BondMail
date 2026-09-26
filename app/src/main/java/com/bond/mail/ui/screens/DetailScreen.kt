@@ -183,7 +183,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-private const val MAIL_OPEN_READY_TIMEOUT_MS = 1500L
+private const val MAIL_OPEN_READY_TIMEOUT_MS = 120L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,10 +237,14 @@ fun DetailScreen(
         }
     }
     LaunchedEffect(messageId) {
-        // A cached local document normally commits well before this. If the body genuinely needs
-        // the network, open the stable native loading sheet rather than leaving the tapped list
-        // frozen indefinitely.
-        delay(MAIL_OPEN_READY_TIMEOUT_MS)
+        // Readiness means a drawable sheet, not a completed network request. Let the native
+        // subject/loading placeholder draw before opening a new mail; cached documents get only
+        // a short grace period to avoid an unnecessary placeholder on a fast revisit.
+        withFrameNanos { }
+        withFrameNanos { }
+        if (initialMessage != null && !initialMessage.needsBodyRefresh()) {
+            delay(MAIL_OPEN_READY_TIMEOUT_MS)
+        }
         reportFirstContentReady()
     }
     // Keep only the top app bar fixed. The bottom action dock still follows scroll direction so it
