@@ -250,6 +250,7 @@ fun MailApp(
     val motionEnabled = bondMotionEnabled()
     val appScope = rememberCoroutineScope()
     val mailboxSnapshotLayer = rememberGraphicsLayer()
+    var mailOpeningBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     val providersSnapshotLayer = rememberGraphicsLayer()
     val aboutSnapshotLayer = rememberGraphicsLayer()
     val aiSettingsSnapshotLayer = rememberGraphicsLayer()
@@ -751,6 +752,11 @@ fun MailApp(
                 rememberDetailSnapshot(initialSnapshot)
                 detailOpenSeenRequests[message.id] = message.unread
                 selectedMessage = openedMessage
+                // Freeze only the opening backdrop, after the list read-state update has drawn.
+                // A live RenderNode may be invalidated while the first WebView attaches.
+                mailOpeningBackground = if (motionEnabled) runCatching {
+                    mailboxSnapshotLayer.toImageBitmap()
+                }.getOrNull() else null
                 navigateOnce("detail/${Uri.encode(message.id)}")
                 navigationSubmitted = true
                 releaseForwardNavigationAfterTransition()
@@ -1141,9 +1147,8 @@ fun MailApp(
                         // restored for a different message.
                         key(messageId) {
                             TelegramMailTransition(
-                                // The persistent MailboxLayer directly below this destination is
-                                // the transition background; no GPU readback is needed before open.
-                                backgroundSnapshot = null,
+                                backgroundSnapshot = mailOpeningBackground,
+                                onOpeningFinished = { mailOpeningBackground = null },
                                 motionEnabled = motionEnabled,
                                 onBackCommitted = ::popBackStackOnce,
                             ) { requestBack, reportContentReady ->

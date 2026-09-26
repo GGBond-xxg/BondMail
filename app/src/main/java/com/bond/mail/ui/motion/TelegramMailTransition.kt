@@ -122,6 +122,7 @@ fun TelegramMailTransition(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
     onBackCommitted: () -> Unit,
+    onOpeningFinished: () -> Unit = {},
     content: @Composable (
         requestBack: () -> Unit,
         reportContentReady: () -> Unit,
@@ -134,6 +135,7 @@ fun TelegramMailTransition(
         contentReadyInitially = false,
         freezeContentOnBack = true,
         backgroundIsLive = true,
+        onOpeningFinished = onOpeningFinished,
         onBackCommitted = onBackCommitted,
         content = content,
     )
@@ -175,6 +177,7 @@ private fun BondBackTransition(
     freezeContentOnBack: Boolean,
     backgroundIsLive: Boolean,
     onBackCommitted: () -> Unit,
+    onOpeningFinished: () -> Unit = {},
     content: @Composable (
         requestBack: () -> Unit,
         reportContentReady: () -> Unit,
@@ -192,6 +195,10 @@ private fun BondBackTransition(
                 (backgroundIsLive || backgroundSnapshot != null)
             ) 0f else 1f,
         )
+    }
+    val latestOnOpeningFinished by rememberUpdatedState(onOpeningFinished)
+    LaunchedEffect(openingProgress.value == 1f) {
+        if (openingProgress.value == 1f) latestOnOpeningFinished()
     }
     var contentReady by remember { mutableStateOf(contentReadyInitially) }
     val backProgress = remember { Animatable(0f) }
@@ -310,9 +317,9 @@ private fun BondBackTransition(
     }
 
     Box(Modifier.fillMaxSize()) {
-        // The mail list is kept composed below the detail NavHost destination, so drawing its old
-        // capture here would hide refresh motion and newly arrived messages during predictive back.
-        if (!backgroundIsLive) backgroundSnapshot?.let { snapshot ->
+        // Keep a stable backdrop through first WebView attachment and the opening slide only.
+        // Once fully covered, remove it so predictive back reveals the live mailbox again.
+        if (!backgroundIsLive || (animateOpening && openingProgress.value < 1f)) backgroundSnapshot?.let { snapshot ->
             Image(
                 bitmap = snapshot,
                 contentDescription = null,
@@ -346,7 +353,9 @@ private fun BondBackTransition(
                     transformOrigin = TransformOrigin.Center
                     val cornerPx = maximumCornerPx * cardProgress
                     shape = RoundedCornerShape(CornerSize(cornerPx))
-                    clip = cornerPx > 0.5f
+                    // WebView must stay clipped even before rounded back-gesture corners apply.
+                    clip = true
+                    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                     shadowElevation = maximumCornerPx * cardProgress
                 },
         ) {
