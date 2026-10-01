@@ -215,7 +215,7 @@ fun MessageCard(
                             fontSize = 16.sp,
                             lineHeight = 20.sp,
                         ),
-                        fontWeight = FontWeight((500 + 200 * unreadFraction).toInt()),
+                        fontWeight = FontWeight.Medium,
                         color = readTextColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -237,7 +237,7 @@ fun MessageCard(
                                 fontSize = 15.sp,
                                 lineHeight = 19.sp,
                             ),
-                            fontWeight = FontWeight((400 + 200 * unreadFraction).toInt()),
+                            fontWeight = FontWeight.Normal,
                             color = readTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -270,7 +270,8 @@ fun MessageCard(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (unreadFraction > 0f) {
+                        // Keep the dot slot in both states so the timestamp never reflows.
+                        run {
                             Box(
                                 modifier = Modifier
                                     .size(5.dp)
@@ -283,7 +284,7 @@ fun MessageCard(
                         Text(
                             text = timeLabel,
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                            fontWeight = FontWeight((400 + 300 * unreadFraction).toInt()),
+                            fontWeight = FontWeight.Normal,
                             color = lerp(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary, unreadFraction),
                             maxLines = 1,
                         )
