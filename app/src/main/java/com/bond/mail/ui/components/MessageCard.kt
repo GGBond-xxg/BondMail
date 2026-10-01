@@ -1,5 +1,9 @@
 package com.bond.mail.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -70,6 +74,7 @@ fun MessageCard(
     onStar: () -> Unit,
     selected: Boolean = false,
     selectionMode: Boolean = false,
+    animateReadState: Boolean = false,
     shape: Shape = MailContentDefaults.SingleItemShape,
     modifier: Modifier = Modifier,
 ) {
@@ -99,14 +104,24 @@ fun MessageCard(
         MailDensity.STANDARD -> 54.dp
         MailDensity.COMPACT -> 44.dp
     }
-    // Read state is changed optimistically before the detail transition captures the mailbox.
-    // Do not animate this color: the captured background would otherwise freeze an intermediate
-    // unread-blue frame and keep showing it until the reader is closed.
-    val rowColor = when {
-        selected -> MaterialTheme.colorScheme.secondaryContainer
-        message.unread -> MaterialTheme.bondSurfaces.contentUnread
-        else -> MaterialTheme.bondSurfaces.content
-    }
+    // Only explicit list actions animate. Opening a reader must capture the final read colors.
+    val readDuration = if (motionEnabled && animateReadState) 220 else 0
+    val unreadFraction by animateFloatAsState(
+        targetValue = if (message.unread) 1f else 0f,
+        animationSpec = tween(readDuration), label = "mail-unread",
+    )
+    val rowColor by animateColorAsState(
+        targetValue = when {
+            selected -> MaterialTheme.colorScheme.secondaryContainer
+            message.unread -> MaterialTheme.bondSurfaces.contentUnread
+            else -> MaterialTheme.bondSurfaces.content
+        },
+        animationSpec = tween(readDuration), label = "mail-read-background",
+    )
+    val readTextColor = lerp(
+        MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.onSurface,
+        unreadFraction,
+    )
 
     val timeLabel = remember(message.receivedAt) { formatMailTime(message.receivedAt) }
     val outgoing = message.folderType == "SENT" || message.folderType == "DRAFTS"
@@ -140,12 +155,13 @@ fun MessageCard(
         onLongClick = onLongClick,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            if (message.unread && !selectionMode) {
+            if (unreadFraction > 0f && !selectionMode) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .width(3.dp)
                         .height(unreadAccentHeight)
+                        .alpha(unreadFraction)
                         .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
                         .background(MaterialTheme.colorScheme.primary),
                 )
@@ -199,12 +215,8 @@ fun MessageCard(
                             fontSize = 16.sp,
                             lineHeight = 20.sp,
                         ),
-                        fontWeight = if (message.unread) FontWeight.Bold else FontWeight.Medium,
-                        color = if (message.unread) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        fontWeight = FontWeight((500 + 200 * unreadFraction).toInt()),
+                        color = readTextColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -225,12 +237,8 @@ fun MessageCard(
                                 fontSize = 15.sp,
                                 lineHeight = 19.sp,
                             ),
-                            fontWeight = if (message.unread) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (message.unread) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            fontWeight = FontWeight((400 + 200 * unreadFraction).toInt()),
+                            color = readTextColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -262,10 +270,11 @@ fun MessageCard(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (message.unread) {
+                        if (unreadFraction > 0f) {
                             Box(
                                 modifier = Modifier
                                     .size(5.dp)
+                                    .alpha(unreadFraction)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primary),
                             )
@@ -274,12 +283,8 @@ fun MessageCard(
                         Text(
                             text = timeLabel,
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                            fontWeight = if (message.unread) FontWeight.Bold else FontWeight.Normal,
-                            color = if (message.unread) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            fontWeight = FontWeight((400 + 300 * unreadFraction).toInt()),
+                            color = lerp(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary, unreadFraction),
                             maxLines = 1,
                         )
                     }

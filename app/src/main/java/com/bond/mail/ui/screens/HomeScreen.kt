@@ -559,6 +559,7 @@ fun HomeScreen(
                         key = { _, message -> message.id },
                         contentType = { _, _ -> "mail-card" },
                     ) { index, message ->
+                        var animateReadState by remember(message.id) { mutableStateOf(false) }
                         val messageSelected = selectedIds.contains(message.id)
                         val itemShape = if (miuixLayout) {
                             MaterialTheme.shapes.medium
@@ -591,7 +592,10 @@ fun HomeScreen(
                                         "DRAFTS" -> onOpenMessage(message)
                                         "TRASH" -> viewModel.moveToInbox(listOf(message))
                                         "SENT" -> onForwardMessage(message)
-                                        else -> viewModel.toggleUnread(message)
+                                        else -> {
+                                            animateReadState = true
+                                            viewModel.toggleUnread(message)
+                                        }
                                     }
                                 },
                                 onEndToStart = {
@@ -612,8 +616,10 @@ fun HomeScreen(
                                     monetBrandIcons = settings.monetBrandIcons,
                                     selected = messageSelected,
                                     selectionMode = inSelectionMode,
+                                    animateReadState = animateReadState,
                                     shape = itemShape,
                                     onOpen = {
+                                        animateReadState = false
                                         if (inSelectionMode) toggleSelection(message) else onOpenMessage(message)
                                     },
                                     onLongClick = { toggleSelection(message) },

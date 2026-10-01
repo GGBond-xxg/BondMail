@@ -1088,6 +1088,10 @@ class MailRepository(
         val current = database.messageDao().byId(messageId) ?: return null
         if (current.deliveryState != "REMOTE" || current.remoteUid <= 0L) return null
 
+        // Persist acknowledgement before the deferred server SEEN write. A late sync/FCM wakeup
+        // must not announce mail the user already opened, even after process recreation.
+        markNotified(current)
+
         while (true) {
             val existing = pendingOpenSeenByMessage[messageId]
             if (existing != null && existing.matches(current)) {
@@ -1492,7 +1496,10 @@ class MailRepository(
         targets.forEach { clearPendingOpenSeen(it.id) }
         val grouped = targets.groupBy(MessageEntity::accountId)
         grouped.keys.forEach(::advanceFlagGeneration)
-        database.messageDao().setUnread(targets.map(MessageEntity::id), unread)
+        database.withTransaction {
+            database.messageDao().setUnread(targets.map(MessageEntity::id), unread)
+            if (!unread) targets.forEach { markNotified(it) }
+        }
         MailLog.d(
             MailLog.APP,
             "read flag batch optimistic count=${targets.size} unread=$unread accounts=${grouped.size}",
@@ -1542,7 +1549,10 @@ class MailRepository(
         val oldUnread = current.unread
         val newUnread = unread
         advanceFlagGeneration(current.accountId)
-        database.messageDao().setUnread(current.id, newUnread)
+        database.withTransaction {
+            database.messageDao().setUnread(current.id, newUnread)
+            if (!newUnread) markNotified(current)
+        }
         MailLog.d(
             MailLog.APP,
             "read flag optimistic providerAccount=${current.accountId} uid=${current.remoteUid} unread=$newUnread",
@@ -2376,8 +2386,19 @@ class MailRepository(
             .sortedWith(compareByDescending<MessageListRow> { it.receivedAt }.thenBy { it.id })
     }
 
-    suspend fun shouldNotify(message: MessageEntity): Boolean =
-        !database.notificationStateDao().wasNotified(message.accountId, message.folderType, message.remoteUid)
+    suspend fun shouldNotify(message: MessageEntity): Boolean {
+        // The sync result is a historical snapshot. Room may already contain a newer local read
+        // action or the server FLAGS reconciliation (including reads on other devices).
+        val latest = database.messageDao().byId(message.id)
+        return NewMailNotificationPolicy.shouldAlert(
+            discovered = message,
+            latest = latest,
+            pendingRead = hasPendingOpenSeen(message.id),
+            consumed = database.notificationStateDao().wasNotified(
+                message.accountId, message.folderType, message.remoteUid,
+            ),
+        )
+    }
 
     suspend fun markNotified(message: MessageEntity) {
         database.notificationStateDao().mark(

@@ -221,8 +221,9 @@ class AppContainer(context: Context) {
         val alertsEnabled = settings.settings.first().notifications
         notificationMutex.withLock {
             messages.forEach { message ->
-                if (!repository.shouldNotify(message)) return@forEach
+                val eligible = repository.shouldNotify(message)
                 val shouldAlert = notificationMode == NewMailNotificationMode.ALERT &&
+                    eligible &&
                     alertsEnabled &&
                     !isAppForeground()
                 if (shouldAlert) notifications.show(message)
