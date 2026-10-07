@@ -619,7 +619,7 @@ fun HomeScreen(
                                     animateReadState = animateReadState,
                                     shape = itemShape,
                                     onOpen = {
-                                        animateReadState = false
+                                        animateReadState = true
                                         if (inSelectionMode) toggleSelection(message) else onOpenMessage(message)
                                     },
                                     onLongClick = { toggleSelection(message) },

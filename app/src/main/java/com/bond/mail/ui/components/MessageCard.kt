@@ -104,7 +104,7 @@ fun MessageCard(
         MailDensity.STANDARD -> 54.dp
         MailDensity.COMPACT -> 44.dp
     }
-    // Only explicit list actions animate. Opening a reader must capture the final read colors.
+    // Explicit swipe and open actions share the same read-state transition.
     val readDuration = if (motionEnabled && animateReadState) 220 else 0
     val unreadFraction by animateFloatAsState(
         targetValue = if (message.unread) 1f else 0f,

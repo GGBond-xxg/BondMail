@@ -95,7 +95,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -250,7 +249,6 @@ fun MailApp(
     val motionEnabled = bondMotionEnabled()
     val appScope = rememberCoroutineScope()
     val mailboxSnapshotLayer = rememberGraphicsLayer()
-    var mailOpeningBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     val providersSnapshotLayer = rememberGraphicsLayer()
     val aboutSnapshotLayer = rememberGraphicsLayer()
     val aiSettingsSnapshotLayer = rememberGraphicsLayer()
@@ -744,7 +742,6 @@ fun MailApp(
                 // motion. MainTabs now remains composed while detail is open, so later sync results
                 // and refresh motion are also visible during a predictive-back preview.
                 homeVm.openMessage(message)
-                withFrameNanos { }
                 val openedMessage = if (message.unread) message.copy(unread = false) else message
                 val initialSnapshot = detailInitialSnapshots[message.id]
                     ?.withLatestListState(openedMessage)
@@ -752,11 +749,8 @@ fun MailApp(
                 rememberDetailSnapshot(initialSnapshot)
                 detailOpenSeenRequests[message.id] = message.unread
                 selectedMessage = openedMessage
-                // Freeze only the opening backdrop, after the list read-state update has drawn.
-                // A live RenderNode may be invalidated while the first WebView attaches.
-                mailOpeningBackground = if (motionEnabled) runCatching {
-                    mailboxSnapshotLayer.toImageBitmap()
-                }.getOrNull() else null
+                // Keep the persistent mailbox live: a bitmap captured before Compose draws the
+                // optimistic read update can replay unread pixels over the running read animation.
                 navigateOnce("detail/${Uri.encode(message.id)}")
                 navigationSubmitted = true
                 releaseForwardNavigationAfterTransition()
@@ -1147,8 +1141,7 @@ fun MailApp(
                         // restored for a different message.
                         key(messageId) {
                             TelegramMailTransition(
-                                backgroundSnapshot = mailOpeningBackground,
-                                onOpeningFinished = { mailOpeningBackground = null },
+                                backgroundSnapshot = null,
                                 motionEnabled = motionEnabled,
                                 onBackCommitted = ::popBackStackOnce,
                             ) { requestBack, reportContentReady ->
