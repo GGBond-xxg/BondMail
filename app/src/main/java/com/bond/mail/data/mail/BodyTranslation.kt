@@ -23,6 +23,17 @@ internal enum class TranslationProvider(val labelKey: String, val needsId: Boole
 }
 
 internal const val TRANSLATION_ACTIVE_KEY = "service:translation:active"
+internal const val TRANSLATION_TARGET_KEY = "service:translation:target"
+internal val supportedTranslationTargets = setOf("zh", "zh-TW", "en", "ja", "ko", "fr", "de", "es")
+
+internal fun resolveTranslationTarget(saved: String?, locale: java.util.Locale): String =
+    saved?.takeIf { it in supportedTranslationTargets } ?: if (locale.language == "zh") {
+        if (locale.script == "Hant" || locale.country in setOf("TW", "HK", "MO")) "zh-TW" else "zh"
+    } else "en"
+
+internal fun CredentialStore.translationTarget(locale: java.util.Locale): String =
+    resolveTranslationTarget(read(TRANSLATION_TARGET_KEY), locale)
+
 internal fun TranslationProvider.credentialKey() = "service:translation:$name:v1"
 internal fun CredentialStore.translationProvider(): TranslationProvider =
     runCatching { TranslationProvider.valueOf(read(TRANSLATION_ACTIVE_KEY).orEmpty()) }

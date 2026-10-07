@@ -344,7 +344,7 @@
   "translation_global_note": "使用國際版介面，中國大陸可用性取決於網絡。Google 需 Cloud Translation Basic v2 API Key；Microsoft 需 Azure Translator 金鑰。",
   "translation_region": "Azure 區域（按資源要求填寫，如 eastasia）",
   "translation_remove_key": "刪除此服務的金鑰",
-  "translation_save_failed": "金鑰儲存失敗，請重試。",
+  "translation_save_failed": "翻譯設定儲存失敗，請重試。",
   "translate_body": "翻譯郵件",
   "translation_send_note": "點擊翻譯會將標題和正文文字傳送給選定服務商；圖片和附件不參與翻譯，原郵件不變。",
   "translation_not_configured": "請先配置並儲存此服務的金鑰。",

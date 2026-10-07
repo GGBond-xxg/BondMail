@@ -5,6 +5,19 @@ import org.junit.Test
 import kotlinx.coroutines.runBlocking
 
 class BodyTranslationTest {
+    @Test fun savedTargetOverridesTheInterfaceLocale() {
+        assertEquals("zh-TW", resolveTranslationTarget("zh-TW", java.util.Locale.SIMPLIFIED_CHINESE))
+        assertEquals("ja", resolveTranslationTarget("ja", java.util.Locale.US))
+        assertEquals("en", resolveTranslationTarget("en", java.util.Locale.TRADITIONAL_CHINESE))
+    }
+
+    @Test fun missingOrInvalidTargetFallsBackToLocale() {
+        assertEquals("zh", resolveTranslationTarget(null, java.util.Locale.SIMPLIFIED_CHINESE))
+        assertEquals("zh-TW", resolveTranslationTarget(null, java.util.Locale.forLanguageTag("zh-Hant")))
+        assertEquals("zh-TW", resolveTranslationTarget("unsupported", java.util.Locale.forLanguageTag("zh-HK")))
+        assertEquals("en", resolveTranslationTarget("", java.util.Locale.JAPAN))
+    }
+
     @Test fun translatesSubjectAndBodyAsSeparateFields(): Unit = runBlocking {
         val sent = mutableListOf<String>()
         val result = translateMailText("Interest update", "Subject: unchanged delimiter\nBody") {

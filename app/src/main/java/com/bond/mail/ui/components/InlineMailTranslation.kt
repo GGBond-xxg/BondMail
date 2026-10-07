@@ -44,9 +44,7 @@ internal fun rememberInlineMailTranslation(messageId: String, subject: String, h
     val cache = remember { TranslationCache(context) }
     val locale = LocalJsonStrings.current.locale
     val state = remember(messageId, subject, html, plain) {
-        InlineMailTranslationState(store.translationProvider(), if (locale.language == "zh") {
-            if (locale.country in setOf("TW", "HK", "MO")) "zh-TW" else "zh"
-        } else "en")
+        InlineMailTranslationState(store.translationProvider(), store.translationTarget(locale))
     }
     LaunchedEffect(state, state.request, state.provider, state.target) {
         if (state.request == 0) return@LaunchedEffect
@@ -83,6 +81,8 @@ internal fun rememberInlineMailTranslation(messageId: String, subject: String, h
 /** Both controls only select options; network requests start at the bottom Translate button. */
 @Composable
 internal fun InlineTranslationSelectors(state: InlineMailTranslationState) {
+    val context = LocalContext.current
+    val store = remember { CredentialStore(context) }
     var languagesOpen by remember { mutableStateOf(false) }
     var providersOpen by remember { mutableStateOf(false) }
     Box {
@@ -92,7 +92,10 @@ internal fun InlineTranslationSelectors(state: InlineMailTranslationState) {
         DropdownMenu(languagesOpen, { languagesOpen = false }) {
             translationLanguages.forEach { (code, label) ->
                 DropdownMenuItem(text = { Text((if (state.target == code) "✓ " else "") + label) }, onClick = {
-                    state.reset(); state.target = code; languagesOpen = false
+                    runCatching { store.save(TRANSLATION_TARGET_KEY, code) }
+                        .onSuccess { state.reset(); state.target = code }
+                        .onFailure { state.error = "translation_save_failed" }
+                    languagesOpen = false
                 })
             }
         }
@@ -104,7 +107,10 @@ internal fun InlineTranslationSelectors(state: InlineMailTranslationState) {
         DropdownMenu(providersOpen, { providersOpen = false }) {
             TranslationProvider.entries.forEach { provider ->
                 DropdownMenuItem(text = { Text((if (state.provider == provider) "✓ " else "") + tr(provider.labelKey)) }, onClick = {
-                    state.reset(); state.provider = provider; providersOpen = false
+                    runCatching { store.save(TRANSLATION_ACTIVE_KEY, provider.name) }
+                        .onSuccess { state.reset(); state.provider = provider }
+                        .onFailure { state.error = "translation_save_failed" }
+                    providersOpen = false
                 })
             }
             HorizontalDivider()

@@ -344,7 +344,7 @@
   "translation_global_note": "Uses the global API; availability in mainland China depends on your network. Google requires a Cloud Translation Basic v2 API key. Microsoft requires an Azure Translator key.",
   "translation_region": "Azure region (if required, e.g. eastasia)",
   "translation_remove_key": "Remove this provider’s key",
-  "translation_save_failed": "Unable to save credentials. Please try again.",
+  "translation_save_failed": "Unable to save translation settings. Please try again.",
   "translate_body": "Translate email",
   "translation_send_note": "Translate sends the subject and body text to the selected provider. Images and attachments are not translated. Original mail is unchanged.",
   "translation_not_configured": "Configure and save this provider’s key first.",

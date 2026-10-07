@@ -30,9 +30,7 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
     val cache = remember { TranslationCache(context) }
     val locale = LocalJsonStrings.current.locale
     var provider by remember { mutableStateOf(store.translationProvider()) }
-    var target by remember { mutableStateOf(if (locale.language == "zh") {
-        if (locale.country in setOf("TW", "HK", "MO")) "zh-TW" else "zh"
-    } else "en") }
+    var target by remember { mutableStateOf(store.translationTarget(locale)) }
     var languagesOpen by remember { mutableStateOf(false) }
     val languages = linkedMapOf("zh" to "简体中文", "zh-TW" to "繁體中文", "en" to "English",
         "ja" to "日本語", "ko" to "한국어", "fr" to "Français", "de" to "Deutsch", "es" to "Español")
@@ -79,7 +77,11 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("translate_body"), style = MaterialTheme.typography.titleLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    TranslationProviderPicker(provider, Modifier.weight(1f), enabled = !busy) { provider = it }
+                    TranslationProviderPicker(provider, Modifier.weight(1f), enabled = !busy) { selected ->
+                        runCatching { store.save(TRANSLATION_ACTIVE_KEY, selected.name) }
+                            .onSuccess { provider = selected }
+                            .onFailure { error = "translation_save_failed" }
+                    }
                     Box(Modifier.weight(1f)) {
                         BondSecondaryButton(onClick = { languagesOpen = true }, enabled = !busy,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
@@ -88,7 +90,12 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
                         }
                         DropdownMenu(expanded = languagesOpen, onDismissRequest = { languagesOpen = false }) {
                             languages.forEach { (code, label) -> DropdownMenuItem(text = { Text(label) },
-                                onClick = { target = code; languagesOpen = false }) }
+                                onClick = {
+                                    runCatching { store.save(TRANSLATION_TARGET_KEY, code) }
+                                        .onSuccess { target = code }
+                                        .onFailure { error = "translation_save_failed" }
+                                    languagesOpen = false
+                                }) }
                         }
                     }
                 }
