@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -93,13 +95,16 @@ internal fun TranslationSettingsDialog(initialProvider: TranslationProvider? = n
 @Composable
 internal fun TranslationProviderPicker(provider: TranslationProvider, modifier: Modifier = Modifier, enabled: Boolean = true, onSelect: (TranslationProvider) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
+    var anchorWidth by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    Box(modifier.onSizeChanged { anchorWidth = it.width }) {
         BondSecondaryButton(onClick = { expanded = true }, enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
             Text(tr(provider.labelKey) + " ▾", maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelMedium)
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false },
+            modifier = Modifier.width(with(density) { anchorWidth.toDp() })) {
             TranslationProvider.entries.forEach { option ->
                 DropdownMenuItem(text = { Text(tr(option.labelKey)) }, onClick = { onSelect(option); expanded = false })
             }

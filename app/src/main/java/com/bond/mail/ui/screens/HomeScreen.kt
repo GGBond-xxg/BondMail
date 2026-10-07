@@ -85,6 +85,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -115,6 +120,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -1415,8 +1422,11 @@ private fun FolderChip(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val labelStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.SemiBold)
+    val labelWidth = rememberTextMeasurer().measure(label, labelStyle, maxLines = 1).size.width
+    val expandedWidth = with(LocalDensity.current) { labelWidth.toDp() } + 44.dp
     val width by animateDpAsState(
-        targetValue = if (selected) 108.dp else 48.dp,
+        targetValue = if (selected) maxOf(108.dp, expandedWidth) else 48.dp,
         animationSpec = tween(220),
         label = "folder-chip-width",
     )
@@ -1440,7 +1450,10 @@ private fun FolderChip(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(
+                .semantics { contentDescription = label }
+                .selectable(
+                    selected = selected,
+                    role = Role.Tab,
                     interactionSource = interactionSource,
                     indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
                     onClick = onClick,
@@ -1454,9 +1467,10 @@ private fun FolderChip(
                 Text(
                     label,
                     modifier = Modifier
+                        .clearAndSetSemantics { }
                         .padding(start = 7.dp)
                         .graphicsLayer { alpha = labelAlpha },
-                    fontWeight = FontWeight.SemiBold,
+                    style = labelStyle,
                     maxLines = 1,
                 )
             }

@@ -12,6 +12,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -262,7 +264,10 @@ fun MessageCard(
                     verticalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier
                         .padding(start = 6.dp)
-                        .width(if (outgoing) 72.dp else 52.dp)
+                        // Let localized timestamps and font scaling determine the width.
+                        // The unread dot keeps its slot, so read changes never shift text.
+                        .widthIn(min = if (outgoing) 72.dp else 52.dp)
+                        .width(IntrinsicSize.Max)
                         .height(trailingHeight),
                 ) {
                     Row(
@@ -283,6 +288,7 @@ fun MessageCard(
                         }
                         Text(
                             text = timeLabel,
+                            softWrap = false,
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                             fontWeight = FontWeight.Normal,
                             color = lerp(MaterialTheme.colorScheme.onSurfaceVariant, MaterialTheme.colorScheme.primary, unreadFraction),
