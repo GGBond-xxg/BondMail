@@ -17,11 +17,15 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import com.bond.mail.data.settings.GlassSettings
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.*
@@ -37,6 +41,16 @@ internal fun GlassSettingsScreen(settings: GlassSettings, onChange: (GlassSettin
     // Also persist when back is pressed while a slider still has focus.
     DisposableEffect(Unit) { onDispose { latestSave(latestDraft) } }
     Dialog(onDismissRequest = onBack, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        val view = LocalView.current
+        val darkSystemIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f
+        SideEffect {
+            (view.parent as? DialogWindowProvider)?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = darkSystemIcons
+                    isAppearanceLightNavigationBars = darkSystemIcons
+                }
+            }
+        }
         CompositionLocalProvider(LocalGlassSettings provides draft) {
             Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).navigationBarsPadding()) {
                 BondTopAppBar(tr("glass_adjustments"), navigationIcon = {
