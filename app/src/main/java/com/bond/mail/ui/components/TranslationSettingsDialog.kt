@@ -1,5 +1,11 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondFormField as OutlinedTextField
+import com.bond.mail.ui.theme.BondFormAction as TextButton
+import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
+import com.bond.mail.ui.theme.BondIconButton as IconButton
+import com.bond.mail.ui.theme.BondSwitch as Switch
+
 import com.bond.mail.ui.theme.BondSecondaryButton
 
 import androidx.compose.foundation.layout.*
@@ -95,19 +101,12 @@ internal fun TranslationSettingsDialog(initialProvider: TranslationProvider? = n
 @Composable
 internal fun TranslationProviderPicker(provider: TranslationProvider, modifier: Modifier = Modifier, enabled: Boolean = true, onSelect: (TranslationProvider) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var anchorWidth by remember { mutableIntStateOf(0) }
-    val density = LocalDensity.current
-    Box(modifier.onSizeChanged { anchorWidth = it.width }) {
+    com.bond.mail.ui.theme.BondPopupMenu(expanded, { expanded = false },
+        TranslationProvider.entries.map { option -> com.bond.mail.ui.theme.BondMenuEntry(tr(option.labelKey),
+            { onSelect(option); expanded = false }, selected = provider == option) }, modifier) {
         BondSecondaryButton(onClick = { expanded = true }, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
-            Text(tr(provider.labelKey) + " ▾", maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelMedium)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false },
-            modifier = Modifier.width(with(density) { anchorWidth.toDp() })) {
-            TranslationProvider.entries.forEach { option ->
-                DropdownMenuItem(text = { Text(tr(option.labelKey)) }, onClick = { onSelect(option); expanded = false })
-            }
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+            Text(tr(provider.labelKey) + " ▾", maxLines = 2)
         }
     }
 }

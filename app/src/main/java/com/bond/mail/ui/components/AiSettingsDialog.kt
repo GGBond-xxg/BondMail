@@ -1,5 +1,13 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondFormField as OutlinedTextField
+import com.bond.mail.ui.theme.BondFormAction as TextButton
+import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
+import com.bond.mail.ui.theme.BondIconButton as IconButton
+import com.bond.mail.ui.theme.BondSwitch as Switch
+
+import com.bond.mail.ui.theme.*
+import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.theme.BondSecondaryButton
 
 import androidx.compose.animation.*
@@ -127,9 +135,10 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean
     val page: @Composable () -> Unit = {
         Surface(
             modifier = if (dialog) Modifier.widthIn(max = 560.dp).fillMaxWidth().fillMaxHeight(0.92f)
+                .glassSurface(LocalGlassWindowBackdrop.current, MaterialTheme.shapes.extraLarge, prominent = true)
                 else Modifier.fillMaxSize(),
             shape = if (dialog) MaterialTheme.shapes.extraLarge else androidx.compose.ui.graphics.RectangleShape,
-            color = MaterialTheme.colorScheme.background,
+            color = if (dialog && LocalUiStyle.current == UiStyle.LIQUID_GLASS) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background,
         ) {
             Column(if (dialog) Modifier else Modifier.systemBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -270,17 +279,13 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
 @Composable
 private fun AiChoice(label: String, selected: String, options: List<Pair<String, String>>, enabled: Boolean, onSelect: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var anchorWidth by remember { mutableIntStateOf(0) }
-    val density = LocalDensity.current
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium)
-        Box(Modifier.fillMaxWidth().onSizeChanged { anchorWidth = it.width }) {
+        BondPopupMenu(expanded, { expanded = false }, options.map { (id, name) ->
+            BondMenuEntry(name, { onSelect(id); expanded = false }, selected = id == selected)
+        }, Modifier.fillMaxWidth()) {
             BondSecondaryButton(onClick = { expanded = true }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
                 Text(options.firstOrNull { it.first == selected }?.second.orEmpty() + " ▾")
-            }
-            DropdownMenu(expanded, onDismissRequest = { expanded = false },
-                modifier = Modifier.width(with(density) { anchorWidth.toDp() })) {
-                options.forEach { (id, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(id); expanded = false }) }
             }
         }
     }

@@ -17,6 +17,10 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.bond.mail.data.mail.TranslatedHtmlMail
 import com.bond.mail.data.mail.TranslationProvider
+import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.ui.theme.BondMailTheme
 import com.bond.mail.ui.components.InlineMailTranslationState
 import com.bond.mail.ui.components.InlineTranslationSelectors
 import com.bond.mail.ui.i18n.JsonStringsProvider
@@ -35,6 +39,7 @@ class InlineTranslationLayoutTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val device = UiDevice.getInstance(instrumentation)
         val visible = mutableStateOf(true)
+        val settings = mutableStateOf(AppSettings(uiStyle = UiStyle.MATERIAL3))
         val state = InlineMailTranslationState(TranslationProvider.GOOGLE, "zh").apply {
             result = TranslatedHtmlMail("离线测试", "<p>模拟译文，不使用任何密钥。</p>")
         }
@@ -53,7 +58,7 @@ class InlineTranslationLayoutTest {
             assertTrue("Main content initialized", installed)
             scenario.onActivity { activity ->
                 activity.setContent {
-                    MaterialTheme {
+                    BondMailTheme(settings.value) {
                         JsonStringsProvider("zh") {
                             Surface {
                                 Box(Modifier.fillMaxSize()) {
@@ -77,7 +82,8 @@ class InlineTranslationLayoutTest {
             val initial = translate.visibleBounds
             assertEquals(original.visibleBounds.width(), initial.width())
             assertEquals(original.visibleBounds.height(), initial.height())
-            assertEquals(initial.centerX(), delete.visibleBounds.centerX())
+            // dp-to-pixel rounding may differ by one pixel for the two circle sizes.
+            assertTrue(kotlin.math.abs(initial.centerX() - delete.visibleBounds.centerX()) <= 1)
             assertTrue(original.visibleBounds.right < initial.left)
             assertTrue(initial.bottom < delete.visibleBounds.top)
             assertTrue(device.hasObject(By.descStartsWith("翻译语言")))
@@ -96,6 +102,32 @@ class InlineTranslationLayoutTest {
             Thread.sleep(600)
             assertEquals(initial.top, device.findObject(By.desc("翻译邮件")).visibleBounds.top)
             device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "inline-translation-controls.png"))
+            for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
+                scenario.onActivity {
+                    settings.value = settings.value.copy(uiStyle = UiStyle.LIQUID_GLASS, themeMode = mode)
+                    state.busy = true
+                    state.progress = 20 to 27
+                }
+                assertTrue(device.wait(Until.hasObject(By.textContains("20/27")), 5000))
+                Thread.sleep(600)
+                assertTrue(device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "glass-translation-progress-${mode.name.lowercase()}.png")))
+                if (mode == ThemeMode.DARK) {
+                    val progressBounds = device.findObject(By.textContains("20/27")).visibleBounds
+                    val replyBounds = device.findObject(By.desc("回复")).visibleBounds
+                    val bitmap = instrumentation.uiAutomation.takeScreenshot()
+                    try {
+                        for ((x, y) in listOf(progressBounds.left - 6 to progressBounds.centerY(),
+                            replyBounds.left - 8 to replyBounds.centerY())) {
+                            val pixel = bitmap.getPixel(x, y)
+                            assertTrue("Stale light surface at ($x, $y): $pixel",
+                                android.graphics.Color.red(pixel) < 180 && android.graphics.Color.green(pixel) < 180)
+                        }
+                    } finally { bitmap.recycle() }
+                }
+                device.findObject(By.desc("取消")).click()
+                instrumentation.waitForIdleSync()
+                assertEquals(0, state.request)
+            }
         }
     }
 }

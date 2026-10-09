@@ -11,6 +11,10 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.bond.mail.data.ai.*
 import com.bond.mail.data.security.CredentialStore
+import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.ui.theme.BondMailTheme
 import com.bond.mail.ui.components.AiSettingsDialog
 import com.bond.mail.ui.i18n.JsonStringsProvider
 import com.bond.mail.ui.screens.SponsorshipScreen
@@ -39,7 +43,7 @@ class AiProfilesLayoutTest {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 waitForContent(scenario)
                 scenario.onActivity { activity -> activity.setContent {
-                    MaterialTheme(colorScheme = darkColorScheme()) { JsonStringsProvider("zh") {
+                    BondMailTheme(AppSettings(uiStyle = UiStyle.LIQUID_GLASS, themeMode = ThemeMode.DARK)) { JsonStringsProvider("zh") {
                         AiSettingsDialog(credentialStore = store, onDismiss = {})
                     } }
                 } }

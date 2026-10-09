@@ -45,6 +45,7 @@ fun LiquidButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
     content: @Composable RowScope.() -> Unit
 ) {
+    val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val effectsEnabled = com.bond.mail.ui.theme.LocalGlassEffects.current
     val interactive = isInteractive && enabled && effectsEnabled
     val animationScope = rememberCoroutineScope()
@@ -63,8 +64,8 @@ fun LiquidButton(
                 effects = {
                     if (effectsEnabled) {
                         vibrancy()
-                        blur(2f.dp.toPx())
-                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                        blur((optics.blurRadius * 2f / 6f).dp.toPx())
+                        lens((optics.refractionHeight * 12f / 12f).dp.toPx(), (optics.refractionAmount * 24f / 24f).dp.toPx(), chromaticAberrationAmount = optics.chromaticAberration)
                     }
                 },
                 layerBlock = if (interactive) {

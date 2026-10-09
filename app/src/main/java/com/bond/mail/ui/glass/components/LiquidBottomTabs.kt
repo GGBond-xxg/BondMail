@@ -67,6 +67,7 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
+    val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val isLightTheme = androidx.compose.material3.MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val accentColor =
         if (isLightTheme) Color(0xFF0088FF)
@@ -205,11 +206,12 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
-                            blur(8f.dp.toPx())
+                            blur((optics.blurRadius * 8f / 6f).dp.toPx())
                             lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
+                            (optics.refractionHeight * 24f / 12f).dp.toPx() * progress,
+                            (optics.refractionAmount * 24f / 24f).dp.toPx() * progress,
+                            chromaticAberrationAmount = optics.chromaticAberration
+                        )
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
@@ -243,9 +245,9 @@ fun LiquidBottomTabs(
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
-                            chromaticAberration = true
+                            (optics.refractionHeight * 10f / 12f).dp.toPx() * progress,
+                            (optics.refractionAmount * 14f / 24f).dp.toPx() * progress,
+                            chromaticAberrationAmount = optics.chromaticAberration
                         )
                     },
                     highlight = {

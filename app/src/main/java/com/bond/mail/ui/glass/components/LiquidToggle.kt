@@ -58,6 +58,7 @@ fun LiquidToggle(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val isLightTheme = androidx.compose.material3.MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val accentColor =
         if (isLightTheme) Color(0xFF34C759)
@@ -175,11 +176,11 @@ fun LiquidToggle(
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         if (effectsEnabled) {
-                        blur(8f.dp.toPx() * (1f - progress))
+                        blur((optics.blurRadius * 8f / 6f).dp.toPx() * (1f - progress))
                         lens(
-                            5f.dp.toPx() * progress,
-                            10f.dp.toPx() * progress,
-                            chromaticAberration = true
+                            (optics.refractionHeight * 5f / 12f).dp.toPx() * progress,
+                            (optics.refractionAmount * 10f / 24f).dp.toPx() * progress,
+                            chromaticAberrationAmount = optics.chromaticAberration
                         )
                         }
                     },

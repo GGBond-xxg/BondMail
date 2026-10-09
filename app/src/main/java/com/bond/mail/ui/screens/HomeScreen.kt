@@ -863,7 +863,7 @@ fun HomeScreen(
                                         // cannot drift onto a separate animation path.
                                         Box(
                                             modifier = Modifier
-                                                .size(44.dp)
+                                                .size(if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 48.dp else 44.dp)
                                                 .onGloballyPositioned { coordinates ->
                                                     searchSourceBounds = coordinates.boundsInRoot()
                                                 },

@@ -85,38 +85,28 @@ internal fun InlineTranslationSelectors(state: InlineMailTranslationState) {
     val store = remember { CredentialStore(context) }
     var languagesOpen by remember { mutableStateOf(false) }
     var providersOpen by remember { mutableStateOf(false) }
-    Box {
+    com.bond.mail.ui.theme.BondPopupMenu(languagesOpen, { languagesOpen = false },
+        translationLanguages.map { (code, label) -> com.bond.mail.ui.theme.BondMenuEntry(label, {
+            runCatching { store.save(TRANSLATION_TARGET_KEY, code) }
+                .onSuccess { state.reset(); state.target = code }
+                .onFailure { state.error = "translation_save_failed" }
+            languagesOpen = false
+        }, selected = state.target == code) }) {
         BondIconButton(enabled = !state.busy, onClick = { languagesOpen = true }) {
             Icon(Icons.Outlined.Language, contentDescription = tr("translation_target_language") + ": " + translationLanguages[state.target])
         }
-        DropdownMenu(languagesOpen, { languagesOpen = false }) {
-            translationLanguages.forEach { (code, label) ->
-                DropdownMenuItem(text = { Text((if (state.target == code) "✓ " else "") + label) }, onClick = {
-                    runCatching { store.save(TRANSLATION_TARGET_KEY, code) }
-                        .onSuccess { state.reset(); state.target = code }
-                        .onFailure { state.error = "translation_save_failed" }
-                    languagesOpen = false
-                })
-            }
-        }
     }
-    Box {
+    com.bond.mail.ui.theme.BondPopupMenu(providersOpen, { providersOpen = false },
+        TranslationProvider.entries.map { provider -> com.bond.mail.ui.theme.BondMenuEntry(tr(provider.labelKey), {
+            runCatching { store.save(TRANSLATION_ACTIVE_KEY, provider.name) }
+                .onSuccess { state.reset(); state.provider = provider }
+                .onFailure { state.error = "translation_save_failed" }
+            providersOpen = false
+        }, selected = state.provider == provider) } + com.bond.mail.ui.theme.BondMenuEntry(tr("translation_settings"), {
+            providersOpen = false; state.configure = true
+        })) {
         BondIconButton(enabled = !state.busy, onClick = { providersOpen = true }) {
             Icon(Icons.Outlined.Key, contentDescription = tr("translation_provider") + ": " + tr(state.provider.labelKey))
-        }
-        DropdownMenu(providersOpen, { providersOpen = false }) {
-            TranslationProvider.entries.forEach { provider ->
-                DropdownMenuItem(text = { Text((if (state.provider == provider) "✓ " else "") + tr(provider.labelKey)) }, onClick = {
-                    runCatching { store.save(TRANSLATION_ACTIVE_KEY, provider.name) }
-                        .onSuccess { state.reset(); state.provider = provider }
-                        .onFailure { state.error = "translation_save_failed" }
-                    providersOpen = false
-                })
-            }
-            HorizontalDivider()
-            DropdownMenuItem(text = { Text(tr("translation_settings")) }, onClick = {
-                providersOpen = false; state.configure = true
-            })
         }
     }
 }

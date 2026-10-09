@@ -710,7 +710,7 @@ fun ComposeScreen(
                                     FloatingCircleAction(
                                         enabled = !sending && accountId.isNotBlank() && to.isNotBlank(),
                                         onClick = ::queueCurrentMessage,
-                                        modifier = Modifier.size(48.dp),
+                                        modifier = Modifier.size(48.dp).padding(2.dp),
                                         containerColor = MaterialTheme.colorScheme.primary,
                                         contentColor = MaterialTheme.colorScheme.onPrimary,
                                     ) {

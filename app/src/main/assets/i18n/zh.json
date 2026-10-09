@@ -555,5 +555,14 @@
   "ai_skill_invalid": "请使用非空 UTF-8 Markdown 或纯文本技能，不能导入网页、压缩包或二进制文件。",
   "ai_skill_url_invalid": "请填写无账号、查询参数或片段的 HTTPS 文本直链，或 GitHub 文件的 blob 链接。",
   "ai_skill_import_failed": "导入失败，请检查文件或链接。链接需直接返回文本，不支持登录或重定向。",
-  "ai_skill_load_failed": "技能读取失败，请关闭后重试。"
+  "ai_skill_load_failed": "技能读取失败，请关闭后重试。",
+  "glass_adjustments": "Liquid Glass 调节",
+  "glass_adjustments_summary": "模糊、折射与色散",
+  "glass_blur": "模糊半径",
+  "glass_height": "折射高度",
+  "glass_amount": "折射强度",
+  "glass_chromatic": "色散",
+  "glass_reset": "恢复默认",
+  "glass_preview": "玻璃预览",
+  "glass_effects_reduced": "系统当前减少视觉效果，调节参数仍会保存。"
 }

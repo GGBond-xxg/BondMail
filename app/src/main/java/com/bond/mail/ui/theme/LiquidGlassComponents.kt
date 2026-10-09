@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
@@ -75,11 +76,11 @@ internal fun GlassSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, m
 @Composable
 internal fun GlassTopAppBar(title: String, modifier: Modifier, navigationIcon: @Composable () -> Unit, actions: @Composable RowScope.() -> Unit) {
     Row(
-        modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 60.dp).padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 60.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         navigationIcon()
-        Text(title, Modifier.weight(1f).padding(horizontal = 6.dp), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(title, Modifier.weight(1f).padding(horizontal = 4.dp), style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         actions()
     }
 }
@@ -125,7 +126,7 @@ internal fun GlassPopup(expanded: Boolean, onDismissRequest: () -> Unit, entries
     ) {
         CompositionLocalProvider(LocalGlassBackdrop provides null) {
             Column(
-                Modifier.padding(8.dp).widthIn(min = 220.dp, max = 320.dp)
+                Modifier.padding(8.dp).widthIn(min = 200.dp, max = 300.dp).width(IntrinsicSize.Max)
                     .glassSurface(backdrop, RoundedCornerShape(28.dp), prominent = true)
                     .heightIn(max = 440.dp).verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
             ) {

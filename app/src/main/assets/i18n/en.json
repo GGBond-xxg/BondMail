@@ -555,5 +555,14 @@
   "ai_skill_invalid": "Use nonempty UTF-8 Markdown or plain text, not a webpage, archive or binary file.",
   "ai_skill_url_invalid": "Enter a direct HTTPS text URL without credentials, query or fragment, or a GitHub blob file URL.",
   "ai_skill_import_failed": "Import failed. Check the file or URL. Links must return text directly; login and redirects are unsupported.",
-  "ai_skill_load_failed": "Could not read skills. Close and retry."
+  "ai_skill_load_failed": "Could not read skills. Close and retry.",
+  "glass_adjustments": "Liquid Glass adjustments",
+  "glass_adjustments_summary": "Blur, refraction and chromatic aberration",
+  "glass_blur": "Blur radius",
+  "glass_height": "Refraction height",
+  "glass_amount": "Refraction amount",
+  "glass_chromatic": "Chromatic aberration",
+  "glass_reset": "Restore defaults",
+  "glass_preview": "Glass preview",
+  "glass_effects_reduced": "Visual effects are reduced by the system. Your adjustments are saved."
 }

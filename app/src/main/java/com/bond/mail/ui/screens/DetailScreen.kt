@@ -173,6 +173,7 @@ import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.bestForwardText
 import com.bond.mail.ui.theme.LocalGlassBackdrop
 import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.glassSurface
 import com.bond.mail.ui.theme.glassDockSurface
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -1064,9 +1065,12 @@ private fun RemoteImageFloatingButton(
 @Composable
 internal fun MessageTranslationActions(translation: InlineMailTranslationState, enabled: Boolean, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (translation.busy || translation.error != null) Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        if (translation.busy || translation.error != null) Box(modifier =
+            if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) Modifier.glassSurface(shape = RoundedCornerShape(20.dp), prominent = true)
+            else Modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(20.dp))) {
             Text(if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
-                else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface)
         }
         // Keep the smaller action centered over the 58dp delete button below.
         Row(Modifier.fillMaxWidth().padding(end = 5.dp), verticalAlignment = Alignment.CenterVertically,
@@ -1116,19 +1120,7 @@ internal fun MessageActionDock(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Surface(
-            modifier = Modifier.weight(1f)
-                .then(if (glassStyle) Modifier.glassDockSurface() else Modifier),
-            shape = RoundedCornerShape(30.dp),
-            color = if (glassStyle) Color.Transparent
-                else MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
-            border = if (glassStyle) null else BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
-            ),
-            tonalElevation = 0.dp,
-            shadowElevation = if (glassStyle) 0.dp else 6.dp,
-        ) {
+        MessageDockSurface(Modifier.weight(1f)) {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = if (glassStyle) 4.dp else 8.dp, vertical = if (glassStyle) 8.dp else 6.dp),
             ) {
@@ -1166,6 +1158,19 @@ internal fun MessageActionDock(
 }
 
 @Composable
+private fun MessageDockSurface(modifier: Modifier, content: @Composable () -> Unit) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        // Recreate only the optical layer when its palette changes; retain the mail state.
+        key(MaterialTheme.colorScheme.surface) {
+            Box(modifier.glassDockSurface()) { content() }
+        }
+    } else Surface(modifier, shape = RoundedCornerShape(30.dp),
+        color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
+        tonalElevation = 0.dp, shadowElevation = 6.dp, content = content)
+}
+
+@Composable
 private fun MessageDockItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
@@ -1173,11 +1178,7 @@ private fun MessageDockItem(
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    Surface(
-        modifier = modifier.height(48.dp),
-        shape = CircleShape,
-        color = androidx.compose.ui.graphics.Color.Transparent,
-    ) {
+    Box(modifier = modifier.height(48.dp).clip(CircleShape)) {
         Box(
             modifier = Modifier.fillMaxSize().clickable(
                 interactionSource = interactionSource,

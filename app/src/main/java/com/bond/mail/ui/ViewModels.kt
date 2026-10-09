@@ -802,6 +802,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
     fun theme(value: ThemeMode) = viewModelScope.launch { container.settings.setTheme(value) }
+    fun glass(value: com.bond.mail.data.settings.GlassSettings) = viewModelScope.launch { container.settings.setGlass(value) }
     fun uiStyle(value: UiStyle) = viewModelScope.launch { container.settings.setUiStyle(value) }
     fun dynamic(value: Boolean) = viewModelScope.launch { container.settings.setDynamic(value) }
     fun themeColor(value: ThemeColor) = viewModelScope.launch { container.settings.setThemeColor(value) }

@@ -3,6 +3,7 @@ package com.bond.mail.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -40,6 +41,7 @@ enum class PushAccessState { MISSING, VERIFYING, VERIFIED, REJECTED, FAILED }
 
 data class AppSettings(
     val uiStyle: UiStyle = UiStyle.MATERIAL3,
+    val glass: GlassSettings = GlassSettings(),
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val themeColor: ThemeColor = ThemeColor.PINK,
@@ -59,6 +61,10 @@ class SettingsStore(private val context: Context) {
         context.getSharedPreferences("bond_mail_startup_hints", Context.MODE_PRIVATE)
 
     private object Keys {
+        val glassBlur = floatPreferencesKey("glass_blur")
+        val glassHeight = floatPreferencesKey("glass_height")
+        val glassAmount = floatPreferencesKey("glass_amount")
+        val glassChromatic = floatPreferencesKey("glass_chromatic")
         val uiStyle = stringPreferencesKey("ui_style")
         val theme = stringPreferencesKey("theme")
         val dynamic = booleanPreferencesKey("dynamic")
@@ -76,6 +82,8 @@ class SettingsStore(private val context: Context) {
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
         AppSettings(
             uiStyle = UiStyle.fromStorageValue(p[Keys.uiStyle]),
+            glass = GlassSettings(p[Keys.glassBlur] ?: 6f, p[Keys.glassHeight] ?: 12f,
+                p[Keys.glassAmount] ?: 24f, p[Keys.glassChromatic] ?: 0f).normalized(),
             themeMode = runCatching { ThemeMode.valueOf(p[Keys.theme] ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM),
             dynamicColor = p[Keys.dynamic] ?: true,
             themeColor = runCatching {
@@ -116,6 +124,13 @@ class SettingsStore(private val context: Context) {
     }
     suspend fun setUiStyle(value: UiStyle) = context.dataStore.edit {
         it[Keys.uiStyle] = value.storageValue
+    }
+    suspend fun setGlass(value: GlassSettings) = context.dataStore.edit {
+        val safe = value.normalized()
+        it[Keys.glassBlur] = safe.blurRadius
+        it[Keys.glassHeight] = safe.refractionHeight
+        it[Keys.glassAmount] = safe.refractionAmount
+        it[Keys.glassChromatic] = safe.chromaticAberration
     }
     suspend fun setDynamic(value: Boolean) = context.dataStore.edit { it[Keys.dynamic] = value }
     suspend fun setThemeColor(value: ThemeColor) = context.dataStore.edit {

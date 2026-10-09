@@ -1,5 +1,11 @@
 package com.bond.mail.ui.components
 
+import com.bond.mail.ui.theme.BondFormField as OutlinedTextField
+import com.bond.mail.ui.theme.BondFormAction as TextButton
+import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
+import com.bond.mail.ui.theme.BondIconButton as IconButton
+import com.bond.mail.ui.theme.BondSwitch as Switch
+
 import com.bond.mail.ui.theme.BondSecondaryButton
 
 import androidx.compose.foundation.layout.*
@@ -96,7 +102,7 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BondSecondaryButton(modifier = Modifier.weight(1f), enabled = ready && !busy,
                             onClick = { ask(strings.text("ai_reply_prompt") + question, draft = true) }) { Text(tr("ai_reply")) }
-                        FilledTonalButton(modifier = Modifier.weight(1f), enabled = ready && !busy && question.isNotBlank(),
+                        BondSecondaryButton(modifier = Modifier.weight(1f), enabled = ready && !busy && question.isNotBlank(),
                             onClick = { ask(question, conversation = true) }) { Text(tr("ai_ask")) }
                     }
                     answers.forEach { answer ->

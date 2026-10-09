@@ -555,5 +555,14 @@
   "ai_skill_invalid": "請使用非空 UTF-8 Markdown 或純文字技能，不能匯入網頁、壓縮檔或二進位檔案。",
   "ai_skill_url_invalid": "請填寫無帳號、查詢參數或片段的 HTTPS 文字直連，或 GitHub 檔案的 blob 連結。",
   "ai_skill_import_failed": "匯入失敗，請檢查檔案或連結。連結需直接返回文字，不支援登入或重新導向。",
-  "ai_skill_load_failed": "技能讀取失敗，請關閉後重試。"
+  "ai_skill_load_failed": "技能讀取失敗，請關閉後重試。",
+  "glass_adjustments": "Liquid Glass 調節",
+  "glass_adjustments_summary": "模糊、折射與色散",
+  "glass_blur": "模糊半徑",
+  "glass_height": "折射高度",
+  "glass_amount": "折射強度",
+  "glass_chromatic": "色散",
+  "glass_reset": "恢復預設",
+  "glass_preview": "玻璃預覽",
+  "glass_effects_reduced": "系統目前減少視覺效果，調節參數仍會儲存。"
 }

@@ -106,5 +106,6 @@ layer once instead of traversing content twice; use screen coordinates across po
 respect app light/dark mode, disabled controls and reduced effects; add switch accessibility
 semantics and full-height touch targets; avoid activating cancelled drags; consume horizontal
 drags after touch slop so navigation does not also open the drawer; share app dock optics; route callbacks through
-current Compose state. BondMail's rounded-line glyphs are original app code, not Apple assets.
+current Compose state; expose bounded optical settings and continuous chromatic aberration.
+BondMail's rounded-line glyphs are original app code, not Apple assets.
 No Catalog wallpaper, sample mail, screenshot or binary APK is redistributed.

@@ -1,5 +1,7 @@
 package com.bond.mail.ui.screens
 
+import androidx.compose.material.icons.filled.Settings
+
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -132,6 +134,8 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
+    var glassSettingsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    if (glassSettingsOpen) GlassSettingsScreen(settings.glass, viewModel::glass) { glassSettingsOpen = false }
     var toolsOpen by remember { mutableStateOf(false) }
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog { toolsOpen = false }
     var translationSettingsOpen by remember { mutableStateOf(false) }
@@ -263,6 +267,11 @@ fun SettingsScreen(
                     selected = settings.uiStyle,
                     onSelect = viewModel::uiStyle,
                 )
+                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
+                    SettingsDivider()
+                    SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
+                        onClick = { glassSettingsOpen = true })
+                }
                 SettingsDivider()
                 DropdownSettingRow(
                     title = tr("list_density"),

@@ -205,7 +205,7 @@ fun BondMailTheme(settings: AppSettings, content: @Composable () -> Unit) {
         style = settings.uiStyle,
         dark = dark,
         materialColors = materialColors,
-        content = content,
+        content = { CompositionLocalProvider(LocalGlassSettings provides settings.glass.normalized()) { content() } },
     )
 }
 
