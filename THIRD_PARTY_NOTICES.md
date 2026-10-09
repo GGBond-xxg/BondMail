@@ -1,5 +1,22 @@
 # Third-party notices
 
+## AndroidLiquidGlass (Kyant0)
+
+BondMail vendors the Compose renderer from
+https://github.com/Kyant0/AndroidLiquidGlass at tag `1.0.0-alpha04`, commit
+`84456cbe04e093f1f7f7a590330a3b2615a785a4`, in
+`app/src/main/java/com/kyant/liquidglass`. It is built with BondMail's existing
+Kotlin/Compose toolchain rather than upgrading the whole application to Backdrop's
+newer dependencies. The optional luminance sampler is not enabled by BondMail.
+
+Local changes: record the source once and draw that layer; invalidate a replaced
+provider; rebind consumer layers after a theme/source change. These edits are marked
+with `BondMail` comments. App-specific materials and accessibility/power fallbacks
+are implemented separately in `BondLiquidGlass.kt`.
+
+Copyright 2025 Kyant. Licensed under Apache License 2.0; the upstream license is
+included in `licenses/AndroidLiquidGlass-Apache-2.0.txt`.
+
 ## theSVG
 
 Selected SVG resources are synchronized from `@thesvg/icons` 3.3.8

@@ -1,10 +1,11 @@
 # BondMail
 
 一款使用 Kotlin 与 Jetpack Compose 开发的 Android 邮件客户端，支持多账户、
-IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX 双界面样式。
+IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX / Liquid Glass 界面样式。
 
 ## 下载
 
+- Liquid Glass 预览版：[v1.5.9](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.9-liquid-glass.1)，供跨设备测试
 - 最新版本：[BondMail v1.5.7.10](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.7.10)
 - 安装包：[BondMail-v1.5.7.10.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.7.10/BondMail-v1.5.7.10.apk)
 - 最低系统：Android 8.0（API 26）
@@ -19,7 +20,8 @@ APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://gi
 - 正文显示模式：自动、原始排版、浅色正文、纯文本，可记住发件人偏好
 - 长按邮件列表头像手动分类，可按邮箱地址或域名设置银行、运营商、交易所、运动、服饰等图标
 - 本地 Room 缓存、增量同步、后台收信与新邮件通知
-- Material 3 与 MIUIX 样式切换，支持浅色、深色和跟随系统
+- Material 3、MIUIX 与 Liquid Glass 样式切换，支持浅色、深色和跟随系统
+- [Liquid Glass](docs/LIQUID_GLASS.md)：导航和悬浮控件的实时背景折射，Android 13+ 完整效果，旧系统自动回退
 - 简体中文、繁体中文与英文 JSON 多语言
 - 可选的自建 Cloudflare FCM 推送
 - 原 HTML 内翻译标题和正文，保留图片、表格和链接；支持阿里云、有道、Google、Microsoft，自填密钥、加密缓存与一键原文切换

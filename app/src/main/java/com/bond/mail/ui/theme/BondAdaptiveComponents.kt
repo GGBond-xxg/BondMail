@@ -98,7 +98,7 @@ fun BondTopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> TopAppBar(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TopAppBar(
             title = { Text(title) },
             modifier = modifier,
             navigationIcon = navigationIcon,
@@ -128,7 +128,7 @@ fun BondIconButton(
     content: @Composable () -> Unit,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> IconButton(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> IconButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -182,7 +182,7 @@ fun BondPopupMenu(
     Box(modifier = modifier.onSizeChanged { anchorHeight = it.height }) {
         anchor()
         when (uiStyle) {
-            UiStyle.MATERIAL3 -> DropdownMenu(
+            UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
             ) {
@@ -387,7 +387,7 @@ fun BondTextAction(
     destructive: Boolean = false,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> TextButton(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TextButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -449,7 +449,7 @@ fun BondTextField(
     cornerRadius: Dp = 18.dp,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> OutlinedTextField(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier,
@@ -537,7 +537,7 @@ fun BondSearchField(
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> TextField(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TextField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier,
@@ -602,7 +602,7 @@ fun BondAlertDialog(
     neutralButton: @Composable (() -> Unit)? = null,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> {
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> {
             val materialDismissButton = dismissButton
             val materialNeutralButton = neutralButton
             val hasThreeActions = materialDismissButton != null && materialNeutralButton != null

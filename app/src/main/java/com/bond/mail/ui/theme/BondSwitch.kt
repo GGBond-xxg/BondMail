@@ -14,7 +14,7 @@ fun BondSwitch(
     enabled: Boolean = true,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> androidx.compose.material3.Switch(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> androidx.compose.material3.Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             modifier = modifier,

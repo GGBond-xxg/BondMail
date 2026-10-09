@@ -67,6 +67,8 @@
   "ui_style": "介面樣式",
   "ui_style_material3": "Material 3",
   "ui_style_miuix": "MIUIX",
+  "ui_style_liquid_glass": "Liquid Glass",
+  "liquid_glass_desc": "導覽與懸浮操作採用折射玻璃，郵件保持清晰。Android 13 及以上支援完整效果；舊系統及省電模式使用實色材質。",
   "theme_mode": "主題模式",
   "follow_system": "跟隨系統",
   "light": "淺色",

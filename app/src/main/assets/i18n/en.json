@@ -67,6 +67,8 @@
   "ui_style": "Interface style",
   "ui_style_material3": "Material 3",
   "ui_style_miuix": "MIUIX",
+  "ui_style_liquid_glass": "Liquid Glass",
+  "liquid_glass_desc": "Refractive glass for navigation and floating actions. Mail stays easy to read. Android 13+; older devices and power saving use a solid surface.",
   "theme_mode": "Theme mode",
   "follow_system": "System default",
   "light": "Light",

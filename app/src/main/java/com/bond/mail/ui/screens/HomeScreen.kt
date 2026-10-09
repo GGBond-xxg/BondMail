@@ -167,6 +167,10 @@ import com.bond.mail.ui.theme.BondMenuEntry
 import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.ui.theme.bondGlassEffectsEnabled
+import com.bond.mail.ui.theme.bondLiquidGlass
+import com.kyant.liquidglass.liquidGlassProvider
+import com.kyant.liquidglass.rememberLiquidGlassProviderState
 import com.bond.mail.ui.theme.BondPrimaryButton
 import com.bond.mail.ui.theme.BondSearchField
 import kotlinx.coroutines.delay
@@ -360,6 +364,8 @@ fun HomeScreen(
         return
     }
 
+    val glassEnabled = bondGlassEffectsEnabled()
+    val glassBackdrop = rememberLiquidGlassProviderState(MaterialTheme.bondSurfaces.page)
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val topChromeHeight = statusBarInset + 68.dp
     val effectiveChromeVisible = chromeVisible || inSelectionMode || searchOverlayActive
@@ -451,6 +457,7 @@ fun HomeScreen(
             LazyColumn(
                     state = listState,
                     modifier = Modifier
+                        .then(if (glassEnabled) Modifier.liquidGlassProvider(glassBackdrop) else Modifier)
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             val touchSlop = viewConfiguration.touchSlop
@@ -675,8 +682,9 @@ fun HomeScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
-                .graphicsLayer { translationY = topChromeOffset.toPx() },
-            color = MaterialTheme.bondSurfaces.chrome,
+                .graphicsLayer { translationY = topChromeOffset.toPx() }
+                .bondLiquidGlass(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp)),
+            color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
             tonalElevation = 0.dp,
             // A full-width physical shadow is copied into the frozen reader backdrop as a dark
             // rectangular strip in light mode. The chrome/page color boundary is sufficient.

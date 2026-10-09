@@ -253,15 +253,24 @@ fun SettingsScreen(
                 SettingsCard {
                 DropdownSettingRow(
                     title = tr("ui_style"),
-                    options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3).map { style ->
+                    options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS).map { style ->
                         style to when (style) {
                             UiStyle.MATERIAL3 -> tr("ui_style_material3")
                             UiStyle.MIUIX -> tr("ui_style_miuix")
+                            UiStyle.LIQUID_GLASS -> tr("ui_style_liquid_glass")
                         }
                     },
                     selected = settings.uiStyle,
                     onSelect = viewModel::uiStyle,
                 )
+                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
+                    Text(
+                        text = tr("liquid_glass_desc"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
                 SettingsDivider()
                 DropdownSettingRow(
                     title = tr("list_density"),
@@ -294,7 +303,7 @@ fun SettingsScreen(
                         }
                     },
                 )
-                if (settings.uiStyle == UiStyle.MATERIAL3) {
+                if (settings.uiStyle != UiStyle.MIUIX) {
                     SettingsDivider()
                     SwitchSettingRow(
                         title = tr("dynamic_color"),

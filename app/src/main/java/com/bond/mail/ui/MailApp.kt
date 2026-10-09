@@ -122,6 +122,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
+import com.bond.mail.ui.theme.LocalGlassBackdrop
+import com.bond.mail.ui.theme.LocalUiStyle
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.ui.theme.bondGlassEffectsEnabled
+import com.bond.mail.ui.theme.bondLiquidGlass
+import com.kyant.liquidglass.liquidGlassProvider
+import com.kyant.liquidglass.rememberLiquidGlassProviderState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -1326,6 +1333,8 @@ private fun MainTabs(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val stateHolder = rememberSaveableStateHolder()
+    val glassEnabled = bondGlassEffectsEnabled()
+    val glassBackdrop = rememberLiquidGlassProviderState(MaterialTheme.bondSurfaces.page)
     LaunchedEffect(coldStartStaggerEnabled) {
         if (coldStartStaggerEnabled) onColdStartStaggerConsumed()
     }
@@ -1433,6 +1442,7 @@ private fun MainTabs(
                 .graphicsLayer { clip = false },
         ) {
             AnimatedContent(
+                modifier = if (glassEnabled) Modifier.liquidGlassProvider(glassBackdrop) else Modifier,
                 targetState = selectedTab,
                 transitionSpec = {
                     bondTopLevelFade(enabled = motionEnabled)
@@ -1506,14 +1516,18 @@ private fun MainTabs(
                 hiddenOffset = 112.dp + navigationBarHeight,
                 label = "bottom-dock-slide",
             )
-            FloatingBottomDock(
-                selectedTab = selectedTab,
-                onSelectTab = selectTab,
-                onCompose = { onCompose("") },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .graphicsLayer { translationY = dockOffset.toPx() },
-            )
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
+            ) {
+                FloatingBottomDock(
+                    selectedTab = selectedTab,
+                    onSelectTab = selectTab,
+                    onCompose = { onCompose("") },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .graphicsLayer { translationY = dockOffset.toPx() },
+                )
+            }
         }
     }
 }
@@ -1525,6 +1539,7 @@ private fun FloatingBottomDock(
     onCompose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val glassBackdrop = LocalGlassBackdrop.current
     Row(
         modifier = modifier
             .navigationBarsPadding()
@@ -1534,9 +1549,13 @@ private fun FloatingBottomDock(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Surface(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
+                .bondLiquidGlass(glassBackdrop, RoundedCornerShape(30.dp)),
             shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
+            color = if (glassBackdrop != null) androidx.compose.ui.graphics.Color.Transparent
+                else MaterialTheme.bondSurfaces.dock.copy(
+                    alpha = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 1f else 0.94f,
+                ),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
             tonalElevation = 0.dp,
             // The border already separates the floating dock. A large physical shadow becomes a

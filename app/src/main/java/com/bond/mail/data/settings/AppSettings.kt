@@ -16,6 +16,7 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 enum class UiStyle(val storageValue: String) {
     MATERIAL3("material3"),
     MIUIX("miuix"),
+    LIQUID_GLASS("liquid_glass"),
     ;
 
     companion object {

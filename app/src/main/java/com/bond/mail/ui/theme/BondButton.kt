@@ -24,7 +24,7 @@ fun BondPrimaryButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> androidx.compose.material3.Button(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> androidx.compose.material3.Button(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -59,7 +59,7 @@ fun BondSecondaryButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3 -> androidx.compose.material3.FilledTonalButton(
+        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> androidx.compose.material3.FilledTonalButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
