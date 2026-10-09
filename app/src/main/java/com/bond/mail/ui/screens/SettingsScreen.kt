@@ -48,7 +48,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -263,14 +263,6 @@ fun SettingsScreen(
                     selected = settings.uiStyle,
                     onSelect = viewModel::uiStyle,
                 )
-                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
-                    Text(
-                        text = tr("liquid_glass_desc"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
                 SettingsDivider()
                 DropdownSettingRow(
                     title = tr("list_density"),
@@ -303,7 +295,7 @@ fun SettingsScreen(
                         }
                     },
                 )
-                if (settings.uiStyle != UiStyle.MIUIX) {
+                if (settings.uiStyle == UiStyle.MATERIAL3) {
                     SettingsDivider()
                     SwitchSettingRow(
                         title = tr("dynamic_color"),
@@ -495,6 +487,12 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
         MiuixSettingsCard(content)
         return
     }
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.bondSurfaces.content) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp), content = content)
+        }
+        return
+    }
     Card(
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(
@@ -520,6 +518,10 @@ private fun <T> DropdownSettingRow(
     onSelect: (T) -> Unit,
     onSelectAt: ((T, Offset) -> Unit)? = null,
 ) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        com.bond.mail.ui.theme.GlassSettingDropdown(title, subtitle, options, selected, onSelect, onSelectAt)
+        return
+    }
     if (LocalUiStyle.current == UiStyle.MIUIX) {
         val selectedIndex = options.indexOfFirst { it.first == selected }.coerceAtLeast(0)
         MiuixDropdownSetting(

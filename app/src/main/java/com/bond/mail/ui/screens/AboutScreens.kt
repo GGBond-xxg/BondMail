@@ -44,7 +44,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,7 +54,7 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.material3.AlertDialog
+import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
 import androidx.compose.material3.TextButton
 import com.bond.mail.data.support.SponsorshipWallet
 import androidx.compose.ui.Alignment
@@ -233,7 +233,7 @@ fun SponsorshipScreen(onBack: () -> Unit) {
                     SelectionContainer { Text(wallet.address, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall) }
                     Text(tr("sponsor_qr_note"), style = MaterialTheme.typography.bodySmall)
                 }
-            }, confirmButton = { TextButton(onClick = { qrWallet = null }) { Text(tr("close")) } })
+            }, confirmButton = { BondTextAction(text = tr("close"), onClick = { qrWallet = null }) })
     }
     AboutPage(title = tr("sponsor_title"), onBack = onBack) {
         item {

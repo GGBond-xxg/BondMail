@@ -22,8 +22,6 @@ import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressScale
 import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.theme.LocalUiStyle
-import com.bond.mail.ui.theme.LocalGlassBackdrop
-import com.bond.mail.ui.theme.bondLiquidGlass
 
 /** Shared raised circular action used by Compose and destructive detail actions. */
 @Composable
@@ -35,7 +33,16 @@ fun FloatingCircleAction(
     enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val glassBackdrop = LocalGlassBackdrop.current
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        com.bond.mail.ui.theme.GlassButton(
+            onClick, modifier, enabled,
+            primary = containerColor == MaterialTheme.colorScheme.primary,
+            destructive = containerColor == MaterialTheme.colorScheme.error,
+            iconOnly = true,
+            contentColor = if (containerColor == MaterialTheme.colorScheme.error) MaterialTheme.colorScheme.error else contentColor,
+        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center, content = content) }
+        return
+    }
     val motionEnabled = bondMotionEnabled()
     val interactionSource = rememberBondPressInteraction()
     val pressScale by rememberBondPressScale(
@@ -54,10 +61,9 @@ fun FloatingCircleAction(
                 elevation = 8.dp,
                 shape = CircleShape,
                 clip = false,
-            )
-            .bondLiquidGlass(glassBackdrop, CircleShape, containerColor),
+            ),
         shape = CircleShape,
-        color = if (glassBackdrop != null) Color.Transparent else containerColor,
+        color = containerColor,
         contentColor = contentColor,
         border = BorderStroke(
             1.dp,

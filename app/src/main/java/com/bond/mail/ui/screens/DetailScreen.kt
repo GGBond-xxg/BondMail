@@ -89,7 +89,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -171,6 +171,11 @@ import com.bond.mail.ui.theme.BondMenuEntry
 import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.bestForwardText
+import com.bond.mail.ui.theme.LocalGlassBackdrop
+import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.glassSurface
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.BondTopAppBar
 import kotlinx.coroutines.delay
@@ -594,6 +599,8 @@ fun DetailScreen(
         label = "remote-image-bottom-inset",
     )
 
+    val glassEnabled = LocalGlassEffects.current
+    val glassBackdrop = rememberLayerBackdrop()
     Box(modifier.fillMaxSize()) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -605,7 +612,8 @@ fun DetailScreen(
         // frames, briefly leaving the sender metadata over the first rows of the message body.
         // One parent transform makes the complete mail sheet move atomically.
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
+                .then(if (glassEnabled) Modifier.layerBackdrop(glassBackdrop) else Modifier),
         ) {
         val hasDisplayBody = item.hasDisplayBody()
         when {
@@ -869,106 +877,110 @@ fun DetailScreen(
             }
         }
 
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .graphicsLayer { translationY = topChromeOffset.toPx() },
-            color = MaterialTheme.bondSurfaces.page,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
+        androidx.compose.runtime.CompositionLocalProvider(
+            LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
         ) {
-            BondTopAppBar(
-                title = owningAccount?.displayName
-                    ?.trim()
-                    ?.take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
-                    .orEmpty(),
-                containerColor = Color.Transparent,
-                navigationIcon = {
-                    BondIconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
-                    }
-                },
-                actions = {
-                    InlineTranslationSelectors(translation)
-                    BondIconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
-                        Icon(
-                            if (item.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = null,
-                        )
-                    }
-                    BondPopupMenu(
-                        expanded = moreOpen,
-                        onDismissRequest = { moreOpen = false },
-                        entries = listOf(
-                            BondMenuEntry(text = tr("mail_display_title"), icon = Icons.Outlined.Tune, onClick = { moreOpen = false; displayModeOpen = true }),
-                            BondMenuEntry(text = tr("sender_icon_title"), icon = Icons.Outlined.Category, onClick = { moreOpen = false; senderIconOpen = true }),
-                            BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
-                            BondMenuEntry(text = tr("ai_title"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; aiOpen = true }),
-                            BondMenuEntry(
-                                text = if (item.unread) tr("mark_read") else tr("mark_unread"),
-                                icon = if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,
-                                onClick = {
-                                    moreOpen = false
-                                    scope.launch { container.repository.toggleUnread(item) }
-                                },
-                            ),
-                            BondMenuEntry(
-                                text = tr("forward"),
-                                icon = Icons.AutoMirrored.Filled.Forward,
-                                onClick = { moreOpen = false; forward() },
-                            ),
-                            BondMenuEntry(
-                                text = tr("share"),
-                                icon = Icons.Default.Share,
-                                onClick = { moreOpen = false; share() },
-                            ),
-                            BondMenuEntry(
-                                text = tr(if (item.folderType == "SPAM") "move_to_inbox" else "spam"),
-                                icon = if (item.folderType == "SPAM") Icons.Default.Inbox else Icons.Default.Report,
-                                onClick = {
-                                    moreOpen = false
-                                    if (item.folderType == "SPAM") {
-                                        onRestoreSenderFromSpam(item)
-                                    } else {
-                                        onMoveSenderToSpam(item)
-                                    }
-                                    onBack()
-                                },
-                            ),
-                            BondMenuEntry(
-                                text = tr("delete"),
-                                icon = Icons.Default.Delete,
-                                destructive = true,
-                                onClick = { moreOpen = false; confirmDelete = true },
-                            ),
-                        ),
-                    ) {
-                        BondIconButton(onClick = { moreOpen = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = null)
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .graphicsLayer { translationY = topChromeOffset.toPx() },
+                color = MaterialTheme.bondSurfaces.page,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+            ) {
+                BondTopAppBar(
+                    title = owningAccount?.displayName
+                        ?.trim()
+                        ?.take(ACCOUNT_DISPLAY_NAME_MAX_LENGTH)
+                        .orEmpty(),
+                    containerColor = Color.Transparent,
+                    navigationIcon = {
+                        BondIconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("back"))
                         }
-                    }
-                },
+                    },
+                    actions = {
+                        InlineTranslationSelectors(translation)
+                        BondIconButton(onClick = { scope.launch { container.repository.toggleStarred(item) } }) {
+                            Icon(
+                                if (item.starred) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = null,
+                            )
+                        }
+                        BondPopupMenu(
+                            expanded = moreOpen,
+                            onDismissRequest = { moreOpen = false },
+                            entries = listOf(
+                                BondMenuEntry(text = tr("mail_display_title"), icon = Icons.Outlined.Tune, onClick = { moreOpen = false; displayModeOpen = true }),
+                                BondMenuEntry(text = tr("sender_icon_title"), icon = Icons.Outlined.Category, onClick = { moreOpen = false; senderIconOpen = true }),
+                                BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
+                                BondMenuEntry(text = tr("ai_title"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; aiOpen = true }),
+                                BondMenuEntry(
+                                    text = if (item.unread) tr("mark_read") else tr("mark_unread"),
+                                    icon = if (item.unread) Icons.Default.MarkEmailRead else Icons.Default.MarkEmailUnread,
+                                    onClick = {
+                                        moreOpen = false
+                                        scope.launch { container.repository.toggleUnread(item) }
+                                    },
+                                ),
+                                BondMenuEntry(
+                                    text = tr("forward"),
+                                    icon = Icons.AutoMirrored.Filled.Forward,
+                                    onClick = { moreOpen = false; forward() },
+                                ),
+                                BondMenuEntry(
+                                    text = tr("share"),
+                                    icon = Icons.Default.Share,
+                                    onClick = { moreOpen = false; share() },
+                                ),
+                                BondMenuEntry(
+                                    text = tr(if (item.folderType == "SPAM") "move_to_inbox" else "spam"),
+                                    icon = if (item.folderType == "SPAM") Icons.Default.Inbox else Icons.Default.Report,
+                                    onClick = {
+                                        moreOpen = false
+                                        if (item.folderType == "SPAM") {
+                                            onRestoreSenderFromSpam(item)
+                                        } else {
+                                            onMoveSenderToSpam(item)
+                                        }
+                                        onBack()
+                                    },
+                                ),
+                                BondMenuEntry(
+                                    text = tr("delete"),
+                                    icon = Icons.Default.Delete,
+                                    destructive = true,
+                                    onClick = { moreOpen = false; confirmDelete = true },
+                                ),
+                            ),
+                        ) {
+                            BondIconButton(onClick = { moreOpen = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = null)
+                            }
+                        }
+                    },
+                )
+            }
+
+            MessageTranslationActions(
+                translation = translation,
+                enabled = !bodyLoading && !bodyLoadFailed,
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                    .padding(start = 12.dp, end = 12.dp, bottom = translationBottom),
+            )
+            MessageActionDock(
+                onReply = ::reply,
+                onForward = ::forward,
+                onShare = ::share,
+                onDelete = { confirmDelete = true },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer { translationY = bottomChromeOffset.toPx() }
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
             )
         }
-
-        MessageTranslationActions(
-            translation = translation,
-            enabled = !bodyLoading && !bodyLoadFailed,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-                .padding(start = 12.dp, end = 12.dp, bottom = translationBottom),
-        )
-        MessageActionDock(
-            onReply = ::reply,
-            onForward = ::forward,
-            onShare = ::share,
-            onDelete = { confirmDelete = true },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .graphicsLayer { translationY = bottomChromeOffset.toPx() }
-                .navigationBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        )
     }
 
     if (confirmDelete) {
@@ -1104,9 +1116,11 @@ internal fun MessageActionDock(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Surface(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f)
+                .glassSurface(LocalGlassBackdrop.current, RoundedCornerShape(30.dp)),
             shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
+            color = if (LocalGlassBackdrop.current != null) Color.Transparent
+                else MaterialTheme.bondSurfaces.dock.copy(alpha = if ((LocalUiStyle.current == UiStyle.LIQUID_GLASS)) 1f else 0.94f),
             border = BorderStroke(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
@@ -1157,6 +1171,12 @@ private fun MessageDockItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        com.bond.mail.ui.theme.GlassButton(onClick, modifier.height(48.dp), iconOnly = true) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
+        }
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier.height(48.dp),

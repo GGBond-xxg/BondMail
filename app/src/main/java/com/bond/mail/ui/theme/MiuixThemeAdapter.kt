@@ -95,10 +95,20 @@ internal fun BondMiuixTheme(
 
         BondMaterialTheme(
             style = style,
-            colors = if (style == UiStyle.MIUIX) miuixMaterialBridge else materialColors,
-            shapes = if (style == UiStyle.MIUIX) MiuixCompatibleShapes else MaterialCompatibleShapes,
+            colors = when (style) {
+                UiStyle.MIUIX -> miuixMaterialBridge
+                UiStyle.LIQUID_GLASS -> liquidGlassColors(dark)
+                UiStyle.MATERIAL3 -> materialColors
+            },
+            shapes = when (style) {
+                UiStyle.MIUIX -> MiuixCompatibleShapes
+                UiStyle.LIQUID_GLASS -> LiquidGlassShapes
+                UiStyle.MATERIAL3 -> MaterialCompatibleShapes
+            },
             typography = if (style == UiStyle.MIUIX) {
                 miuixCompatibleTypography()
+            } else if (style == UiStyle.LIQUID_GLASS) {
+                LiquidGlassTypography
             } else {
                 MaterialCompatibleTypography
             },
@@ -107,7 +117,7 @@ internal fun BondMiuixTheme(
             // Keeping this Box stable for both styles prevents a style switch from recreating
             // the navigation host while still enabling native MIUIX overlays.
             Box(Modifier.fillMaxSize()) {
-                content()
+                GlassBackdropHost(content)
                 if (style == UiStyle.MIUIX) {
                     MiuixPopupHost()
                 }

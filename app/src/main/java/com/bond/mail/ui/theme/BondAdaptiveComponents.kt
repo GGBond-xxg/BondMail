@@ -98,7 +98,8 @@ fun BondTopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TopAppBar(
+        UiStyle.LIQUID_GLASS -> GlassTopAppBar(title, modifier, navigationIcon, actions)
+        UiStyle.MATERIAL3 -> TopAppBar(
             title = { Text(title) },
             modifier = modifier,
             navigationIcon = navigationIcon,
@@ -128,7 +129,8 @@ fun BondIconButton(
     content: @Composable () -> Unit,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> IconButton(
+        UiStyle.LIQUID_GLASS -> GlassIconButton(onClick, modifier, enabled, content)
+        UiStyle.MATERIAL3 -> IconButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -182,7 +184,8 @@ fun BondPopupMenu(
     Box(modifier = modifier.onSizeChanged { anchorHeight = it.height }) {
         anchor()
         when (uiStyle) {
-            UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> DropdownMenu(
+            UiStyle.LIQUID_GLASS -> GlassPopup(expanded, onDismissRequest, entries, anchorHeight)
+            UiStyle.MATERIAL3 -> DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismissRequest,
             ) {
@@ -387,7 +390,11 @@ fun BondTextAction(
     destructive: Boolean = false,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TextButton(
+        UiStyle.LIQUID_GLASS -> GlassButton(
+            onClick, if (LocalGlassDialogAction.current) modifier.fillMaxWidth() else modifier,
+            enabled, primary = primary, destructive = destructive,
+        ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+        UiStyle.MATERIAL3 -> TextButton(
             onClick = onClick,
             modifier = modifier,
             enabled = enabled,
@@ -449,7 +456,10 @@ fun BondTextField(
     cornerRadius: Dp = 18.dp,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> OutlinedTextField(
+        UiStyle.LIQUID_GLASS -> GlassTextField(value, onValueChange, label, modifier, placeholder, supportingText,
+            enabled, readOnly, isError, singleLine, minLines, maxLines, keyboardOptions, keyboardActions,
+            visualTransformation, leadingIcon, trailingIcon)
+        UiStyle.MATERIAL3 -> OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier,
@@ -537,7 +547,7 @@ fun BondSearchField(
     trailingIcon: @Composable (() -> Unit)? = null,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> TextField(
+        UiStyle.LIQUID_GLASS, UiStyle.MATERIAL3 -> TextField(
             value = value,
             onValueChange = onValueChange,
             modifier = modifier,
@@ -602,7 +612,8 @@ fun BondAlertDialog(
     neutralButton: @Composable (() -> Unit)? = null,
 ) {
     when (LocalUiStyle.current) {
-        UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS -> {
+        UiStyle.LIQUID_GLASS -> GlassAlertDialog(onDismissRequest, title, text, confirmButton, dismissButton, neutralButton)
+        UiStyle.MATERIAL3 -> {
             val materialDismissButton = dismissButton
             val materialNeutralButton = neutralButton
             val hasThreeActions = materialDismissButton != null && materialNeutralButton != null

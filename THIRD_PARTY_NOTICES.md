@@ -1,22 +1,5 @@
 # Third-party notices
 
-## AndroidLiquidGlass (Kyant0)
-
-BondMail vendors the Compose renderer from
-https://github.com/Kyant0/AndroidLiquidGlass at tag `1.0.0-alpha04`, commit
-`84456cbe04e093f1f7f7a590330a3b2615a785a4`, in
-`app/src/main/java/com/kyant/liquidglass`. It is built with BondMail's existing
-Kotlin/Compose toolchain rather than upgrading the whole application to Backdrop's
-newer dependencies. The optional luminance sampler is not enabled by BondMail.
-
-Local changes: record the source once and draw that layer; invalidate a replaced
-provider; rebind consumer layers after a theme/source change. These edits are marked
-with `BondMail` comments. App-specific materials and accessibility/power fallbacks
-are implemented separately in `BondLiquidGlass.kt`.
-
-Copyright 2025 Kyant. Licensed under Apache License 2.0; the upstream license is
-included in `licenses/AndroidLiquidGlass-Apache-2.0.txt`.
-
 ## theSVG
 
 Selected SVG resources are synchronized from `@thesvg/icons` 3.3.8
@@ -106,3 +89,21 @@ theme and native MIUIX controls.
 
 MIUIX is distributed under the Apache License, Version 2.0. The full license
 text is included at `licenses/Apache-2.0.txt`.
+
+
+## AndroidLiquidGlass / Backdrop and Catalog examples
+
+BondMail's Liquid Glass style uses source from [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass),
+version `1.0.6`, commit `896a94a3ade1cc1a940b92365f942a34971fecda` (Apache-2.0).
+The Backdrop core is under `app/src/main/java/com/kyant/backdrop`. Adapted official Catalog
+examples (LiquidButton, LiquidToggle, LiquidBottomTabs/Tab and their interaction helpers) are
+under `app/src/main/java/com/bond/mail/ui/glass`. Dialog optics follow Catalog's DialogContent.
+The complete upstream license is at `licenses/AndroidLiquidGlass-Apache-2.0.txt`.
+
+Local adaptations: replace the context parameter with an explicit node argument for Kotlin 2.1;
+use Compose CornerBasedShape instead of the optional Kyant Shapes dependency; draw the recorded
+layer once instead of traversing content twice; use screen coordinates across popup windows;
+respect app light/dark mode, disabled controls and reduced effects; add switch accessibility
+semantics and full-height touch targets; avoid activating cancelled drags; route callbacks through
+current Compose state. BondMail's rounded-line glyphs are original app code, not Apple assets.
+No Catalog wallpaper, sample mail, screenshot or binary APK is redistributed.

@@ -77,7 +77,7 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
@@ -167,10 +167,10 @@ import com.bond.mail.ui.theme.BondMenuEntry
 import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.LocalUiStyle
-import com.bond.mail.ui.theme.bondGlassEffectsEnabled
-import com.bond.mail.ui.theme.bondLiquidGlass
-import com.kyant.liquidglass.liquidGlassProvider
-import com.kyant.liquidglass.rememberLiquidGlassProviderState
+import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.glassSurface
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.BondPrimaryButton
 import com.bond.mail.ui.theme.BondSearchField
 import kotlinx.coroutines.delay
@@ -364,8 +364,8 @@ fun HomeScreen(
         return
     }
 
-    val glassEnabled = bondGlassEffectsEnabled()
-    val glassBackdrop = rememberLiquidGlassProviderState(MaterialTheme.bondSurfaces.page)
+    val glassEnabled = LocalGlassEffects.current
+    val glassBackdrop = rememberLayerBackdrop()
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val topChromeHeight = statusBarInset + 68.dp
     val effectiveChromeVisible = chromeVisible || inSelectionMode || searchOverlayActive
@@ -457,7 +457,7 @@ fun HomeScreen(
             LazyColumn(
                     state = listState,
                     modifier = Modifier
-                        .then(if (glassEnabled) Modifier.liquidGlassProvider(glassBackdrop) else Modifier)
+                        .then(if (glassEnabled) Modifier.layerBackdrop(glassBackdrop) else Modifier)
                         .fillMaxSize()
                         .pointerInput(Unit) {
                             val touchSlop = viewConfiguration.touchSlop
@@ -677,261 +677,265 @@ fun HomeScreen(
             }
         }
 
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
-                .graphicsLayer { translationY = topChromeOffset.toPx() }
-                .bondLiquidGlass(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp)),
-            color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
-            tonalElevation = 0.dp,
-            // A full-width physical shadow is copied into the frozen reader backdrop as a dark
-            // rectangular strip in light mode. The chrome/page color boundary is sufficient.
-            shadowElevation = 0.dp,
+        androidx.compose.runtime.CompositionLocalProvider(
+            com.bond.mail.ui.theme.LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    AnimatedContent(
-                        targetState = inSelectionMode,
-                        transitionSpec = { bondFadeThrough(motionEnabled) },
-                        label = "top-bar-fade-through",
-                    ) { selecting ->
-                        if (selecting) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                IconButton(onClick = ::clearSelection) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = tr("back"),
-                                    )
-                                }
-                                Text(
-                                    "${if (selectedIds.isNotEmpty()) selectedIds.size else selectionDisplayCount} ${tr("selected_count")}",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Spacer(Modifier.weight(1f))
-                                IconButton(
-                                    onClick = {
-                                        if (allVisibleSelected) {
-                                            clearSelection()
-                                        } else {
-                                            selectedIds.clear()
-                                            selectedIds.addAll(messages.map { message -> message.id })
-                                        }
-                                    },
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
+                    .graphicsLayer { translationY = topChromeOffset.toPx() }
+                    .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp)),
+                color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
+                tonalElevation = 0.dp,
+                // A full-width physical shadow is copied into the frozen reader backdrop as a dark
+                // rectangular strip in light mode. The chrome/page color boundary is sufficient.
+                shadowElevation = 0.dp,
+            ) {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        AnimatedContent(
+                            targetState = inSelectionMode,
+                            transitionSpec = { bondFadeThrough(motionEnabled) },
+                            label = "top-bar-fade-through",
+                        ) { selecting ->
+                            if (selecting) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Icon(
-                                        if (allVisibleSelected) Icons.Default.Close else Icons.Default.SelectAll,
-                                        contentDescription = tr(
-                                            if (allVisibleSelected) "cancel_select_all" else "select_all",
-                                        ),
-                                    )
-                                }
-                                when (currentFolder) {
-                                    "TRASH" -> {
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.moveToInbox(selectedMessages.toList())
-                                                clearSelection()
-                                            },
-                                        ) {
-                                            Icon(
-                                                Icons.Default.RestoreFromTrash,
-                                                contentDescription = tr("restore_mail"),
-                                            )
-                                        }
-                                        IconButton(onClick = { confirmDeleteSelection = true }) {
-                                            Icon(
-                                                Icons.Default.DeleteForever,
-                                                contentDescription = tr("delete_permanently"),
-                                            )
-                                        }
+                                    IconButton(onClick = ::clearSelection) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = tr("back"),
+                                        )
                                     }
-                                    else -> {
-                                        if (currentFolder == "SPAM") {
+                                    Text(
+                                        "${if (selectedIds.isNotEmpty()) selectedIds.size else selectionDisplayCount} ${tr("selected_count")}",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                    IconButton(
+                                        onClick = {
+                                            if (allVisibleSelected) {
+                                                clearSelection()
+                                            } else {
+                                                selectedIds.clear()
+                                                selectedIds.addAll(messages.map { message -> message.id })
+                                            }
+                                        },
+                                    ) {
+                                        Icon(
+                                            if (allVisibleSelected) Icons.Default.Close else Icons.Default.SelectAll,
+                                            contentDescription = tr(
+                                                if (allVisibleSelected) "cancel_select_all" else "select_all",
+                                            ),
+                                        )
+                                    }
+                                    when (currentFolder) {
+                                        "TRASH" -> {
                                             IconButton(
                                                 onClick = {
-                                                    viewModel.restoreSendersFromSpam(selectedMessages.toList())
+                                                    viewModel.moveToInbox(selectedMessages.toList())
                                                     clearSelection()
                                                 },
                                             ) {
                                                 Icon(
-                                                    Icons.Default.Inbox,
-                                                    contentDescription = tr("move_to_inbox"),
+                                                    Icons.Default.RestoreFromTrash,
+                                                    contentDescription = tr("restore_mail"),
                                                 )
                                             }
-                                        } else if (currentFolder !in setOf("DRAFTS", "SENT")) {
-                                            IconButton(
-                                                onClick = {
-                                                    viewModel.moveSendersToSpam(selectedMessages.toList())
-                                                    clearSelection()
-                                                },
-                                            ) {
+                                            IconButton(onClick = { confirmDeleteSelection = true }) {
                                                 Icon(
-                                                    Icons.Default.Report,
-                                                    contentDescription = tr("spam"),
+                                                    Icons.Default.DeleteForever,
+                                                    contentDescription = tr("delete_permanently"),
                                                 )
                                             }
                                         }
-                                        IconButton(onClick = { confirmDeleteSelection = true }) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = tr(
-                                                    if (currentFolder == "DRAFTS") {
-                                                        "discard_draft"
-                                                    } else {
-                                                        "delete"
+                                        else -> {
+                                            if (currentFolder == "SPAM") {
+                                                IconButton(
+                                                    onClick = {
+                                                        viewModel.restoreSendersFromSpam(selectedMessages.toList())
+                                                        clearSelection()
                                                     },
-                                                ),
-                                            )
-                                        }
-                                        if (currentFolder != "DRAFTS") {
-                                            IconButton(
-                                                onClick = {
-                                                    val target = selectedMessages.toList()
-                                                    if (selectionWillMarkRead) {
-                                                        viewModel.markAllRead(target)
-                                                    } else {
-                                                        viewModel.markAllUnread(target)
-                                                    }
-                                                    clearSelection()
-                                                },
-                                            ) {
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Inbox,
+                                                        contentDescription = tr("move_to_inbox"),
+                                                    )
+                                                }
+                                            } else if (currentFolder !in setOf("DRAFTS", "SENT")) {
+                                                IconButton(
+                                                    onClick = {
+                                                        viewModel.moveSendersToSpam(selectedMessages.toList())
+                                                        clearSelection()
+                                                    },
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Report,
+                                                        contentDescription = tr("spam"),
+                                                    )
+                                                }
+                                            }
+                                            IconButton(onClick = { confirmDeleteSelection = true }) {
                                                 Icon(
-                                                    if (selectionWillMarkRead) {
-                                                        Icons.Default.MarkEmailRead
-                                                    } else {
-                                                        Icons.Default.MarkEmailUnread
-                                                    },
+                                                    Icons.Default.Delete,
                                                     contentDescription = tr(
-                                                        if (selectionWillMarkRead) {
-                                                            "mark_read"
+                                                        if (currentFolder == "DRAFTS") {
+                                                            "discard_draft"
                                                         } else {
-                                                            "mark_unread"
+                                                            "delete"
                                                         },
                                                     ),
                                                 )
                                             }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                TopActionButton(
-                                    onClick = onOpenDrawer,
-                                    containerColor = Color.Transparent,
-                                ) {
-                                    Icon(
-                                        Icons.Default.Menu,
-                                        contentDescription = tr("open_navigation_drawer"),
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    selectedAccount?.displayName ?: tr("mail"),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    // Keep the closed search action inside the same translated
-                                    // top-bar row as menu/more/add. The overlay only owns the
-                                    // container-transform interval, so ordinary scroll hide/show
-                                    // cannot drift onto a separate animation path.
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .onGloballyPositioned { coordinates ->
-                                                searchSourceBounds = coordinates.boundsInRoot()
-                                            },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        if (!searchOverlayActive) {
-                                            TopActionButton(
-                                                onClick = {
-                                                    pendingSearchMessage = null
-                                                    showSearch = true
-                                                },
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Search,
-                                                    contentDescription = tr("search"),
-                                                )
+                                            if (currentFolder != "DRAFTS") {
+                                                IconButton(
+                                                    onClick = {
+                                                        val target = selectedMessages.toList()
+                                                        if (selectionWillMarkRead) {
+                                                            viewModel.markAllRead(target)
+                                                        } else {
+                                                            viewModel.markAllUnread(target)
+                                                        }
+                                                        clearSelection()
+                                                    },
+                                                ) {
+                                                    Icon(
+                                                        if (selectionWillMarkRead) {
+                                                            Icons.Default.MarkEmailRead
+                                                        } else {
+                                                            Icons.Default.MarkEmailUnread
+                                                        },
+                                                        contentDescription = tr(
+                                                            if (selectionWillMarkRead) {
+                                                                "mark_read"
+                                                            } else {
+                                                                "mark_unread"
+                                                            },
+                                                        ),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                    TopActionButton(onClick = onAddAccount) {
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    TopActionButton(
+                                        onClick = onOpenDrawer,
+                                        containerColor = Color.Transparent,
+                                    ) {
                                         Icon(
-                                            Icons.Default.Add,
-                                            contentDescription = tr("add_mailbox"),
+                                            Icons.Default.Menu,
+                                            contentDescription = tr("open_navigation_drawer"),
                                         )
                                     }
-                                    BondPopupMenu(
-                                        expanded = topMenu,
-                                        onDismissRequest = { topMenu = false },
-                                        entries = listOf(
-                                            BondMenuEntry(
-                                                text = tr("select_all"),
-                                                onClick = {
-                                                    selectedIds.clear()
-                                                    selectedIds.addAll(messages.map { it.id })
-                                                    topMenu = false
-                                                },
-                                            ),
-                                            BondMenuEntry(
-                                                text = tr("mark_all_read"),
-                                                onClick = {
-                                                    viewModel.markAllRead(messages)
-                                                    topMenu = false
-                                                },
-                                            ),
-                                        ),
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        selectedAccount?.displayName ?: tr("mail"),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        TopActionButton(onClick = { topMenu = true }) {
+                                        // Keep the closed search action inside the same translated
+                                        // top-bar row as menu/more/add. The overlay only owns the
+                                        // container-transform interval, so ordinary scroll hide/show
+                                        // cannot drift onto a separate animation path.
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .onGloballyPositioned { coordinates ->
+                                                    searchSourceBounds = coordinates.boundsInRoot()
+                                                },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            if (!searchOverlayActive) {
+                                                TopActionButton(
+                                                    onClick = {
+                                                        pendingSearchMessage = null
+                                                        showSearch = true
+                                                    },
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Search,
+                                                        contentDescription = tr("search"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        TopActionButton(onClick = onAddAccount) {
                                             Icon(
-                                                Icons.Default.MoreVert,
-                                                contentDescription = tr("more"),
+                                                Icons.Default.Add,
+                                                contentDescription = tr("add_mailbox"),
                                             )
+                                        }
+                                        BondPopupMenu(
+                                            expanded = topMenu,
+                                            onDismissRequest = { topMenu = false },
+                                            entries = listOf(
+                                                BondMenuEntry(
+                                                    text = tr("select_all"),
+                                                    onClick = {
+                                                        selectedIds.clear()
+                                                        selectedIds.addAll(messages.map { it.id })
+                                                        topMenu = false
+                                                    },
+                                                ),
+                                                BondMenuEntry(
+                                                    text = tr("mark_all_read"),
+                                                    onClick = {
+                                                        viewModel.markAllRead(messages)
+                                                        topMenu = false
+                                                    },
+                                                ),
+                                            ),
+                                        ) {
+                                            TopActionButton(onClick = { topMenu = true }) {
+                                                Icon(
+                                                    Icons.Default.MoreVert,
+                                                    contentDescription = tr("more"),
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                AnimatedVisibility(
-                    visible = busy,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(),
-                    enter = fadeIn(tween(BondMotionDuration.EffectShort)),
-                    exit = fadeOut(tween(BondMotionDuration.EffectShort)),
-                ) {
-                    LinearProgressIndicator(
+                    AnimatedVisibility(
+                        visible = busy,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp),
-                    )
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth(),
+                        enter = fadeIn(tween(BondMotionDuration.EffectShort)),
+                        exit = fadeOut(tween(BondMotionDuration.EffectShort)),
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp),
+                        )
+                    }
                 }
             }
         }
@@ -1387,6 +1391,10 @@ private fun TopActionButton(
     containerColor: Color = MaterialTheme.bondSurfaces.popup,
     content: @Composable () -> Unit,
 ) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        com.bond.mail.ui.theme.GlassIconButton(onClick, modifier, true, content)
+        return
+    }
     val pressResetter = rememberBondPressResetter()
     key(pressResetter.epoch) {
         val motionEnabled = bondMotionEnabled()

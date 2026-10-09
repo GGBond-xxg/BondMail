@@ -55,7 +55,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
@@ -99,6 +99,12 @@ import com.bond.mail.ui.theme.BondMenuEntry
 import com.bond.mail.ui.theme.BondPopupMenu
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
+import com.bond.mail.ui.components.FloatingCircleAction
+import com.bond.mail.ui.theme.LocalGlassBackdrop
+import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.glassSurface
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 
@@ -210,6 +216,8 @@ fun ComposeScreen(
             }
     }
 
+    val glassEnabled = LocalGlassEffects.current
+    val glassBackdrop = rememberLayerBackdrop()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hasMeaningfulDraft = to.isNotBlank() || cc.isNotBlank() || bcc.isNotBlank() ||
             subject.isNotBlank() || body.isNotBlank() || attachments.isNotEmpty()
@@ -314,84 +322,19 @@ fun ComposeScreen(
             sheetSwipeEnabled = true,
             containerColor = Color.Transparent,
             sheetContent = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(28.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        BottomSheetDefaults.DragHandle()
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(58.dp)
-                            .padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        BondIconButton(onClick = ::requestClose) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = tr("back"),
-                            )
-                        }
-                        Text(
-                            tr("compose_mail"),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Box {
-                            BondIconButton(
-                                enabled = !sending && attachments.size < 10,
-                                onClick = { attachmentPicker.launch(arrayOf("*/*")) },
-                            ) {
-                                Icon(
-                                    Icons.Default.AttachFile,
-                                    contentDescription = tr("add_attachment"),
-                                )
-                            }
-                            if (attachments.isNotEmpty()) {
-                                Surface(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-2).dp, y = 2.dp)
-                                        .size(18.dp),
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(
-                                            attachments.size.toString(),
-                                            style = MaterialTheme.typography.labelSmall,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        BondIconButton(
-                            enabled = !sending && accountId.isNotBlank() && to.isNotBlank(),
-                            onClick = ::queueCurrentMessage,
-                        ) {
-                            SendProgressIcon(sending = sending, contentDescription = tr("send"))
-                        }
-                    }
-
+                Box(Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .padding(top = if (glassEnabled) 0.dp else 86.dp)
                             // Keep the sheet chrome fixed when the keyboard opens. Only the
                             // scrollable editor viewport needs to avoid the IME; padding the
                             // entire sheet made the toolbar and field outlines jump upward too.
                             .imePadding()
                             .navigationBarsPadding()
+                            .then(if (glassEnabled) Modifier.layerBackdrop(glassBackdrop) else Modifier)
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(start = 16.dp, end = 16.dp, top = if (glassEnabled) 94.dp else 8.dp, bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BondPopupMenu(
@@ -698,6 +641,90 @@ fun ComposeScreen(
                         // Bottom send/attachment actions were intentionally removed. The stable
                         // top app bar contains both actions and never changes the sheet's height.
                         Box(Modifier.height(24.dp))
+                    }
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
+                    ) {
+                        Column(
+                            Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                                .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp))
+                                .background(if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.sheet),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                BottomSheetDefaults.DragHandle()
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(58.dp)
+                                    .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                BondIconButton(onClick = ::requestClose) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = tr("back"),
+                                    )
+                                }
+                                Text(
+                                    tr("compose_mail"),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Box {
+                                    BondIconButton(
+                                        enabled = !sending && attachments.size < 10,
+                                        onClick = { attachmentPicker.launch(arrayOf("*/*")) },
+                                    ) {
+                                        Icon(
+                                            Icons.Default.AttachFile,
+                                            contentDescription = tr("add_attachment"),
+                                        )
+                                    }
+                                    if (attachments.isNotEmpty()) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = (-2).dp, y = 2.dp)
+                                                .size(18.dp),
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    attachments.size.toString(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+                                    FloatingCircleAction(
+                                        enabled = !sending && accountId.isNotBlank() && to.isNotBlank(),
+                                        onClick = ::queueCurrentMessage,
+                                        modifier = Modifier.size(48.dp),
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ) {
+                                        SendProgressIcon(sending = sending, contentDescription = tr("send"))
+                                    }
+                                } else {
+                                    BondIconButton(
+                                        enabled = !sending && accountId.isNotBlank() && to.isNotBlank(),
+                                        onClick = ::queueCurrentMessage,
+                                    ) {
+                                        SendProgressIcon(sending = sending, contentDescription = tr("send"))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },

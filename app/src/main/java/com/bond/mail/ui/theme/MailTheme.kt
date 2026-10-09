@@ -99,6 +99,14 @@ val MaterialTheme.bondSurfaces: BondMailSurfacePalette
 private fun buildSurfacePalette(colors: ColorScheme, style: UiStyle): BondMailSurfacePalette {
     val darkSurface = colors.surfaceContainerLowest.luminance() < 0.5f
     val unreadBlend = if (darkSurface) 0.18f else 0.11f
+    if (style == UiStyle.LIQUID_GLASS) {
+        return BondMailSurfacePalette(
+            page = colors.background, chrome = colors.background, content = colors.surface,
+            contentUnread = lerp(colors.surface, colors.primaryContainer, 0.12f),
+            dock = colors.surface, section = colors.surface, popup = colors.surface,
+            input = colors.surfaceVariant, drawer = colors.background, sheet = colors.background,
+        )
+    }
     if (style == UiStyle.MIUIX) {
         // MIUIX places cards on its background canvas. The previous Material-oriented mapping
         // inverted those roles (black message cards on a raised page), which made Mail/Contacts

@@ -71,7 +71,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
+import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -125,10 +125,10 @@ import androidx.navigation.NavType
 import com.bond.mail.ui.theme.LocalGlassBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.data.settings.UiStyle
-import com.bond.mail.ui.theme.bondGlassEffectsEnabled
-import com.bond.mail.ui.theme.bondLiquidGlass
-import com.kyant.liquidglass.liquidGlassProvider
-import com.kyant.liquidglass.rememberLiquidGlassProviderState
+import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.glassSurface
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -1333,8 +1333,8 @@ private fun MainTabs(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val stateHolder = rememberSaveableStateHolder()
-    val glassEnabled = bondGlassEffectsEnabled()
-    val glassBackdrop = rememberLiquidGlassProviderState(MaterialTheme.bondSurfaces.page)
+    val glassEnabled = LocalGlassEffects.current
+    val glassBackdrop = rememberLayerBackdrop()
     LaunchedEffect(coldStartStaggerEnabled) {
         if (coldStartStaggerEnabled) onColdStartStaggerConsumed()
     }
@@ -1442,7 +1442,7 @@ private fun MainTabs(
                 .graphicsLayer { clip = false },
         ) {
             AnimatedContent(
-                modifier = if (glassEnabled) Modifier.liquidGlassProvider(glassBackdrop) else Modifier,
+                modifier = if (glassEnabled) Modifier.layerBackdrop(glassBackdrop) else Modifier,
                 targetState = selectedTab,
                 transitionSpec = {
                     bondTopLevelFade(enabled = motionEnabled)
@@ -1539,6 +1539,10 @@ private fun FloatingBottomDock(
     onCompose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        com.bond.mail.ui.theme.GlassMainDock(selectedTab, onSelectTab, onCompose, modifier)
+        return
+    }
     val glassBackdrop = LocalGlassBackdrop.current
     Row(
         modifier = modifier
@@ -1550,7 +1554,7 @@ private fun FloatingBottomDock(
     ) {
         Surface(
             modifier = Modifier.weight(1f)
-                .bondLiquidGlass(glassBackdrop, RoundedCornerShape(30.dp)),
+                .glassSurface(glassBackdrop, RoundedCornerShape(30.dp)),
             shape = RoundedCornerShape(30.dp),
             color = if (glassBackdrop != null) androidx.compose.ui.graphics.Color.Transparent
                 else MaterialTheme.bondSurfaces.dock.copy(

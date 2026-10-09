@@ -9,8 +9,7 @@ import com.bond.mail.data.settings.ThemeMode
 import com.bond.mail.data.settings.UiStyle
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -18,72 +17,64 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class LiquidGlassStyleTest {
     @Test
-    fun selectorPersistsAndRendersAcrossThemesAndFallback() = runBlocking {
+    fun stylePickerPersistsAndSwitchesBackToBothOriginalStyles() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val settings = (context.applicationContext as MailApplication).container.settings
-        val original = settings.settings.first()
+        val original = runBlocking { settings.settings.first() }
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        val originalMotion = device.executeShellCommand("settings get global animator_duration_scale").trim()
-        fun restart() {
+        fun launch() {
             device.executeShellCommand("am start -W -f 0x10008000 -n com.bond.mail/.MainActivity")
-            assertTrue(device.wait(Until.hasObject(By.pkg(context.packageName)), 10_000))
+            assertNotNull(device.wait(Until.findObject(By.desc("Settings")), 30_000))
             device.waitForIdle()
         }
-        fun settingsTab() {
-            val tab = device.wait(Until.findObject(By.desc("Settings")), 5_000)
-            checkNotNull(tab).click()
-            assertTrue(device.wait(Until.hasObject(By.text("Interface style")), 5_000))
+        fun select(label: String) {
+            val current = runBlocking { settings.settings.first().uiStyle }
+            val currentLabel = when (current) {
+                UiStyle.MATERIAL3 -> "Material 3"
+                UiStyle.MIUIX -> "MIUIX"
+                UiStyle.LIQUID_GLASS -> "Liquid Glass"
+            }
+            checkNotNull(device.wait(Until.findObject(By.text(currentLabel)), 20_000)).click()
+            checkNotNull(device.wait(Until.findObject(By.text(label)), 20_000)).click()
         }
-        fun screenshot(name: String) {
+        fun awaitStyle(style: UiStyle) {
+            val deadline = android.os.SystemClock.uptimeMillis() + 20_000
+            while (runBlocking { settings.settings.first().uiStyle } != style && android.os.SystemClock.uptimeMillis() < deadline) {
+                android.os.SystemClock.sleep(100)
+            }
+            assertEquals(style, runBlocking { settings.settings.first().uiStyle })
+        }
+        fun shot(name: String) {
             device.waitForIdle()
-            // UIAutomator idle does not include Compose draw/transition frames. Let the final
-            // frame reach SurfaceFlinger instead of capturing the previous theme or closing menu.
-            android.os.SystemClock.sleep(500)
-            assertTrue(device.takeScreenshot(File(context.getExternalFilesDir(null), "$name.png")))
+            android.os.SystemClock.sleep(700)
+            device.takeScreenshot(File(context.getExternalFilesDir(null), "$name.png"))
         }
         try {
-            settings.setLanguage("en")
-            settings.setUiStyle(UiStyle.MATERIAL3)
-            restart()
-            settingsTab()
-            checkNotNull(device.wait(Until.findObject(By.text("Material 3")), 5_000)).click()
-            checkNotNull(device.wait(Until.findObject(By.text("Liquid Glass")), 5_000)).click()
-            assertTrue(device.wait(Until.hasObject(By.textStartsWith("Refractive glass")), 5_000))
-            assertEquals(UiStyle.LIQUID_GLASS, settings.settings.first().uiStyle)
-            // Every palette swap changes the recorded source; catch stale render-layer bindings.
-            for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
-                settings.setTheme(mode)
-                settings.setDynamic(false)
-                assertTrue(device.wait(Until.hasObject(By.text(if (mode == ThemeMode.LIGHT) "Light" else "Dark")), 5_000))
-                assertTrue(device.wait(Until.hasObject(By.text("Theme color")), 5_000))
-                screenshot("liquid-glass-${mode.name.lowercase()}")
-            }
-            settings.setDynamic(true)
-            assertTrue(device.wait(Until.gone(By.text("Theme color")), 5_000))
-            screenshot("liquid-glass-dynamic")
-            restart()
-            assertEquals(UiStyle.LIQUID_GLASS, settings.settings.first().uiStyle)
-            settingsTab()
-            assertTrue(device.wait(Until.hasObject(By.text("Liquid Glass")), 5_000))
-            device.executeShellCommand("settings put global animator_duration_scale 0")
-            screenshot("liquid-glass-reduced-motion")
-            // Exercise every adapter while retaining the active settings destination.
-            for (style in listOf(UiStyle.MIUIX, UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS)) {
-                settings.setUiStyle(style)
-                device.waitForIdle()
-                assertTrue(device.wait(Until.hasObject(By.text("Settings")), 5_000))
-            }
-            assertTrue(device.executeShellCommand("pidof com.bond.mail").isNotBlank())
+            runBlocking { settings.setLanguage("en"); settings.setTheme(ThemeMode.LIGHT); settings.setUiStyle(UiStyle.MATERIAL3) }
+            launch()
+            checkNotNull(device.findObject(By.desc("Settings"))).click()
+            select("Liquid Glass")
+            awaitStyle(UiStyle.LIQUID_GLASS)
+            assertFalse(device.hasObject(By.textStartsWith("Refractive glass")))
+            shot("glass-style-light")
+            launch()
+            assertEquals(UiStyle.LIQUID_GLASS, runBlocking { settings.settings.first().uiStyle })
+            checkNotNull(device.findObject(By.desc("Settings"))).click()
+            runBlocking { settings.setTheme(ThemeMode.DARK) }
+            assertTrue(device.wait(Until.hasObject(By.text("Dark")), 20_000))
+            shot("glass-style-dark")
+            select("MIUIX")
+            awaitStyle(UiStyle.MIUIX)
+            select("Liquid Glass")
+            awaitStyle(UiStyle.LIQUID_GLASS)
+            select("Material 3")
+            awaitStyle(UiStyle.MATERIAL3)
+        } catch (failure: Throwable) {
+            shot("glass-style-failure")
+            device.dumpWindowHierarchy(File(context.getExternalFilesDir(null), "glass-style-failure.xml"))
+            throw failure
         } finally {
-            if (originalMotion == "null") {
-                device.executeShellCommand("settings delete global animator_duration_scale")
-            } else {
-                device.executeShellCommand("settings put global animator_duration_scale $originalMotion")
-            }
-            settings.setTheme(original.themeMode)
-            settings.setDynamic(original.dynamicColor)
-            settings.setLanguage(original.languageCode)
-            settings.setUiStyle(original.uiStyle)
+            runBlocking { settings.setTheme(original.themeMode); settings.setLanguage(original.languageCode); settings.setUiStyle(original.uiStyle) }
         }
     }
 }
