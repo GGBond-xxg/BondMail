@@ -173,7 +173,7 @@ import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.bestForwardText
 import com.bond.mail.ui.theme.LocalGlassBackdrop
 import com.bond.mail.ui.theme.LocalGlassEffects
-import com.bond.mail.ui.theme.glassSurface
+import com.bond.mail.ui.theme.glassDockSurface
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
@@ -1110,6 +1110,7 @@ internal fun MessageActionDock(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val glassStyle = LocalUiStyle.current == UiStyle.LIQUID_GLASS
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -1117,19 +1118,19 @@ internal fun MessageActionDock(
     ) {
         Surface(
             modifier = Modifier.weight(1f)
-                .glassSurface(LocalGlassBackdrop.current, RoundedCornerShape(30.dp)),
+                .then(if (glassStyle) Modifier.glassDockSurface() else Modifier),
             shape = RoundedCornerShape(30.dp),
-            color = if (LocalGlassBackdrop.current != null) Color.Transparent
-                else MaterialTheme.bondSurfaces.dock.copy(alpha = if ((LocalUiStyle.current == UiStyle.LIQUID_GLASS)) 1f else 0.94f),
-            border = BorderStroke(
+            color = if (glassStyle) Color.Transparent
+                else MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
+            border = if (glassStyle) null else BorderStroke(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f),
             ),
             tonalElevation = 0.dp,
-            shadowElevation = 6.dp,
+            shadowElevation = if (glassStyle) 0.dp else 6.dp,
         ) {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = if (glassStyle) 4.dp else 8.dp, vertical = if (glassStyle) 8.dp else 6.dp),
             ) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     MessageDockItem(
@@ -1155,7 +1156,7 @@ internal fun MessageActionDock(
         }
         FloatingCircleAction(
             onClick = onDelete,
-            modifier = Modifier.size(58.dp),
+            modifier = Modifier.size(if (glassStyle) 60.dp else 58.dp),
             containerColor = MaterialTheme.colorScheme.error,
             contentColor = MaterialTheme.colorScheme.onError,
         ) {
@@ -1171,12 +1172,6 @@ private fun MessageDockItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-        com.bond.mail.ui.theme.GlassButton(onClick, modifier.height(48.dp), iconOnly = true) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
-        }
-        return
-    }
     val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier.height(48.dp),
@@ -1195,7 +1190,8 @@ private fun MessageDockItem(
                 icon,
                 contentDescription = label,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -1223,6 +1219,10 @@ private fun MailHtmlView(
     onRendererGone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Cache Chromium into its own hardware texture before Backdrop replays it.
+    // Replaying a raw WebView functor into several Vulkan effect targets crashes
+    // on the reported Xiaomi/Android 16 stack in WebViewFunctor::drawVk.
+    val webViewLayerType = if (LocalGlassEffects.current) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE
     val density = androidx.compose.ui.platform.LocalDensity.current
     val fontScale = density.fontScale.coerceIn(0.75f, 2.50f)
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
@@ -1491,7 +1491,7 @@ private fun MailHtmlView(
                         isScrollbarFadingEnabled = true
                         overScrollMode = View.OVER_SCROLL_NEVER
                         isNestedScrollingEnabled = false
-                        setLayerType(View.LAYER_TYPE_NONE, null)
+                        setLayerType(webViewLayerType, null)
                         // The reader is translated off-screen until ready. Chromium otherwise
                         // defers rasterizing its tiles until navigation has already started.
                         settings.offscreenPreRaster = true
@@ -1824,6 +1824,7 @@ private fun MailHtmlView(
                     }
                 },
                 update = { webView ->
+                    if (webView.layerType != webViewLayerType) webView.setLayerType(webViewLayerType, null)
                     webView.setBackgroundColor(background)
                     val allowRemoteResources = loadImages && mainDocumentCommitted
                     runCatching { webView.settings.blockNetworkLoads = !allowRemoteResources }

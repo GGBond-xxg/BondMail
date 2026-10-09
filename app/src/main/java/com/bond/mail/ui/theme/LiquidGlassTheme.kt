@@ -142,26 +142,45 @@ fun Modifier.glassSurface(
     shape: Shape = RoundedCornerShape(50),
     prominent: Boolean = false,
     tint: Color = Color.Unspecified,
+    chrome: Boolean = false,
 ): Modifier {
     if (LocalUiStyle.current != UiStyle.LIQUID_GLASS) return this
     val surface = MaterialTheme.colorScheme.surface
     val dark = surface.luminance() < 0.5f
     val source = backdrop ?: glassBackdrop()
     if (!LocalGlassEffects.current) return this.clip(shape).background(surface)
-        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+        .then(if (chrome) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape))
     return drawBackdrop(
         backdrop = source,
         shape = { shape },
         effects = {
             vibrancy()
             blur((if (prominent) 16.dp else 6.dp).toPx())
-            lens((if (prominent) 20.dp else 12.dp).toPx(), (if (prominent) 36.dp else 24.dp).toPx(), depthEffect = prominent)
+            if (!chrome) lens((if (prominent) 20.dp else 12.dp).toPx(), (if (prominent) 36.dp else 24.dp).toPx(), depthEffect = prominent)
         },
-        highlight = { if (prominent) Highlight.Plain else Highlight.Default },
-        shadow = { Shadow(radius = 8.dp, color = Color.Black.copy(alpha = if (dark) 0.18f else 0.08f)) },
+        highlight = if (chrome) null else { { if (prominent) Highlight.Plain else Highlight.Default } },
+        shadow = if (chrome) null else { { Shadow(radius = 8.dp, color = Color.Black.copy(alpha = if (dark) 0.18f else 0.08f)) } },
         onDrawSurface = {
             drawRect(surface.copy(alpha = if (prominent) 0.72f else if (dark) 0.5f else 0.4f))
             if (tint != Color.Unspecified) drawRect(tint.copy(alpha = 0.14f))
         },
+    )
+}
+
+/** Shared optics for the home navigation and message action dock. */
+@Composable
+internal fun Modifier.glassDockSurface(
+    backdrop: Backdrop = glassBackdrop(),
+    layerBlock: (androidx.compose.ui.graphics.GraphicsLayerScope.() -> Unit)? = null,
+): Modifier {
+    val light = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val container = if (light) Color(0xFFFAFAFA) else Color(0xFF121212)
+    if (!LocalGlassEffects.current) return clip(RoundedCornerShape(50)).background(container)
+    return drawBackdrop(
+        backdrop = backdrop,
+        shape = { RoundedCornerShape(50) },
+        effects = { vibrancy(); blur(8.dp.toPx()); lens(24.dp.toPx(), 24.dp.toPx()) },
+        layerBlock = layerBlock,
+        onDrawSurface = { drawRect(container.copy(alpha = 0.4f)) },
     )
 }

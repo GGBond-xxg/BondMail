@@ -30,3 +30,9 @@ replay_pid*.log
 /cloudflare-worker/.wrangler/
 /cloudflare-worker/node_modules/
 /tools/icon-sync/node_modules/
+
+# Local device diagnostics may contain mailbox and system data.
+/bondmail-*-crash*.txt
+/bondmail-*-new.txt
+/bondmail-*-exit-info.txt
+/bondmail-*-webview.txt

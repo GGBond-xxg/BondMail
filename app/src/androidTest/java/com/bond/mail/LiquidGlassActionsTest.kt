@@ -37,6 +37,8 @@ class LiquidGlassActionsTest {
         val context = instrumentation.targetContext
         val container = (context.applicationContext as MailApplication).container
         val device = UiDevice.getInstance(instrumentation)
+        device.wakeUp()
+        device.executeShellCommand("wm dismiss-keyguard")
         val id = "glass-test-${UUID.randomUUID()}"
         val html = "<html><body>" + (1..30).joinToString("") {
             val color = if (it % 2 == 0) "#5eb8b0" else "#d7a476"
@@ -105,6 +107,17 @@ class LiquidGlassActionsTest {
                         scenario.onActivity { settings.value = settings.value.copy(themeMode = mode); compose.value = false }
                         assertTrue(device.wait(Until.hasObject(By.desc("Reply")), 20_000))
                         android.os.SystemClock.sleep(1_200) // Chromium's first body frame.
+                        scenario.onActivity { activity ->
+                            fun findWebView(view: android.view.View): android.webkit.WebView? {
+                                if (view is android.webkit.WebView) return view
+                                if (view is android.view.ViewGroup) for (i in 0 until view.childCount) {
+                                    findWebView(view.getChildAt(i))?.let { return it }
+                                }
+                                return null
+                            }
+                            val web = checkNotNull(findWebView(activity.window.decorView))
+                            assertEquals(android.view.View.LAYER_TYPE_HARDWARE, web.layerType)
+                        }
                         shot("glass-actions-${mode.name.lowercase()}")
                         checkNotNull(device.findObject(By.desc("Reply"))).click()
                         checkNotNull(device.findObject(By.desc("Forward"))).click()

@@ -647,7 +647,7 @@ fun ComposeScreen(
                     ) {
                         Column(
                             Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                                .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp))
+                                .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp), chrome = true)
                                 .background(if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.sheet),
                         ) {
                             Box(
@@ -662,7 +662,8 @@ fun ComposeScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(58.dp)
-                                    .padding(horizontal = 8.dp),
+                                    .padding(horizontal = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 12.dp else 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 6.dp else 0.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 BondIconButton(onClick = ::requestClose) {

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
+import com.bond.mail.ui.theme.glassDockSurface
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -168,21 +169,14 @@ fun LiquidBottomTabs(
                 .graphicsLayer {
                     translationX = panelOffset
                 }
-                .drawBackdrop(
+                .glassDockSurface(
                     backdrop = backdrop,
-                    shape = { RoundedCornerShape(50) },
-                    effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                    },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
                         val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
                         scaleX = scale
                         scaleY = scale
                     },
-                    onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(interactiveHighlight.modifier)
                 .height(64f.dp)

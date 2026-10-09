@@ -89,6 +89,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -686,7 +687,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
                     .graphicsLayer { translationY = topChromeOffset.toPx() }
-                    .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp)),
+                    .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp), chrome = true),
                 color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
                 tonalElevation = 0.dp,
                 // A full-width physical shadow is copied into the frozen reader backdrop as a dark
@@ -1451,6 +1452,25 @@ private fun FolderChip(
         animationSpec = tween(if (selected) 190 else 90),
         label = "folder-chip-label",
     )
+
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        // This row is part of the recorded list: use the canvas material source,
+        // never sample the list's own layer (which would create a render cycle).
+        com.bond.mail.ui.theme.GlassButton(
+            onClick = onClick,
+            modifier = Modifier.width(width).height(52.dp).semantics {
+                contentDescription = label
+                this.selected = selected
+            },
+            primary = selected,
+            iconOnly = true,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(21.dp))
+            if (selected) Text(label, style = labelStyle, maxLines = 1,
+                modifier = Modifier.clearAndSetSemantics { }.graphicsLayer { alpha = labelAlpha })
+        }
+        return
+    }
 
     val interactionSource = rememberBondPressInteraction()
     Surface(
