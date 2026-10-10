@@ -1,0 +1,12 @@
+<resources>
+<string name="widget_small">Mail · Unread</string>
+<string name="widget_medium">Mail · Recent</string>
+<string name="widget_large">Mail · Inbox list</string>
+<string name="widget_description">Choose an account, theme and privacy options; resizable</string>
+<string name="widget_inbox">Inbox</string>
+<string name="widget_unread">unread</string>
+<string name="widget_preview_count" translatable="false">0</string>
+<string name="widget_refresh_label">Refresh</string>
+<string name="widget_compose_label">Compose</string>
+<string name="widget_setup">Add and choose an account</string>
+</resources>

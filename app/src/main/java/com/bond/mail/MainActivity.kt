@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
+    private var widgetOpenRequest by mutableStateOf<com.bond.mail.widget.WidgetOpenRequest?>(null)
     private var initialMessageId by mutableStateOf<String?>(null)
     private var externalComposeRequest by mutableStateOf<ExternalComposeRequest?>(null)
     private var externalComposeRequestSequence = 0L
@@ -145,6 +146,8 @@ class MainActivity : ComponentActivity() {
                             MailApp(
                                 container = container,
                                 initialMessageId = initialMessageId,
+                                widgetOpenRequest = widgetOpenRequest,
+                                onWidgetOpenConsumed = { widgetOpenRequest = null },
                                 externalComposeRequest = externalComposeRequest,
                                 selectedMainTab = selectedMainTab,
                                 onSelectedMainTabChange = { selectedMainTab = it },
@@ -231,6 +234,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun acceptIntent(intent: Intent) {
+        if (intent.action == "com.bond.mail.WIDGET_OPEN") {
+            widgetOpenRequest = com.bond.mail.widget.WidgetOpenRequest(
+                intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1),
+                intent.getStringExtra("widget_action").orEmpty(),
+                intent.getStringExtra("widget_message").orEmpty(), ++externalComposeRequestSequence,
+            )
+            initialMessageId = null
+            return
+        }
         initialMessageId = intent.getStringExtra("message_id")
         ExternalMailIntentParser.parse(
             intent = intent,

@@ -5,13 +5,15 @@ IMAP/SMTP、OAuth、后台同步，以及 Material 3 / MIUIX / Liquid Glass 三�
 
 ## 下载
 
-- 最新版本：[BondMail v1.5.9.5](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.5.9.5)
-- 安装包：[BondMail-v1.5.9.5.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.5.9.5/BondMail-v1.5.9.5.apk)
+- 最新版本：[BondMail v1.6.0](https://github.com/GGBond-xxg/BondMail/releases/tag/v1.6.0)
+- 安装包：[BondMail-v1.6.0.apk](https://github.com/GGBond-xxg/BondMail/releases/download/v1.6.0/BondMail-v1.6.0.apk)
 - 最低系统：Android 8.0（API 26）
 
 APK 的 SHA-256、版本代码和历史安装包见 [GitHub Releases](https://github.com/GGBond-xxg/BondMail/releases)。
 
 ## 主要功能
+
+- [桌面小组件](docs/WIDGETS.md)：2×2、4×2、4×4 默认尺寸，三套主题、独立账号与隐私配置，支持真实未读数、最近邮件、写信和刷新。
 
 - [Liquid Glass 界面样式](docs/LIQUID_GLASS.md)：基于 Kyant Backdrop 的独立控件体系，涵盖导航、图标、开关、菜单、弹窗和写信操作。
 - 多邮箱账户收信、发信、草稿、已发送与联系人管理

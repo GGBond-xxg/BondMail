@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/widget_background" android:src="@drawable/widget_preview_surface" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" android:importantForAccessibility="no"/>
+    <LinearLayout android:id="@+id/widget_content" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
+        <LinearLayout android:id="@+id/widget_header" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <ImageView android:id="@+id/widget_logo" android:layout_width="28dp" android:layout_height="28dp" android:layout_marginEnd="8dp" android:src="@drawable/bondmail_icon_color" android:importantForAccessibility="no"/>
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" android:text="@string/widget_inbox"/>
+                <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_account" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" android:layout_marginTop="3dp"/>
+            </LinearLayout>
+            <ImageView android:id="@+id/widget_refresh" android:contentDescription="@string/widget_refresh_label" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="2dp" android:scaleType="fitCenter"/>
+            <ImageView android:id="@+id/widget_compose" android:contentDescription="@string/widget_compose_label" android:layout_width="48dp" android:layout_height="48dp" android:layout_marginStart="2dp" android:scaleType="fitCenter"/>
+        </LinearLayout>
+        <FrameLayout android:id="@+id/widget_compact" android:visibility="gone" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center_vertical">
+                <ImageView android:id="@+id/widget_compact_logo" android:layout_width="34dp" android:layout_height="34dp" android:layout_marginBottom="10dp" android:importantForAccessibility="no"/>
+                <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_compact_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" android:layout_marginBottom="4dp" android:text="@string/widget_inbox"/>
+                <TextView android:fontFamily="sans-serif" android:id="@+id/widget_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="28sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" android:textStyle="bold" android:text="@string/widget_preview_count"/>
+                <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_unread_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" android:layout_marginTop="2dp" android:text="@string/widget_unread"/>
+            </LinearLayout>
+            <ImageView android:id="@+id/widget_compact_compose" android:contentDescription="@string/widget_compose_label" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="bottom|end" android:scaleType="fitCenter"/>
+        </FrameLayout>
+        <LinearLayout android:id="@+id/widget_rows" android:visibility="gone" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:layout_marginTop="4dp"/>
+        <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_empty" android:text="@string/widget_setup" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:textSize="12sp" android:maxLines="3" android:ellipsize="end"/>
+        <TextView android:fontFamily="sans-serif" android:textStyle="normal" android:id="@+id/widget_status" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="10sp" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false"/>
+    </LinearLayout>
+</FrameLayout>

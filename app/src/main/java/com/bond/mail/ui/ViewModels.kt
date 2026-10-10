@@ -205,6 +205,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun selectMailbox(accountId: String?, targetFolder: String) {
+        com.bond.mail.widget.WidgetStore(container.appContext).rememberAccount(accountId)
         if (
             accountId == selectedAccount.value &&
             targetFolder == folder.value &&

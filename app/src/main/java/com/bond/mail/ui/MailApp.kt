@@ -245,6 +245,8 @@ fun MailApp(
     onSelectedMainTabChange: (Int) -> Unit,
     onExternalComposeRequestConsumed: (Long) -> Unit,
     onFirstContentReady: () -> Unit = {},
+    widgetOpenRequest: com.bond.mail.widget.WidgetOpenRequest? = null,
+    onWidgetOpenConsumed: () -> Unit = {},
 ) {
     val loadedSettings by container.settings.settings.collectAsState(initial = null)
     val settings = loadedSettings ?: AppSettings()
@@ -646,6 +648,42 @@ fun MailApp(
             enabled = true,
             intervalMinutes = currentSettings.syncMinutes,
         )
+    }
+
+    val widgetUnavailable = tr("widget_link_unavailable")
+    val widgetFinishDraft = tr("widget_finish_draft")
+    LaunchedEffect(widgetOpenRequest?.sequence) {
+        val request = widgetOpenRequest ?: return@LaunchedEffect
+        val config = com.bond.mail.widget.WidgetStore(context).get(request.widgetId)
+        val owned = com.bond.mail.widget.WidgetUpdates.owns(context, request.widgetId)
+        val account = config?.let { container.database.accountDao().byId(it.accountId) }
+        val message = if (request.action == "detail") container.database.messageDao().metadataById(request.messageId) else null
+        if (!owned || account?.enabled != true || request.action !in setOf("inbox", "compose", "detail") ||
+            (request.action == "detail" && (message == null || message.accountId != account.id))) {
+            Toast.makeText(context, widgetUnavailable, Toast.LENGTH_SHORT).show()
+            onWidgetOpenConsumed()
+            return@LaunchedEffect
+        }
+        // A launcher shortcut must not replace an editor that still owns an unsaved draft.
+        if (composeVisible) {
+            Toast.makeText(context, widgetFinishDraft, Toast.LENGTH_SHORT).show()
+            onWidgetOpenConsumed()
+            return@LaunchedEffect
+        }
+        homeVm.selectMailbox(account.id, "INBOX")
+        onSelectedMainTabChange(0)
+        nav.popBackStack(MAIN, false)
+        when (request.action) {
+            "detail" -> { selectedMessage = null; navigateOnce("detail/${Uri.encode(request.messageId)}") }
+            "compose" -> {
+                composeAccountId = account.id
+                composeTo = ""; composeCc = ""; composeBcc = ""; composeSubject = ""; composeBody = ""
+                composeAttachmentUris = emptyList()
+                composeDraftTaskId = null; composeSourceMessageId = null; composeReplyMessageId = null
+                composeVisible = true
+            }
+        }
+        onWidgetOpenConsumed()
     }
 
     LaunchedEffect(initialMessageId) {

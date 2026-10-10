@@ -1,0 +1,12 @@
+<resources>
+<string name="widget_small">邮件 · 未读</string>
+<string name="widget_medium">邮件 · 最近邮件</string>
+<string name="widget_large">邮件 · 邮件列表</string>
+<string name="widget_description">选择账号、主题和隐私显示；大小可调整</string>
+<string name="widget_inbox">收件箱</string>
+<string name="widget_unread">未读邮件</string>
+<string name="widget_preview_count" translatable="false">0</string>
+<string name="widget_refresh_label">刷新</string>
+<string name="widget_compose_label">写邮件</string>
+<string name="widget_setup">添加并选择邮箱</string>
+</resources>

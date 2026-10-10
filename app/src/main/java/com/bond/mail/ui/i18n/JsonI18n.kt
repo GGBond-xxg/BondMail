@@ -103,3 +103,18 @@ private fun rememberAssetStrings(context: Context, asset: String): Map<String, S
 
 @Composable
 fun tr(key: String, vararg args: Any): String = LocalJsonStrings.current.text(key, *args)
+
+/** Also used by RemoteViews, which are rendered outside a Compose composition. */
+fun loadJsonStrings(context: Context, languageCode: String): JsonStrings {
+    val asset = SupportedLanguages.resolveAsset(languageCode, context.resources.configuration.locales[0] ?: Locale.getDefault())
+    fun read(name: String): Map<String, String> = context.assets.open("i18n/$name").bufferedReader(Charsets.UTF_8).use {
+        val json = JSONObject(it.readText())
+        buildMap { json.keys().forEach { key -> put(key, json.getString(key)) } }
+    }
+    val locale = when (asset) {
+        "zh.json" -> Locale.SIMPLIFIED_CHINESE
+        "zh-CHT.json" -> Locale.TRADITIONAL_CHINESE
+        else -> Locale.ENGLISH
+    }
+    return JsonStrings(read(asset), read("en.json"), locale)
+}

@@ -30,6 +30,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -312,6 +314,26 @@ private data class ContactLogo(
     val markupElements: List<String>,
     val raster: ImageBitmap? = null,
 )
+
+/** Reuse bundled contact artwork in launcher RemoteViews without loading a network image. */
+fun contactLogoBitmap(context: Context, senderName: String, senderAddress: String, tint: Int, size: Int): android.graphics.Bitmap? {
+    val manual = MailPresentationStore.get(context).icon(senderAddress)
+    val brand = manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
+    val logo = ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "") ?: return null
+    if (logo.contentWidth <= 0 || logo.contentHeight <= 0) return null
+    return android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888).apply {
+        val canvas = android.graphics.Canvas(this)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint }
+        val factor = size / maxOf(logo.contentWidth, logo.contentHeight)
+        canvas.translate((size - logo.contentWidth * factor) / 2, (size - logo.contentHeight * factor) / 2)
+        canvas.scale(factor, factor)
+        canvas.translate(-logo.contentLeft, -logo.contentTop)
+        logo.raster?.let {
+            canvas.drawBitmap(it.asAndroidBitmap(), null, RectF(logo.contentLeft, logo.contentTop,
+                logo.contentLeft + logo.contentWidth, logo.contentTop + logo.contentHeight), paint)
+        } ?: logo.paths.forEach { canvas.drawPath(it.asAndroidPath(), paint) }
+    }
+}
 
 fun contactLogoSvgMarkup(
     context: Context,

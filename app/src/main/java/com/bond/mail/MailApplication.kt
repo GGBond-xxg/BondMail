@@ -20,6 +20,7 @@ class MailApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        com.bond.mail.widget.WidgetUpdates.observe(this, applicationScope)
         FcmRegistrationStore.register(this)
         // Chromium construction is synchronous. Pay that cost while the system splash is still
         // covering startup, never on the user's first message tap. A missing or updating system

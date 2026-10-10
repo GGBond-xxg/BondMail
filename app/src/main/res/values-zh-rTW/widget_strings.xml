@@ -1,0 +1,12 @@
+<resources>
+<string name="widget_small">郵件 · 未讀</string>
+<string name="widget_medium">郵件 · 最近郵件</string>
+<string name="widget_large">郵件 · 郵件列表</string>
+<string name="widget_description">選擇帳號、主題和隱私顯示；大小可調整</string>
+<string name="widget_inbox">收件匣</string>
+<string name="widget_unread">未讀郵件</string>
+<string name="widget_preview_count" translatable="false">0</string>
+<string name="widget_refresh_label">重新整理</string>
+<string name="widget_compose_label">寫郵件</string>
+<string name="widget_setup">新增並選擇郵箱</string>
+</resources>

@@ -85,6 +85,12 @@ private const val MESSAGE_CHUNK_BYTES = 64 * 1024
 
 @Dao
 interface MessageDao {
+    @Query("SELECT id, accountId, folderType, senderName, senderAddress, recipients, subject, preview, receivedAt, unread, starred, deliveryState, NULL AS localTaskId FROM messages WHERE accountId = :accountId AND folderType = 'INBOX' ORDER BY receivedAt DESC, id LIMIT 6")
+    suspend fun widgetRows(accountId: String): List<MessageListRow>
+
+    @Query("SELECT COUNT(*) FROM messages WHERE accountId = :accountId AND folderType = 'INBOX' AND unread = 1")
+    suspend fun widgetUnread(accountId: String): Int
+
     @androidx.room.RawQuery(observedEntities = [MessageEntity::class])
     fun searchAdvanced(query: androidx.sqlite.db.SupportSQLiteQuery): Flow<List<MessageListRow>>
 

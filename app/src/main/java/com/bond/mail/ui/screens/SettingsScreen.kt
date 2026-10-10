@@ -304,6 +304,9 @@ fun SettingsScreen(
                     SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
                         onClick = { glassSettingsOpen = true })
                 }
+                SettingsDivider()
+                SettingsActionRow(Icons.Default.Settings, tr("widget_settings"), tr("widget_independent"),
+                    onClick = { context.startActivity(android.content.Intent(context, com.bond.mail.widget.WidgetConfigActivity::class.java)) })
                 if (settings.uiStyle == UiStyle.MATERIAL3) {
                     SettingsDivider()
                     SwitchSettingRow(
