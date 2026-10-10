@@ -703,7 +703,11 @@ fun HomeScreen(
                     ) {
                         AnimatedContent(
                             targetState = inSelectionMode,
-                            transitionSpec = { bondFadeThrough(motionEnabled) },
+                            transitionSpec = {
+                                if (glassEnabled) bondFadeThrough(motionEnabled)
+                                    .using(androidx.compose.animation.SizeTransform(clip = false))
+                                else bondFadeThrough(motionEnabled)
+                            },
                             label = "top-bar-fade-through",
                         ) { selecting ->
                             if (selecting) {
@@ -712,6 +716,7 @@ fun HomeScreen(
                                         .fillMaxWidth()
                                         .height(56.dp),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 4.dp else 0.dp),
                                 ) {
                                     IconButton(onClick = ::clearSelection) {
                                         Icon(
@@ -723,8 +728,10 @@ fun HomeScreen(
                                         "${if (selectedIds.isNotEmpty()) selectedIds.size else selectionDisplayCount} ${tr("selected_count")}",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
-                                    Spacer(Modifier.weight(1f))
                                     IconButton(
                                         onClick = {
                                             if (allVisibleSelected) {

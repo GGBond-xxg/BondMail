@@ -1874,7 +1874,8 @@ private fun MailDrawerContent(
                 selected = currentFolder == folder,
                 onClick = { onChooseMailbox(selectedAccountId, folder) },
                 icon = { Icon(icon, contentDescription = null) },
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier.padding(horizontal = 12.dp,
+                    vertical = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 4.dp else 0.dp),
             )
         }
 

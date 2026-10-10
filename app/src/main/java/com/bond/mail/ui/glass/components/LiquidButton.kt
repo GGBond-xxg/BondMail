@@ -61,6 +61,9 @@ fun LiquidButton(
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { RoundedCornerShape(50) },
+                // A cast shadow on every control becomes a clipped band inside scrolling forms.
+                // The optical edge already separates the button from its background.
+                shadow = null,
                 effects = {
                     if (effectsEnabled) {
                         vibrancy()

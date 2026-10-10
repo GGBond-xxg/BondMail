@@ -3,6 +3,7 @@ package com.bond.mail
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -39,11 +40,12 @@ class AiProfilesLayoutTest {
             "https://api.xiaomimimo.com/v1", "mimo-v2.6-flash", "fake-key-two", AiAuth.API_KEY))
         store.saveAiProfiles(AiProfiles(listOf(one, two), "two"))
         val device = UiDevice.getInstance(instrumentation)
+        val theme = mutableStateOf(ThemeMode.DARK)
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 waitForContent(scenario)
                 scenario.onActivity { activity -> activity.setContent {
-                    BondMailTheme(AppSettings(uiStyle = UiStyle.LIQUID_GLASS, themeMode = ThemeMode.DARK)) { JsonStringsProvider("zh") {
+                    BondMailTheme(AppSettings(uiStyle = UiStyle.LIQUID_GLASS, themeMode = theme.value)) { JsonStringsProvider("zh") {
                         AiSettingsDialog(credentialStore = store, onDismiss = {})
                     } }
                 } }
@@ -53,6 +55,7 @@ class AiProfilesLayoutTest {
                 assertEquals("one", store.aiProfiles().activeId)
                 device.findObjects(By.text("编辑")).first().click()
                 assertTrue(device.wait(Until.hasObject(By.text("服务商预设")), 5000))
+                device.takeScreenshot(File(context.getExternalFilesDir(null), "ai-editor-dark.png"))
                 repeat(3) { if (!device.hasObject(By.text("选择模型"))) device.swipe(530, 1300, 530, 600, 25) }
                 val choose = device.findObject(By.text("选择模型"))
                 assertNotNull(choose)
@@ -64,6 +67,9 @@ class AiProfilesLayoutTest {
                 assertEquals("deepseek-v4-pro", store.aiProfiles().active!!.config.model)
                 assertEquals("fake-key-two", store.aiProfiles().entries.first { it.id == "two" }.config.key)
                 device.takeScreenshot(File(context.getExternalFilesDir(null), "ai-profiles.png"))
+                scenario.onActivity { theme.value = ThemeMode.LIGHT }
+                device.waitForIdle()
+                device.takeScreenshot(File(context.getExternalFilesDir(null), "ai-profiles-light.png"))
             }
         } finally { context.getSharedPreferences(name, 0).edit().clear().commit() }
     }

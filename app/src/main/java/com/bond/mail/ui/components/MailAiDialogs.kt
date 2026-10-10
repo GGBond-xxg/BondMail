@@ -76,7 +76,9 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize().systemBarsPadding().imePadding(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text(tr("ai_title"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).padding(top = 10.dp))
                     TextButton(enabled = !busy, onClick = { settings = true }) { Text(tr("ai_settings_short")) }
                     TextButton(onClick = onDismiss) { Text(tr("close")) }
@@ -106,7 +108,9 @@ internal fun MailAiDialog(subject: String, html: String?, plain: String, bodyRea
                             onClick = { ask(question, conversation = true) }) { Text(tr("ai_ask")) }
                     }
                     answers.forEach { answer ->
-                        Card(Modifier.fillMaxWidth()) {
+                        Card(Modifier.fillMaxWidth(), colors = if (com.bond.mail.ui.theme.LocalUiStyle.current == com.bond.mail.data.settings.UiStyle.LIQUID_GLASS)
+                            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            else CardDefaults.cardColors()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(answer.task, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 SelectionContainer { Text(answer.text, style = MaterialTheme.typography.bodyLarge) }

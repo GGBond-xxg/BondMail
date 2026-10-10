@@ -120,6 +120,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.AnnotatedString
@@ -267,7 +268,10 @@ fun DetailScreen(
     val updateTopPull: (Float) -> Float = { 0f }
     val releaseTopPull: () -> Unit = {}
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val detailTopBarHeight = statusBarInset + 64.dp
+    var measuredTopBarHeight by remember { mutableIntStateOf(0) }
+    val detailTopBarHeight = if (measuredTopBarHeight > 0) {
+        with(LocalDensity.current) { measuredTopBarHeight.toDp() }
+    } else statusBarInset + if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 60.dp else 64.dp
     val messageContentTopInset = detailTopBarHeight
 
     val item = remember(storedMessage, immediateOpenResult) {
@@ -885,6 +889,7 @@ fun DetailScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
+                    .onSizeChanged { measuredTopBarHeight = it.height }
                     .graphicsLayer { translationY = topChromeOffset.toPx() },
                 color = MaterialTheme.bondSurfaces.page,
                 tonalElevation = 0.dp,

@@ -103,7 +103,9 @@ private fun AiSettingsContent(credentialStore: CredentialStore?, onSaved: () -> 
         if (loadError) Text(tr("ai_profiles_load_error"), color = MaterialTheme.colorScheme.error)
         if (profiles.entries.isEmpty() && !loadError) Text(tr("ai_not_configured"))
         profiles.entries.forEach { profile ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), colors = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS)
+                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                else CardDefaults.cardColors()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(profile.name, style = MaterialTheme.typography.titleMedium)
                     Text(profile.config.model, style = MaterialTheme.typography.bodyMedium)
@@ -139,6 +141,7 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean
                 else Modifier.fillMaxSize(),
             shape = if (dialog) MaterialTheme.shapes.extraLarge else androidx.compose.ui.graphics.RectangleShape,
             color = if (dialog && LocalUiStyle.current == UiStyle.LIQUID_GLASS) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(if (dialog) Modifier else Modifier.systemBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),

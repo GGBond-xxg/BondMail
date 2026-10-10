@@ -1,7 +1,10 @@
 package com.bond.mail
 
 import androidx.activity.compose.setContent
-import androidx.compose.material3.MaterialTheme
+import com.bond.mail.data.settings.AppSettings
+import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.data.settings.ThemeMode
+import com.bond.mail.ui.theme.BondMailTheme
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -35,7 +38,7 @@ class MailAiLayoutTest {
             }
             assertTrue(installed)
             scenario.onActivity { activity -> activity.setContent {
-                MaterialTheme { JsonStringsProvider("zh") {
+                BondMailTheme(AppSettings(uiStyle = UiStyle.LIQUID_GLASS, themeMode = ThemeMode.LIGHT)) { JsonStringsProvider("zh") {
                     MailAiDialog("Offline sample", "<p>Meeting on Friday</p>", "", true,
                         onUseReply = { reply.set(it) }, onDismiss = {},
                         loadConfig = { AiConfig(AiProvider.COMPATIBLE, "https://example.com/v1", "offline-model", "fake-unused-key") },
@@ -45,6 +48,13 @@ class MailAiLayoutTest {
             val visible = device.wait(Until.hasObject(By.text("生成回复")), 7000)
             if (!visible) device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "ai-test-blocked.png"))
             assertTrue("AI controls visible; foreground=${device.currentPackageName}", visible)
+            fun actionBounds(label: String): android.graphics.Rect {
+                var action = device.findObject(By.text(label))
+                while (!action.isClickable && action.parent != null) action = action.parent
+                return action.visibleBounds
+            }
+            assertTrue("Settings and close buttons must not touch",
+                actionBounds("配置").right < actionBounds("关闭").left)
             assertNull(request.get())
             assertNull(reply.get())
             device.findObject(By.text("生成回复")).click()

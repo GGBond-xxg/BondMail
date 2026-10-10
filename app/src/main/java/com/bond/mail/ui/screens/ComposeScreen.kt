@@ -45,7 +45,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
@@ -668,8 +667,8 @@ fun ComposeScreen(
                             ) {
                                 BondIconButton(onClick = ::requestClose) {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = tr("back"),
+                                        Icons.Default.ExpandMore,
+                                        contentDescription = tr("close"),
                                     )
                                 }
                                 Text(

@@ -88,6 +88,13 @@ import com.bond.mail.ui.theme.BondIconButton
 import com.bond.mail.ui.theme.BondSearchField
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
+import com.bond.mail.ui.theme.LocalGlassEffects
+import com.bond.mail.ui.theme.LocalGlassBackdrop
+import com.bond.mail.ui.theme.glassSurface
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
 import kotlinx.coroutines.launch
 
@@ -176,6 +183,9 @@ fun ContactsScreen(
         enabled = chromeControllerEnabled,
     )
 
+    val glassEnabled = LocalGlassEffects.current
+    val glassStyle = LocalUiStyle.current == UiStyle.LIQUID_GLASS
+    val contactBackdrop = rememberLayerBackdrop()
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val topChromeHeight = statusBarInset + 80.dp
     val topChromeOffset = animateChromeOffset(
@@ -191,7 +201,8 @@ fun ContactsScreen(
     ) {
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
+                .then(if (glassEnabled) Modifier.layerBackdrop(contactBackdrop) else Modifier),
             contentPadding = PaddingValues(
                 start = if (miuixLayout) 12.dp else 16.dp,
                 end = if (miuixLayout) 12.dp else 16.dp,
@@ -303,69 +314,73 @@ fun ContactsScreen(
             }
         }
 
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
-                .graphicsLayer { translationY = topChromeOffset.toPx() },
-            color = MaterialTheme.bondSurfaces.chrome,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
-        ) {
-            Box(
+        CompositionLocalProvider(LocalGlassBackdrop provides contactBackdrop.takeIf { glassEnabled }) {
+            Surface(
                 modifier = Modifier
+                    .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .bondStaggeredEntrance(entranceState, index = 0, verticalOffset = 8.dp)
+                    .graphicsLayer { translationY = topChromeOffset.toPx() }
+                    .glassSurface(contactBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp), chrome = true),
+                color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.bondSurfaces.input,
-                    tonalElevation = 1.dp,
-                    shadowElevation = 1.dp,
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = if (glassStyle) Color.Transparent else MaterialTheme.bondSurfaces.input,
+                        tonalElevation = if (glassStyle) 0.dp else 1.dp,
+                        shadowElevation = if (glassStyle) 0.dp else 1.dp,
                     ) {
-                        BondSearchField(
-                            value = query,
-                            onValueChange = { query = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = tr("search_contacts"),
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                        )
-                        BondIconButton(
-                            onClick = {
-                                editingContactId = null
-                                contactName = ""
-                                contactEmail = ""
-                                contactAvatar = ""
-                                contactError = null
-                                showAddContact = true
-                            },
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                Icons.Default.PersonAdd,
-                                contentDescription = tr("add_contact"),
-                                tint = MaterialTheme.colorScheme.primary,
+                            BondSearchField(
+                                value = query,
+                                onValueChange = { query = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = tr("search_contacts"),
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
                             )
+                            BondIconButton(
+                                onClick = {
+                                    editingContactId = null
+                                    contactName = ""
+                                    contactEmail = ""
+                                    contactAvatar = ""
+                                    contactError = null
+                                    showAddContact = true
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Default.PersonAdd,
+                                    contentDescription = tr("add_contact"),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                         }
                     }
                 }
             }
+
         }
 
         AnimatedVisibility(

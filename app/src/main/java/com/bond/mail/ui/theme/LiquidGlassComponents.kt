@@ -1,6 +1,7 @@
 package com.bond.mail.ui.theme
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +47,20 @@ internal fun GlassButton(
     val accent = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
     val foreground = if (contentColor != Color.Unspecified) contentColor else if (primary) Color.White else if (destructive) accent else MaterialTheme.colorScheme.onSurface
     val surface = MaterialTheme.colorScheme.surface
+    if (!enabled) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) {
+            Row(
+                modifier.clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    .clickable(enabled = false, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+                    .height(48.dp).padding(horizontal = if (iconOnly) 0.dp else 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+        return
+    }
     CompositionLocalProvider(LocalContentColor provides foreground) {
         LiquidButton(
             onClick = onClick, backdrop = glassBackdrop(),
@@ -127,7 +142,7 @@ internal fun GlassPopup(expanded: Boolean, onDismissRequest: () -> Unit, entries
         CompositionLocalProvider(LocalGlassBackdrop provides null) {
             Column(
                 Modifier.padding(8.dp).widthIn(min = 200.dp, max = 300.dp).width(IntrinsicSize.Max)
-                    .glassSurface(backdrop, RoundedCornerShape(28.dp), prominent = true)
+                    .glassSurface(backdrop, RoundedCornerShape(28.dp), prominent = true, surfaceAlpha = 0.42f)
                     .heightIn(max = 440.dp).verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
             ) {
                 entries.forEachIndexed { index, entry ->
@@ -189,19 +204,32 @@ internal fun GlassTextField(
     singleLine: Boolean, minLines: Int, maxLines: Int, keyboardOptions: KeyboardOptions, keyboardActions: KeyboardActions,
     visualTransformation: VisualTransformation, leadingIcon: @Composable (() -> Unit)?, trailingIcon: @Composable (() -> Unit)?,
 ) {
-    TextField(
-        value, onValueChange, modifier, enabled = enabled, readOnly = readOnly,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        label = { Text(label) }, placeholder = placeholder?.let { { Text(it) } },
-        supportingText = supportingText?.let { { Text(it) } }, isError = isError,
-        singleLine = singleLine, minLines = minLines, maxLines = maxLines,
-        keyboardOptions = keyboardOptions, keyboardActions = keyboardActions, visualTransformation = visualTransformation,
-        leadingIcon = leadingIcon, trailingIcon = trailingIcon, shape = RoundedCornerShape(20.dp),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent,
-        ),
-    )
+    val field: @Composable (Modifier) -> Unit = { fieldModifier ->
+        TextField(
+            value, onValueChange,
+            fieldModifier.border(1.dp,
+                if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
+                RoundedCornerShape(20.dp)),
+            enabled = enabled, readOnly = readOnly,
+            textStyle = MaterialTheme.typography.bodyLarge,
+            label = { Text(label) }, placeholder = placeholder?.let { { Text(it) } },
+            isError = isError,
+            singleLine = singleLine, minLines = minLines, maxLines = maxLines,
+            keyboardOptions = keyboardOptions, keyboardActions = keyboardActions, visualTransformation = visualTransformation,
+            leadingIcon = leadingIcon, trailingIcon = trailingIcon, shape = RoundedCornerShape(20.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent,
+            ),
+        )
+    }
+    if (supportingText == null) field(modifier)
+    else Column(modifier) {
+        field(Modifier.fillMaxWidth())
+        Text(supportingText, Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

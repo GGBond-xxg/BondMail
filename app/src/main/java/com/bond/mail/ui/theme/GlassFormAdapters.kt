@@ -1,6 +1,7 @@
 package com.bond.mail.ui.theme
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,12 +24,12 @@ internal fun BondFormField(value: String, onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) TextField(
-        value, onValueChange, modifier, label = label, enabled = enabled, singleLine = singleLine,
+        value, onValueChange, modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f), RoundedCornerShape(20.dp)), label = label, enabled = enabled, singleLine = singleLine,
         minLines = minLines, maxLines = maxLines, isError = isError,
         visualTransformation = visualTransformation, keyboardOptions = keyboardOptions,
         shape = RoundedCornerShape(20.dp), colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
         ),
@@ -71,7 +72,7 @@ internal fun BondDropdownMenu(expanded: Boolean, onDismissRequest: () -> Unit,
     val backdrop = LocalGlassWindowBackdrop.current
     androidx.compose.ui.window.Popup(position, onDismissRequest, properties = androidx.compose.ui.window.PopupProperties(focusable = true)) {
         Column(modifier.widthIn(min = 200.dp, max = 300.dp).width(IntrinsicSize.Max)
-            .glassSurface(backdrop, RoundedCornerShape(28.dp), prominent = true)
+            .glassSurface(backdrop, RoundedCornerShape(28.dp), prominent = true, surfaceAlpha = 0.42f)
             .heightIn(max = 380.dp).verticalScroll(rememberScrollState()).padding(vertical = 8.dp), content = content)
     }
 }

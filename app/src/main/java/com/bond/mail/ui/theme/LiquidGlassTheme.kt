@@ -145,6 +145,7 @@ fun Modifier.glassSurface(
     prominent: Boolean = false,
     tint: Color = Color.Unspecified,
     chrome: Boolean = false,
+    surfaceAlpha: Float? = null,
 ): Modifier {
     if (LocalUiStyle.current != UiStyle.LIQUID_GLASS) return this
     val optics = LocalGlassSettings.current
@@ -166,7 +167,7 @@ fun Modifier.glassSurface(
         highlight = if (chrome) null else { { if (prominent) Highlight.Plain else Highlight.Default } },
         shadow = if (chrome) null else { { Shadow(radius = 8.dp, color = Color.Black.copy(alpha = if (dark) 0.18f else 0.08f)) } },
         onDrawSurface = {
-            drawRect(surface.copy(alpha = if (prominent) 0.72f else if (dark) 0.5f else 0.4f))
+            drawRect(surface.copy(alpha = surfaceAlpha ?: if (prominent) 0.72f else if (dark) 0.5f else 0.4f))
             if (tint != Color.Unspecified) drawRect(tint.copy(alpha = 0.14f))
         },
     )
