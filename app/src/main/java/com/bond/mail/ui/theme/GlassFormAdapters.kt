@@ -8,11 +8,37 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.bond.mail.data.settings.UiStyle
+
+/** Dialog content stays readable while the floating container follows the current theme. */
+@Composable
+internal fun BondServiceSurface(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val glass = LocalUiStyle.current == UiStyle.LIQUID_GLASS
+    val shape = MaterialTheme.shapes.extraLarge
+    Surface(modifier.glassSurface(LocalGlassWindowBackdrop.current, shape, prominent = true),
+        shape = shape,
+        color = if (glass) Color.Transparent else MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface) {
+        CompositionLocalProvider(LocalGlassBackdrop provides null, content = content)
+    }
+}
+
+/** Filter controls use the same glass material and preserve their selected semantics. */
+@Composable
+internal fun BondFilterChip(selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, label: @Composable () -> Unit) {
+    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+        GlassButton(onClick, modifier.semantics { this.selected = selected }, enabled = enabled,
+            primary = selected) { label() }
+    } else FilterChip(selected, onClick, modifier = modifier, enabled = enabled, label = label)
+}
 
 /** Slot-based adapter for existing service forms. */
 @Composable

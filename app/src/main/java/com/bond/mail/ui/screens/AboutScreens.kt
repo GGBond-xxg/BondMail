@@ -55,7 +55,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.asImageBitmap
 import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
-import androidx.compose.material3.TextButton
+import com.bond.mail.ui.theme.BondFormAction as TextButton
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.selection.SelectionContainer
 import com.bond.mail.data.support.SponsorshipWallet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -340,6 +343,20 @@ private fun AboutHeroContent() {
 
 @Composable
 fun OpenSourceLicensesScreen(onBack: () -> Unit) {
+    var document by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val currentDocument = document
+    if (currentDocument != null) {
+        BackHandler { document = null }
+        val body = remember(currentDocument) {
+            context.assets.open("licenses/$currentDocument").bufferedReader().use { it.readText() }
+        }
+        LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
+            onBack = { document = null }) {
+            SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+        }
+        return
+    }
     LegalPage(title = tr("open_source_licenses"), onBack = onBack) {
         Text(
             text = tr("open_source_statement"),
@@ -347,7 +364,23 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(14.dp))
+        Text("Liquid Glass · AndroidLiquidGlass / Backdrop 1.0.6", style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold)
+        Text("Copyright 2025 Kyant · Apache License 2.0", modifier = Modifier.padding(top = 6.dp),
+            style = MaterialTheme.typography.bodyMedium)
+        Text(tr("glass_open_source_details"), modifier = Modifier.padding(top = 10.dp),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SelectionContainer {
+            Text("https://github.com/Kyant0/AndroidLiquidGlass\n896a94a3ade1cc1a940b92365f942a34971fecda",
+                modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodySmall)
+        }
+        TextButton(onClick = { document = "AndroidLiquidGlass-Apache-2.0.txt" }, modifier = Modifier.padding(vertical = 14.dp)) {
+            Text(tr("view_full_license"))
+        }
+        HorizontalDivider()
         val libraries = listOf(
+            "MIUIX" to "Apache License 2.0",
+            "theSVG" to "MIT License (package/tooling; brand rights retained)",
             "AndroidX & Jetpack Compose" to "Apache License 2.0",
             "Kotlin & kotlinx.coroutines" to "Apache License 2.0",
             "MaterialKolor & Material Color Utilities" to "MIT / Apache License 2.0",
@@ -382,14 +415,20 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp),
         )
+        TextButton(onClick = { document = "THIRD_PARTY_NOTICES.md" }, modifier = Modifier.padding(top = 14.dp)) {
+            Text(tr("view_third_party_notices"))
+        }
     }
 }
 
 @Composable
 fun AppLicenseScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val license = remember { context.assets.open("licenses/BondMail-MIT.txt").bufferedReader().use { it.readText() } }
     LegalPage(title = tr("app_license"), onBack = onBack) {
+        Text(tr("app_license_scope"), modifier = Modifier.padding(bottom = 16.dp), style = MaterialTheme.typography.bodyMedium)
         Text(
-            text = MIT_LICENSE_TEXT,
+            text = license,
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
         )
@@ -627,26 +666,3 @@ private fun AboutDivider() {
         )
     }
 }
-
-private val MIT_LICENSE_TEXT = """
-MIT License
-
-Copyright (c) 2026 GGBond-xxg
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-""".trimIndent()

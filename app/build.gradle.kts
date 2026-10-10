@@ -6,6 +6,14 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Ship the canonical notices verbatim, including upstream warranty/liability terms.
+val prepareLicenseAssets by tasks.registering(Sync::class) {
+    into(layout.buildDirectory.dir("generated/licenseAssets/licenses"))
+    from(rootProject.file("licenses"))
+    from(rootProject.file("THIRD_PARTY_NOTICES.md"))
+    from(rootProject.file("LICENSE")) { rename { "BondMail-MIT.txt" } }
+}
+
 android {
     namespace = "com.bond.mail"
     compileSdk = 36
@@ -14,8 +22,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 184
-        versionName = "1.5.9.4"
+        versionCode = 185
+        versionName = "1.5.9.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -24,6 +32,8 @@ android {
         compose = true
         buildConfig = true
     }
+
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/licenseAssets"))
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -83,6 +93,8 @@ android {
         abortOnError = true
     }
 }
+
+tasks.named("preBuild").configure { dependsOn(prepareLicenseAssets) }
 
 
 dependencies {

@@ -95,6 +95,7 @@ text is included at `licenses/Apache-2.0.txt`.
 
 BondMail's Liquid Glass style uses source from [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass),
 version `1.0.6`, commit `896a94a3ade1cc1a940b92365f942a34971fecda` (Apache-2.0).
+Copyright 2025 Kyant.
 The Backdrop core is under `app/src/main/java/com/kyant/backdrop`. Adapted official Catalog
 examples (LiquidButton, LiquidToggle, LiquidBottomTabs/Tab and their interaction helpers) are
 under `app/src/main/java/com/bond/mail/ui/glass`. Dialog optics follow Catalog's DialogContent.
@@ -107,5 +108,19 @@ respect app light/dark mode, disabled controls and reduced effects; add switch a
 semantics and full-height touch targets; avoid activating cancelled drags; consume horizontal
 drags after touch slop so navigation does not also open the drawer; share app dock optics; route callbacks through
 current Compose state; expose bounded optical settings and continuous chromatic aberration.
+Additional UI adaptations remove button cast shadows during transitions, separate adjacent
+actions and filter controls, and apply the app's glass surfaces to service dialogs and menus.
 BondMail's rounded-line glyphs are original app code, not Apple assets.
 No Catalog wallpaper, sample mail, screenshot or binary APK is redistributed.
+
+The unmodified upstream license, including its disclaimer of warranty and limitation of
+liability, is bundled in the APK at `assets/licenses/AndroidLiquidGlass-Apache-2.0.txt`
+and can be read offline under Settings → About → Open-source licenses → Liquid Glass.
+This implementation is not affiliated with or endorsed by Apple. BondMail's MIT license
+does not replace the Apache-2.0 terms for these third-party sources.
+
+## Offline license documents
+
+The build copies this notice and the canonical `licenses/` documents into `assets/licenses/`.
+BondMail's own MIT license is bundled as `assets/licenses/BondMail-MIT.txt` and displayed
+under App license. Third-party copyrights and licenses remain applicable independently.

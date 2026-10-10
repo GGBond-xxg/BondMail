@@ -117,6 +117,7 @@ fun AccountOrderScreen(
                         ) {
                             Icon(Icons.Default.ArrowUpward, contentDescription = tr("move_up"))
                         }
+                        Spacer(Modifier.width(8.dp))
                         BondIconButton(
                             enabled = index < ordered.lastIndex,
                             onClick = { move(index, index + 1) },

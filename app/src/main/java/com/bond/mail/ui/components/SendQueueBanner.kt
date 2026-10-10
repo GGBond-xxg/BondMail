@@ -6,6 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.bond.mail.ui.theme.BondServiceSurface
+import com.bond.mail.ui.theme.BondFormAction as TextButton
 import com.bond.mail.MailApplication
 import com.bond.mail.ui.i18n.tr
 import kotlinx.coroutines.delay
@@ -28,9 +30,9 @@ fun SendUndoNotice() {
     LaunchedEffect(undone) { if (undone) { delay(3_000); undone = false } }
     if (undone || (task != null && task.sendAfter > now)) {
         androidx.compose.ui.window.Popup(alignment = androidx.compose.ui.Alignment.BottomCenter) {
-            Surface(Modifier.padding(horizontal = 16.dp, vertical = 100.dp).fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium, tonalElevation = 8.dp, shadowElevation = 4.dp) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            BondServiceSurface(Modifier.padding(horizontal = 16.dp, vertical = 100.dp).widthIn(max = 600.dp).fillMaxWidth()) {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text(if (undone) tr("send_undone") else task!!.subject.ifBlank { tr("no_subject") }, Modifier.weight(1f), maxLines = 2)
                     if (!undone && task != null) TextButton(onClick = { scope.launch { undone = container.repository.undoSend(task.id) } }) {
                         Text(tr("send_undo") + " (${((task.sendAfter - now + 999) / 1000).coerceAtLeast(0)})")

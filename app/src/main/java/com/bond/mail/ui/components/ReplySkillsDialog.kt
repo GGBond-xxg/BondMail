@@ -8,6 +8,9 @@ import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
 import com.bond.mail.ui.theme.BondIconButton
 import com.bond.mail.ui.theme.BondIconButton as IconButton
 import com.bond.mail.ui.theme.BondSwitch as Switch
+import com.bond.mail.ui.theme.BondPrimaryButton as Button
+import com.bond.mail.ui.theme.BondSecondaryButton as FilledTonalButton
+import com.bond.mail.ui.theme.BondSecondaryButton
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState

@@ -5,6 +5,10 @@ import com.bond.mail.ui.theme.BondFormAction as TextButton
 
 import com.bond.mail.ui.theme.BondDropdownMenu as DropdownMenu
 
+import com.bond.mail.ui.theme.BondFilterChip as FilterChip
+import com.bond.mail.ui.theme.BondPrimaryButton as Button
+import com.bond.mail.ui.theme.BondServiceSurface
+import androidx.compose.ui.Alignment
 import com.bond.mail.ui.theme.BondSecondaryButton
 
 import android.content.Intent
@@ -32,6 +36,7 @@ import kotlinx.coroutines.*
 import java.text.DateFormat
 import java.util.Date
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync", onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -85,10 +90,10 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
         }
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth().fillMaxHeight(.92f).padding(12.dp), shape = MaterialTheme.shapes.large) {
-            Column(Modifier.padding(16.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(tr("mail_tools"), style = MaterialTheme.typography.titleLarge)
+        BondServiceSurface(Modifier.padding(12.dp).widthIn(max = 600.dp).fillMaxWidth().fillMaxHeight(.92f)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("mail_tools"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = onDismiss) { Text(tr("close")) }
                 }
                 Box {
@@ -99,8 +104,8 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
                         }
                     }
                 }
-                if (tab !in listOf("tools_storage", "tools_reminders")) Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    TextButton(onClick = { account = null }) { Text(tr("all_accounts")) }
+                if (tab !in listOf("tools_storage", "tools_reminders")) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FilterChip(account == null, { account = null }, label = { Text(tr("all_accounts")) })
                     accounts.forEach { item -> FilterChip(account == item.id, { account = item.id }, label = { Text(item.displayName.ifBlank { item.email }) }) }
                 }
                 if (working) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -110,7 +115,7 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
                         item { Text(tr("sync_diagnostics_note"), style = MaterialTheme.typography.bodySmall) }
                         items(accounts.filter { account == null || it.id == account }, key = { it.id }) { item ->
                             val provider = ProviderRegistry.forAccount(item)
-                            Column(Modifier.padding(vertical = 10.dp)) {
+                            Column(Modifier.padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(item.email, style = MaterialTheme.typography.titleMedium)
                                 Text(tr("sync_last") + ": " + (item.lastSyncAt?.let(::formatMailToolDate) ?: "—"))
                                 Text("IMAP: ${provider.imapHost}:${provider.imapPort} · ${provider.imapSecurity}")
@@ -140,7 +145,7 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
                     "tools_reminders" -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         item { Text(tr("reminder_note")) }
                         if (messageId != null) item {
-                            Row {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 listOf(1 to "reminder_hour", 24 to "reminder_day", 168 to "reminder_week").forEach { (hours, label) ->
                                     TextButton(onClick = { scheduleMailReminder(context, messageId, System.currentTimeMillis() + hours * 3_600_000L); refresh++ }) { Text(tr(label)) }
                                 }
@@ -158,8 +163,8 @@ fun MailToolsDialog(messageId: String? = null, initialTab: String = "tools_sync"
                     else -> {
                         if (tab == "tools_attachments") {
                             OutlinedTextField(filter, { filter = it }, modifier = Modifier.fillMaxWidth(), label = { Text(tr("attachment_filter")) }, singleLine = true)
-                            Row {
-                                listOf(0, 7, 30).forEach { days -> TextButton(onClick = { recentDays = days }) { Text(if (days == 0) tr("all") else "$days " + tr("days")) } }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(0, 7, 30).forEach { days -> FilterChip(recentDays == days, { recentDays = days }, label = { Text(if (days == 0) tr("all") else "$days " + tr("days")) }) }
                             }
                             Text(tr("attachment_center_note"), style = MaterialTheme.typography.bodySmall)
                         }
@@ -212,7 +217,7 @@ private fun AccountProductivityEditor(account: String, email: String, store: Pro
         item { Text(email) }
         item { OutlinedTextField(signature, { signature = it; saved = false }, Modifier.fillMaxWidth(), label = { Text(tr("signature")) }) }
         item { OutlinedTextField(templates, { templates = it; saved = false }, Modifier.fillMaxWidth(), label = { Text(tr("response_templates")) }); Text(tr("templates_note")) }
-        item { Text(tr("notifications")); Row(Modifier.horizontalScroll(rememberScrollState())) {
+        item { Text(tr("notifications")); Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             listOf("all", "important", "silent", "off").forEach { key -> FilterChip(mode == key, { mode = key; saved = false }, label = { Text(tr("notify_$key")) }) }
         } }
         item { OutlinedTextField(important, { important = it; saved = false }, Modifier.fillMaxWidth(), label = { Text(tr("important_senders")) }) }

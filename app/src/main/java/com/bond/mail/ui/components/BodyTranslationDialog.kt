@@ -8,6 +8,9 @@ import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
 import com.bond.mail.ui.theme.BondIconButton as IconButton
 import com.bond.mail.ui.theme.BondSwitch as Switch
 
+import com.bond.mail.ui.theme.BondPrimaryButton as Button
+import com.bond.mail.ui.theme.BondFilterChip as FilterChip
+import com.bond.mail.ui.theme.BondServiceSurface
 import com.bond.mail.ui.theme.BondSecondaryButton
 
 import androidx.compose.foundation.layout.*
@@ -80,8 +83,7 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
     }
     if (configure) TranslationSettingsDialog { configure = false; provider = store.translationProvider() }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.padding(horizontal = 16.dp).widthIn(max = 600.dp).fillMaxWidth().fillMaxHeight(.9f),
-            shape = MaterialTheme.shapes.extraLarge) {
+        BondServiceSurface(Modifier.padding(horizontal = 16.dp).widthIn(max = 600.dp).fillMaxWidth().fillMaxHeight(.9f)) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("translate_body"), style = MaterialTheme.typography.titleLarge)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -146,7 +148,7 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
                     enabled = !busy && extracted && (original.isNotBlank() || subject.isNotBlank()), onClick = { request++ }) {
                     Text(tr(if (busy) "translation_working" else if (error == null) "translate_body" else "retry"))
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TextButton(enabled = !busy, modifier = Modifier.weight(1f), onClick = { configure = true }) { Text(tr("translation_settings")) }
                     TextButton(onClick = onDismiss) { Text(tr("close")) }
                 }

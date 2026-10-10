@@ -564,5 +564,9 @@
   "glass_chromatic": "Chromatic aberration",
   "glass_reset": "Restore defaults",
   "glass_preview": "Glass preview",
-  "glass_effects_reduced": "Visual effects are reduced by the system. Your adjustments are saved."
+  "glass_effects_reduced": "Visual effects are reduced by the system. Your adjustments are saved.",
+  "glass_open_source_details": "The Liquid Glass theme uses AndroidLiquidGlass Backdrop core and adapted Catalog controls. BondMail changes popup coordinates, layer drawing, gestures, accessibility, theming and optical settings. These components are licensed under Apache 2.0, including section 7 (disclaimer of warranty) and section 8 (limitation of liability). Liquid Glass is the interface style name. This app is not affiliated with Apple and uses no proprietary Apple UI code or image assets.",
+  "view_full_license": "Read full license and disclaimer",
+  "view_third_party_notices": "Read third-party notices and changes",
+  "app_license_scope": "The MIT License below applies to BondMail’s own code. Third-party components retain their copyrights and respective licenses, including Apache 2.0 for the Liquid Glass implementation. See Open-source licenses."
 }

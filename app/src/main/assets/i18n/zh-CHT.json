@@ -564,5 +564,9 @@
   "glass_chromatic": "色散",
   "glass_reset": "恢復預設",
   "glass_preview": "玻璃預覽",
-  "glass_effects_reduced": "系統目前減少視覺效果，調節參數仍會儲存。"
+  "glass_effects_reduced": "系統目前減少視覺效果，調節參數仍會儲存。",
+  "glass_open_source_details": "Liquid Glass 主題使用 AndroidLiquidGlass 的 Backdrop 核心及改編的 Catalog 控件。BondMail 調整了彈窗座標、繪製層、手勢、無障礙、主題與光學參數。原元件遵循 Apache 2.0，完整授權含第 7 節不提供擔保及第 8 節責任限制。Liquid Glass 是介面風格名稱，本應用與 Apple 無關聯，未使用 Apple 的專有介面程式碼或圖像素材。",
+  "view_full_license": "檢視完整授權與免責條款",
+  "view_third_party_notices": "檢視第三方版權與改動說明",
+  "app_license_scope": "以下 MIT 授權適用於 BondMail 自身程式碼。第三方元件保留各自版權，依各自授權發佈；包括 Liquid Glass 使用的 Apache 2.0。詳見開源聲明。"
 }
