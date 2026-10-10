@@ -89,14 +89,19 @@ class LiquidGlassActionsTest {
                                         onBack = { compose.value = false }, onQueued = { error("Test must never send") },
                                     )
                                 } else {
-                                    DetailScreen(
-                                        container = container, messageId = id, initialMessage = fixture,
-                                        markSeenOnOpen = false, settings = settings.value,
-                                        onMessageSnapshot = {}, onBack = {}, onDelete = { deletes.incrementAndGet() },
-                                        onMoveSenderToSpam = {}, onRestoreSenderFromSpam = {},
-                                        onReply = { _, _, _ -> replies.incrementAndGet() },
-                                        onForward = { _, _ -> forwards.incrementAndGet() },
-                                    )
+                                    com.bond.mail.ui.motion.TelegramMailTransition(
+                                        backgroundSnapshot = null, motionEnabled = true, onBackCommitted = {},
+                                    ) { requestBack, reportContentReady ->
+                                        DetailScreen(
+                                            container = container, messageId = id, initialMessage = fixture,
+                                            markSeenOnOpen = false, settings = settings.value,
+                                            onFirstContentReady = reportContentReady,
+                                            onMessageSnapshot = {}, onBack = requestBack, onDelete = { deletes.incrementAndGet() },
+                                            onMoveSenderToSpam = {}, onRestoreSenderFromSpam = {},
+                                            onReply = { _, _, _ -> replies.incrementAndGet() },
+                                            onForward = { _, _ -> forwards.incrementAndGet() },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -107,6 +112,9 @@ class LiquidGlassActionsTest {
                         scenario.onActivity { settings.value = settings.value.copy(themeMode = mode); compose.value = false }
                         assertTrue(device.wait(Until.hasObject(By.desc("Reply")), 20_000))
                         android.os.SystemClock.sleep(1_200) // Chromium's first body frame.
+                        // Reader deliberately disables JavaScript. Verify Chromium's accessible
+                        // document text instead of evaluating a script (which returns null).
+                        assertTrue("Mail body never became visible", device.wait(Until.hasObject(By.text("Offline glass sample 1")), 15_000))
                         scenario.onActivity { activity ->
                             fun findWebView(view: android.view.View): android.webkit.WebView? {
                                 if (view is android.webkit.WebView) return view
@@ -117,6 +125,7 @@ class LiquidGlassActionsTest {
                             }
                             val web = checkNotNull(findWebView(activity.window.decorView))
                             assertEquals(android.view.View.LAYER_TYPE_HARDWARE, web.layerType)
+                            assertFalse("Mail must not enable document scripts", web.settings.javaScriptEnabled)
                         }
                         shot("glass-actions-${mode.name.lowercase()}")
                         checkNotNull(device.findObject(By.descStartsWith("Translation language:"))).click()

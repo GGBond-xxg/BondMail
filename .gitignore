@@ -36,3 +36,4 @@ replay_pid*.log
 /bondmail-*-new.txt
 /bondmail-*-exit-info.txt
 /bondmail-*-webview.txt
+/bondmail-xiaomi-recurrence*.txt

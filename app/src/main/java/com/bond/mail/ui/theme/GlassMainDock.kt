@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bond.mail.ui.glass.components.LiquidBottomTab
 import com.bond.mail.ui.glass.components.LiquidBottomTabs
+import com.bond.mail.ui.glass.utils.glassDockGestureBoundary
 import com.bond.mail.ui.i18n.tr
 
 @Composable
@@ -22,7 +23,8 @@ internal fun GlassMainDock(selectedTab: Int, onSelectTab: (Int) -> Unit, onCompo
     val labels = listOf(tr("mail"), tr("contacts"), tr("settings"))
     val icons = listOf(GlassIcons.Mail, GlassIcons.People, GlassIcons.Settings)
     Row(
-        modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
+        modifier.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth()
+            .glassDockGestureBoundary(),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (LocalGlassEffects.current) {

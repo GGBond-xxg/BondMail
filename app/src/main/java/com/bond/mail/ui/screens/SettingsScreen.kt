@@ -267,11 +267,6 @@ fun SettingsScreen(
                     selected = settings.uiStyle,
                     onSelect = viewModel::uiStyle,
                 )
-                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
-                    SettingsDivider()
-                    SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
-                        onClick = { glassSettingsOpen = true })
-                }
                 SettingsDivider()
                 DropdownSettingRow(
                     title = tr("list_density"),
@@ -304,6 +299,11 @@ fun SettingsScreen(
                         }
                     },
                 )
+                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
+                    SettingsDivider()
+                    SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
+                        onClick = { glassSettingsOpen = true })
+                }
                 if (settings.uiStyle == UiStyle.MATERIAL3) {
                     SettingsDivider()
                     SwitchSettingRow(

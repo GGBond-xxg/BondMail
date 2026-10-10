@@ -25,6 +25,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class LiquidGlassControlsTest {
@@ -100,6 +102,9 @@ class LiquidGlassControlsTest {
         device.executeShellCommand("wm dismiss-keyguard")
         val selected = mutableIntStateOf(0)
         val drawer = androidx.compose.material3.DrawerState(androidx.compose.material3.DrawerValue.Closed)
+        val closedOffset = AtomicReference(Float.NaN)
+        val drawerMoved = AtomicBoolean(false)
+        val trackDrawer = AtomicBoolean(true)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             var installed = false
             val deadline = android.os.SystemClock.uptimeMillis() + 20_000
@@ -113,6 +118,11 @@ class LiquidGlassControlsTest {
             scenario.onActivity { activity ->
                 activity.setContent {
                     BondMailTheme(AppSettings(uiStyle = UiStyle.LIQUID_GLASS, themeMode = ThemeMode.LIGHT)) {
+                        LaunchedEffect(drawer) {
+                            snapshotFlow { drawer.currentOffset }.collect { offset ->
+                                if (trackDrawer.get() && offset > closedOffset.get() + 1f) drawerMoved.set(true)
+                            }
+                        }
                         androidx.compose.material3.ModalNavigationDrawer(
                             drawerState = drawer,
                             drawerContent = { androidx.compose.material3.ModalDrawerSheet { Text(if (drawer.isOpen) "Drawer opened" else "Drawer moving") } },
@@ -134,6 +144,7 @@ class LiquidGlassControlsTest {
                 }
             }
             val dock = checkNotNull(device.wait(Until.findObject(By.desc("Test glass dock")), 20_000)).visibleBounds
+            scenario.onActivity { closedOffset.set(drawer.currentOffset) }
             val x = dock.left + dock.width() / 6
             val y = dock.centerY()
             val endX = dock.centerX()
@@ -141,7 +152,26 @@ class LiquidGlassControlsTest {
             assertTrue(device.swipe(points, 22)) // Hold first, then drag right across the selected pill.
             assertTrue(device.wait(Until.hasObject(By.text("Selected 1")), 10_000))
             assertTrue("Glass drag also opened the drawer", drawer.isClosed)
+            val Point = { px: Int, py: Int -> android.graphics.Point(px, py) }
+            val starts = listOf(x, dock.centerX(), dock.left + 8, dock.right - 8)
+            for (startX in starts) {
+                scenario.onActivity { selected.intValue = 0 }
+                android.os.SystemClock.sleep(350)
+                // Long hold at selected/unselected tabs and both ends, then leave the dock.
+                val hold = List(8) { Point(startX, y) }
+                assertTrue(device.swipe((hold + listOf(Point(endX, y), Point(dock.right + 8, y), Point(x, y))).toTypedArray(), 22))
+                assertTrue("Drawer moved during a dock gesture starting at $startX", !drawerMoved.get())
+                assertTrue(drawer.isClosed)
+            }
+            scenario.onActivity { selected.intValue = 0 }
+            android.os.SystemClock.sleep(350)
+            assertTrue(device.swipe(arrayOf(Point(x, y), Point(x, y - 100), Point(dock.right - 12, y - 100)), 30))
+            assertFalse("Vertical-then-horizontal dock drag leaked into the drawer", drawerMoved.get())
+            // Clicking an unselected tab must still work after the drag boundary consumes movement.
+            checkNotNull(device.findObject(By.text("Tab 2"))).click()
+            assertTrue(device.wait(Until.hasObject(By.text("Selected 2")), 10_000))
             // The fix must not disable the drawer's normal swipe gesture.
+            trackDrawer.set(false)
             device.swipe(device.displayWidth / 4, device.displayHeight / 3, device.displayWidth * 9 / 10, device.displayHeight / 3, 35)
             device.wait(Until.hasObject(By.text("Drawer opened")), 10_000)
             assertTrue("Normal content swipe no longer opens the drawer", drawer.isOpen)
