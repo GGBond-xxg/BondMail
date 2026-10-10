@@ -1,0 +1,5 @@
+<resources>
+    <string name="shortcut_compose">写邮件</string>
+    <string name="shortcut_add_account">添加邮箱</string>
+    <string name="shortcut_refresh">刷新邮件</string>
+</resources>

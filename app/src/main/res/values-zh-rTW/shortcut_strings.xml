@@ -1,0 +1,5 @@
+<resources>
+    <string name="shortcut_compose">寫郵件</string>
+    <string name="shortcut_add_account">新增郵箱</string>
+    <string name="shortcut_refresh">重新整理郵件</string>
+</resources>

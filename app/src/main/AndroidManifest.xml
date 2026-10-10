@@ -44,6 +44,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
             <!-- Identifies BondMail as a complete e-mail application, not only as a mailto:
                  handler. OEM default-app pickers use APP_EMAIL to find Gmail-like candidates. -->
             <intent-filter>

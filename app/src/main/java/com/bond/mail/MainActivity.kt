@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : ComponentActivity() {
+    private var launcherShortcutRequest by mutableStateOf<LauncherShortcutRequest?>(null)
     private var widgetOpenRequest by mutableStateOf<com.bond.mail.widget.WidgetOpenRequest?>(null)
     private var initialMessageId by mutableStateOf<String?>(null)
     private var externalComposeRequest by mutableStateOf<ExternalComposeRequest?>(null)
@@ -146,6 +147,13 @@ class MainActivity : ComponentActivity() {
                             MailApp(
                                 container = container,
                                 initialMessageId = initialMessageId,
+                                launcherShortcutRequest = launcherShortcutRequest,
+                                onLauncherShortcutConsumed = {
+                                    launcherShortcutRequest = null
+                                    if (LauncherShortcut.fromAction(intent.action) != null) {
+                                        setIntent(Intent(intent).setAction(Intent.ACTION_MAIN))
+                                    }
+                                },
                                 widgetOpenRequest = widgetOpenRequest,
                                 onWidgetOpenConsumed = { widgetOpenRequest = null },
                                 externalComposeRequest = externalComposeRequest,
@@ -234,6 +242,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun acceptIntent(intent: Intent) {
+        LauncherShortcut.fromAction(intent.action)?.let { shortcut ->
+            initialMessageId = null
+            widgetOpenRequest = null
+            externalComposeRequest = null
+            launcherShortcutRequest = LauncherShortcutRequest(shortcut, ++externalComposeRequestSequence)
+            return
+        }
+        launcherShortcutRequest = null
         if (intent.action == "com.bond.mail.WIDGET_OPEN") {
             widgetOpenRequest = com.bond.mail.widget.WidgetOpenRequest(
                 intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1),

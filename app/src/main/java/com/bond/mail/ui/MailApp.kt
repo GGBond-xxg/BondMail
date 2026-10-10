@@ -189,6 +189,7 @@ import com.bond.mail.ui.screens.AboutNoticeScreen
 import com.bond.mail.ui.screens.ProviderPickerScreen
 import com.bond.mail.ui.screens.PushSettingsScreen
 import com.bond.mail.ui.screens.SettingsScreen
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -245,6 +246,8 @@ fun MailApp(
     onSelectedMainTabChange: (Int) -> Unit,
     onExternalComposeRequestConsumed: (Long) -> Unit,
     onFirstContentReady: () -> Unit = {},
+    launcherShortcutRequest: com.bond.mail.LauncherShortcutRequest? = null,
+    onLauncherShortcutConsumed: () -> Unit = {},
     widgetOpenRequest: com.bond.mail.widget.WidgetOpenRequest? = null,
     onWidgetOpenConsumed: () -> Unit = {},
 ) {
@@ -652,6 +655,29 @@ fun MailApp(
 
     val widgetUnavailable = tr("widget_link_unavailable")
     val widgetFinishDraft = tr("widget_finish_draft")
+    LaunchedEffect(launcherShortcutRequest?.sequence) {
+        val request = launcherShortcutRequest ?: return@LaunchedEffect
+        if (composeVisible) {
+            // Preserve the editor and its unsaved attachment/text state when returning from Home.
+            Toast.makeText(context, widgetFinishDraft, Toast.LENGTH_SHORT).show()
+            onLauncherShortcutConsumed()
+            return@LaunchedEffect
+        }
+        val enabled = container.repository.accounts.first().filter { it.enabled }
+        onSelectedMainTabChange(0)
+        nav.popBackStack(MAIN, false)
+        when {
+            request.shortcut == com.bond.mail.LauncherShortcut.ADD_ACCOUNT || enabled.isEmpty() -> navigateOnce(PROVIDERS)
+            request.shortcut == com.bond.mail.LauncherShortcut.COMPOSE -> {
+                val preferred = homeVm.selectedAccount.value ?: com.bond.mail.widget.WidgetStore(context).lastAccount()
+                prepareCompose()
+                composeAccountId = (enabled.firstOrNull { it.id == preferred } ?: enabled.first()).id
+            }
+            request.shortcut == com.bond.mail.LauncherShortcut.REFRESH -> homeVm.refresh()
+        }
+        onLauncherShortcutConsumed()
+    }
+
     LaunchedEffect(widgetOpenRequest?.sequence) {
         val request = widgetOpenRequest ?: return@LaunchedEffect
         val config = com.bond.mail.widget.WidgetStore(context).get(request.widgetId)

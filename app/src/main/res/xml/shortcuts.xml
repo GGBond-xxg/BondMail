@@ -1,0 +1,11 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="compose" android:enabled="true" android:icon="@drawable/shortcut_compose" android:shortcutShortLabel="@string/shortcut_compose" android:shortcutLongLabel="@string/shortcut_compose">
+        <intent android:action="com.bond.mail.shortcut.COMPOSE" android:targetPackage="com.bond.mail" android:targetClass="com.bond.mail.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="add_account" android:enabled="true" android:icon="@drawable/shortcut_add_account" android:shortcutShortLabel="@string/shortcut_add_account" android:shortcutLongLabel="@string/shortcut_add_account">
+        <intent android:action="com.bond.mail.shortcut.ADD_ACCOUNT" android:targetPackage="com.bond.mail" android:targetClass="com.bond.mail.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="refresh" android:enabled="true" android:icon="@drawable/shortcut_refresh" android:shortcutShortLabel="@string/shortcut_refresh" android:shortcutLongLabel="@string/shortcut_refresh">
+        <intent android:action="com.bond.mail.shortcut.REFRESH" android:targetPackage="com.bond.mail" android:targetClass="com.bond.mail.MainActivity" />
+    </shortcut>
+</shortcuts>
