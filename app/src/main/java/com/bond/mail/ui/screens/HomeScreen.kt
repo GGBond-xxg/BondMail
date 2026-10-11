@@ -660,21 +660,29 @@ fun HomeScreen(
                 scaleOut(targetScale = 0.80f, animationSpec = tween(150)) +
                 slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(150)),
         ) {
-            FloatingCircleAction(
-                onClick = {
-                    scrollScope.launch {
-                        listState.animateToTopWithMomentum(motionEnabled)
-                    }
-                },
-                modifier = Modifier.size(48.dp),
-                containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
-                contentColor = MaterialTheme.colorScheme.primary,
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.bond.mail.ui.theme.LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
             ) {
-                Icon(
-                    Icons.Default.KeyboardArrowUp,
-                    contentDescription = tr("scroll_to_top"),
-                    modifier = Modifier.size(26.dp),
-                )
+                FloatingCircleAction(
+                    onClick = {
+                        scrollScope.launch {
+                            listState.animateToTopWithMomentum(motionEnabled)
+                        }
+                    },
+                    modifier = Modifier.size(48.dp),
+                    containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
+                    contentColor = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowUp,
+                        contentDescription = tr("scroll_to_top"),
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
             }
         }
 

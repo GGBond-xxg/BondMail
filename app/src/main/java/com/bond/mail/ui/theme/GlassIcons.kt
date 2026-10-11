@@ -60,6 +60,9 @@ internal object GlassIcons {
         moveTo(3f, 3f); lineTo(22f, 12f); lineTo(3f, 21f); lineTo(6f, 12f); close()
         moveTo(6f, 12f); lineTo(22f, 12f)
     }
+    val ChevronUp = glyph("Glass.ChevronUp") {
+        moveTo(5f, 15f); lineTo(12f, 8f); lineTo(19f, 15f)
+    }
 }
 
 @Composable
@@ -74,6 +77,7 @@ fun BondIcon(imageVector: ImageVector, contentDescription: String?, modifier: Mo
         "Share" -> GlassIcons.Share
         "Delete", "DeleteOutline" -> GlassIcons.Delete
         "Send" -> GlassIcons.Send
+        "KeyboardArrowUp" -> GlassIcons.ChevronUp
         else -> imageVector
     } else imageVector
     androidx.compose.material3.Icon(glyph, contentDescription, modifier, tint)
