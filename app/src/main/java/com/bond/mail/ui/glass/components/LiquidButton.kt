@@ -2,6 +2,7 @@ package com.bond.mail.ui.glass.components
 
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -48,6 +49,7 @@ fun LiquidButton(
     val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val effectsEnabled = com.bond.mail.ui.theme.LocalGlassEffects.current
     val interactive = isInteractive && enabled && effectsEnabled
+    val edgeColor = com.bond.mail.ui.theme.glassControlBorderColor(enabled, tinted = tint.isSpecified)
     val animationScope = rememberCoroutineScope()
 
     val interactiveHighlight = remember(animationScope) {
@@ -64,6 +66,9 @@ fun LiquidButton(
                 // A cast shadow on every control becomes a clipped band inside scrolling forms.
                 // The optical edge already separates the button from its background.
                 shadow = null,
+                // A white optical rim disappears on light cards. Use one contrast-aware edge
+                // in both themes instead, with no extra shadow or overlapping highlight.
+                highlight = null,
                 effects = {
                     if (effectsEnabled) {
                         vibrancy()
@@ -109,6 +114,7 @@ fun LiquidButton(
                     }
                 }
             )
+            .border(1.dp, edgeColor, RoundedCornerShape(50))
             .clickable(
                 enabled = enabled,
                 interactionSource = null,

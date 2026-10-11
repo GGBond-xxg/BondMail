@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +54,7 @@ internal fun GlassButton(
             Row(
                 modifier.clip(RoundedCornerShape(50))
                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                    .border(1.dp, glassControlBorderColor(enabled = false), RoundedCornerShape(50))
                     .clickable(enabled = false, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
                     .height(48.dp).padding(horizontal = if (iconOnly) 0.dp else 18.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
@@ -125,7 +128,12 @@ internal fun <T> GlassSettingDropdown(
         }) {
             GlassButton({ expanded = true }, Modifier.widthIn(max = 180.dp).onGloballyPositioned { center = it.boundsInWindow().center }) {
                 Text(options.firstOrNull { it.first == selected }?.second.orEmpty(), maxLines = 1, color = MaterialTheme.colorScheme.primary)
-                Text("⌄", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -208,7 +216,7 @@ internal fun GlassTextField(
         TextField(
             value, onValueChange,
             fieldModifier.border(1.dp,
-                if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
+                if (isError) MaterialTheme.colorScheme.error else glassControlBorderColor(enabled),
                 RoundedCornerShape(20.dp)),
             enabled = enabled, readOnly = readOnly,
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -220,6 +228,8 @@ internal fun GlassTextField(
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                errorContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent, errorIndicatorColor = Color.Transparent,
             ),

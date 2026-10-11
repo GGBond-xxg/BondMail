@@ -56,14 +56,22 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.asImageBitmap
 import com.bond.mail.ui.theme.BondAlertDialog as AlertDialog
 import com.bond.mail.ui.theme.BondFormAction as TextButton
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import com.bond.mail.ui.motion.BondBackScreen
+import com.bond.mail.ui.motion.bondMotionEnabled
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.text.selection.SelectionContainer
 import com.bond.mail.data.support.SponsorshipWallet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -270,153 +278,142 @@ fun SponsorshipScreen(onBack: () -> Unit) {
 
 @Composable
 private fun AboutHeroCard() {
-    if (LocalUiStyle.current == UiStyle.MIUIX) {
-        MiuixCard(
+    AboutCard {
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            insideMargin = PaddingValues(horizontal = 24.dp, vertical = 28.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            AboutHeroContent()
+            Image(
+                painter = painterResource(R.drawable.bondmail_icon_color),
+                contentDescription = null,
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)),
+            )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("BondMail", style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold)
+                Text("V${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-        return
-    }
-
-    Card(
-        shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                        ),
-                    ),
-                )
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            AboutHeroContent()
-        }
-    }
-}
-
-@Composable
-private fun AboutHeroContent() {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.bondmail_icon_color),
-            contentDescription = null,
-            modifier = Modifier.size(88.dp).clip(RoundedCornerShape(26.dp)),
-        )
-        Text(
-            text = "BondMail",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 14.dp),
-        )
         Text(
             text = tr("about_tagline"),
+            modifier = Modifier.padding(top = 16.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 6.dp),
         )
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.34f),
-            modifier = Modifier.padding(top = 16.dp),
-        ) {
-            Text(
-                text = "V${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-            )
-        }
     }
 }
-
 @Composable
 fun OpenSourceLicensesScreen(onBack: () -> Unit) {
     var document by rememberSaveable { mutableStateOf<String?>(null) }
+    var documentBackground by remember { mutableStateOf<ImageBitmap?>(null) }
+    var openingDocument by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val snapshotLayer = rememberGraphicsLayer()
+    val scope = rememberCoroutineScope()
+    val motionEnabled = bondMotionEnabled()
     val context = LocalContext.current
+    fun openDocument(name: String) {
+        if (openingDocument || document != null) return
+        openingDocument = true
+        scope.launch {
+            try {
+                documentBackground = try {
+                    snapshotLayer.toImageBitmap()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null // The document remains accessible if the renderer cannot copy a frame.
+                }
+                document = name
+            } finally {
+                openingDocument = false
+            }
+        }
+    }
     val currentDocument = document
     if (currentDocument != null) {
-        BackHandler { document = null }
         val body = remember(currentDocument) {
             context.assets.open("licenses/$currentDocument").bufferedReader().use { it.readText() }
         }
-        LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
-            onBack = { document = null }) {
-            SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+        BondBackScreen(
+            backgroundSnapshot = documentBackground,
+            motionEnabled = motionEnabled,
+            onBackCommitted = { document = null; documentBackground = null },
+        ) { requestBack ->
+            LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
+                onBack = requestBack) {
+                SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+            }
         }
         return
     }
-    LegalPage(title = tr("open_source_licenses"), onBack = onBack) {
-        Text(
-            text = tr("open_source_statement"),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(14.dp))
-        Text("Liquid Glass · AndroidLiquidGlass / Backdrop 1.0.6", style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold)
-        Text("Copyright 2025 Kyant · Apache License 2.0", modifier = Modifier.padding(top = 6.dp),
-            style = MaterialTheme.typography.bodyMedium)
-        Text(tr("glass_open_source_details"), modifier = Modifier.padding(top = 10.dp),
-            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SelectionContainer {
-            Text("https://github.com/Kyant0/AndroidLiquidGlass\n896a94a3ade1cc1a940b92365f942a34971fecda",
-                modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodySmall)
-        }
-        TextButton(onClick = { document = "AndroidLiquidGlass-Apache-2.0.txt" }, modifier = Modifier.padding(vertical = 14.dp)) {
-            Text(tr("view_full_license"))
-        }
-        HorizontalDivider()
-        val libraries = listOf(
-            "MIUIX" to "Apache License 2.0",
-            "theSVG" to "MIT License (package/tooling; brand rights retained)",
-            "AndroidX & Jetpack Compose" to "Apache License 2.0",
-            "Kotlin & kotlinx.coroutines" to "Apache License 2.0",
-            "MaterialKolor & Material Color Utilities" to "MIT / Apache License 2.0",
-            "Microsoft Authentication Library (MSAL)" to "MIT License",
-            "jsoup" to "MIT License",
-            "Jakarta Mail for Android" to "CDDL 1.1 / GPL 2.0 with Classpath Exception",
-            "CircularRevealSwitch (Compose adaptation)" to "MIT License",
-            "Simple Icons" to "CC0 1.0",
-            "Bootstrap Icons" to "MIT License",
-        )
-        libraries.forEachIndexed { index, (library, license) ->
-            Column(modifier = Modifier.padding(vertical = 9.dp)) {
-                Text(
-                    text = library,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = license,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 3.dp),
-                )
+    Box(Modifier.fillMaxSize().drawWithContent {
+        snapshotLayer.record { this@drawWithContent.drawContent() }
+        drawLayer(snapshotLayer)
+    }) {
+        LegalPage(title = tr("open_source_licenses"), onBack = onBack, listState = listState) {
+            Text(
+                text = tr("open_source_statement"),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Text("Liquid Glass · AndroidLiquidGlass / Backdrop 1.0.6", style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold)
+            Text("Copyright 2025 Kyant · Apache License 2.0", modifier = Modifier.padding(top = 6.dp),
+                style = MaterialTheme.typography.bodyMedium)
+            Text(tr("glass_open_source_details"), modifier = Modifier.padding(top = 10.dp),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SelectionContainer {
+                Text("https://github.com/Kyant0/AndroidLiquidGlass\n896a94a3ade1cc1a940b92365f942a34971fecda",
+                    modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodySmall)
             }
-            if (index < libraries.lastIndex) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            TextButton(onClick = { openDocument("AndroidLiquidGlass-Apache-2.0.txt") }, modifier = Modifier.padding(vertical = 14.dp)) {
+                Text(tr("view_full_license"))
             }
-        }
-        Text(
-            text = tr("open_source_notice"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 14.dp),
-        )
-        TextButton(onClick = { document = "THIRD_PARTY_NOTICES.md" }, modifier = Modifier.padding(top = 14.dp)) {
-            Text(tr("view_third_party_notices"))
+            HorizontalDivider()
+            val libraries = listOf(
+                "MIUIX" to "Apache License 2.0",
+                "theSVG" to "MIT License (package/tooling; brand rights retained)",
+                "AndroidX & Jetpack Compose" to "Apache License 2.0",
+                "Kotlin & kotlinx.coroutines" to "Apache License 2.0",
+                "MaterialKolor & Material Color Utilities" to "MIT / Apache License 2.0",
+                "Microsoft Authentication Library (MSAL)" to "MIT License",
+                "jsoup" to "MIT License",
+                "Jakarta Mail for Android" to "CDDL 1.1 / GPL 2.0 with Classpath Exception",
+                "CircularRevealSwitch (Compose adaptation)" to "MIT License",
+                "Simple Icons" to "CC0 1.0",
+                "Bootstrap Icons" to "MIT License",
+            )
+            libraries.forEachIndexed { index, (library, license) ->
+                Column(modifier = Modifier.padding(vertical = 9.dp)) {
+                    Text(
+                        text = library,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = license,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
+                if (index < libraries.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            }
+            Text(
+                text = tr("open_source_notice"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 14.dp),
+            )
+            TextButton(onClick = { openDocument("THIRD_PARTY_NOTICES.md") }, modifier = Modifier.padding(top = 14.dp)) {
+                Text(tr("view_third_party_notices"))
+            }
         }
     }
 }
@@ -475,6 +472,7 @@ private fun PrivacySection(title: String, body: String) {
 private fun AboutPage(
     title: String,
     onBack: () -> Unit,
+    listState: LazyListState = rememberLazyListState(),
     content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
 ) {
     Column(
@@ -485,6 +483,7 @@ private fun AboutPage(
     ) {
         PageTopBar(title, onBack)
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
@@ -502,9 +501,10 @@ private fun AboutPage(
 private fun LegalPage(
     title: String,
     onBack: () -> Unit,
+    listState: LazyListState = rememberLazyListState(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    AboutPage(title = title, onBack = onBack) {
+    AboutPage(title = title, onBack = onBack, listState = listState) {
         item {
             AboutCard {
                 Column(content = content)

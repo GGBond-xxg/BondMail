@@ -41,7 +41,6 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.Shadow
 
 /** A separate visual system: neutral grouped content, blue actions and optical navigation. */
@@ -137,6 +136,16 @@ internal fun glassBackdrop(): Backdrop {
     return LocalGlassBackdrop.current ?: canvas
 }
 
+/** Stable, contrast-aware outline shared by controls and their opaque fallback. */
+@Composable
+internal fun glassControlBorderColor(enabled: Boolean = true, tinted: Boolean = false): Color {
+    if (tinted && enabled) return Color.White.copy(alpha = 0.32f)
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return MaterialTheme.colorScheme.onSurface.copy(
+        alpha = if (enabled) { if (dark) 0.22f else 0.16f } else { if (dark) 0.10f else 0.08f },
+    )
+}
+
 /** Catalog optics, with stronger frosting for menus/dialogs and an opaque accessibility fallback. */
 @Composable
 fun Modifier.glassSurface(
@@ -152,8 +161,9 @@ fun Modifier.glassSurface(
     val surface = MaterialTheme.colorScheme.surface
     val dark = surface.luminance() < 0.5f
     val source = backdrop ?: glassBackdrop()
+    val edge = glassControlBorderColor()
     if (!LocalGlassEffects.current) return this.clip(shape).background(surface)
-        .then(if (chrome) Modifier else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape))
+        .then(if (chrome) Modifier else Modifier.border(1.dp, edge, shape))
     return drawBackdrop(
         backdrop = source,
         shape = { shape },
@@ -164,13 +174,13 @@ fun Modifier.glassSurface(
                 (optics.refractionAmount * if (prominent) 1.5f else 1f).dp.toPx(), depthEffect = prominent,
                 chromaticAberrationAmount = optics.chromaticAberration)
         },
-        highlight = if (chrome) null else { { if (prominent) Highlight.Plain else Highlight.Default } },
+        highlight = null,
         shadow = if (chrome) null else { { Shadow(radius = 8.dp, color = Color.Black.copy(alpha = if (dark) 0.18f else 0.08f)) } },
         onDrawSurface = {
             drawRect(surface.copy(alpha = surfaceAlpha ?: if (prominent) 0.72f else if (dark) 0.5f else 0.4f))
             if (tint != Color.Unspecified) drawRect(tint.copy(alpha = 0.14f))
         },
-    )
+    ).then(if (chrome) Modifier else Modifier.border(1.dp, edge, shape))
 }
 
 /** Shared optics for the home navigation and message action dock. */
@@ -182,7 +192,9 @@ internal fun Modifier.glassDockSurface(
     val optics = LocalGlassSettings.current
     val light = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val container = if (light) Color(0xFFFAFAFA) else Color(0xFF121212)
+    val edge = glassControlBorderColor()
     if (!LocalGlassEffects.current) return clip(RoundedCornerShape(50)).background(container)
+        .border(1.dp, edge, RoundedCornerShape(50))
     return drawBackdrop(
         backdrop = backdrop,
         shape = { RoundedCornerShape(50) },
@@ -190,6 +202,7 @@ internal fun Modifier.glassDockSurface(
             lens((optics.refractionHeight * 2f).dp.toPx(), optics.refractionAmount.dp.toPx(),
                 chromaticAberrationAmount = optics.chromaticAberration) },
         layerBlock = layerBlock,
+        highlight = null,
         onDrawSurface = { drawRect(container.copy(alpha = 0.4f)) },
-    )
+    ).border(1.dp, edge, RoundedCornerShape(50))
 }
