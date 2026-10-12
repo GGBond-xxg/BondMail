@@ -45,7 +45,7 @@ fun SendUndoNotice() {
 }
 
 @Composable
-fun SendQueueBanner() {
+fun SendQueueBanner(modifier: Modifier = Modifier) {
     val container = (LocalContext.current.applicationContext as MailApplication).container
     val flow = remember { container.database.outboxDao().observeSending() }
     val tasks by flow.collectAsState(emptyList())
@@ -53,10 +53,12 @@ fun SendQueueBanner() {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var notice by remember { mutableStateOf(false) }
     LaunchedEffect(tasks) { while (tasks.any { it.state == "QUEUED" && it.sendAfter > now }) { now = System.currentTimeMillis(); delay(200) } }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    // Apply the surrounding spacing only when there is actual content to show.
+    if (tasks.isEmpty() && !notice) return
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tasks.take(3).forEach { task ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(task.subject.ifBlank { tr("no_subject") }, Modifier.weight(1f), maxLines = 1)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(task.subject.ifBlank { tr("no_subject") }, Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 if (task.state == "QUEUED" && task.sendAfter > now) {
                     TextButton(onClick = { scope.launch { notice = container.repository.undoSend(task.id) } }) {
                         Text(tr("send_undo") + " (${((task.sendAfter - now + 999) / 1000).coerceAtLeast(0)})")

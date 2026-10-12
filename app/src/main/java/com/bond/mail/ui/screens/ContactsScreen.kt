@@ -176,7 +176,8 @@ fun ContactsScreen(
                     listState.firstVisibleItemScrollOffset > 420
             val scrolledAwayFromTop =
                 listState.firstVisibleItemIndex >= 4 || partiallyScrolled
-            listState.canScrollForward && scrolledAwayFromTop
+            // Reaching the end of the list must not hide the way back to the top.
+            scrolledAwayFromTop
         }
     }
     ObserveLazyListChromeVisibility(

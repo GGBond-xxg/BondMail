@@ -382,6 +382,8 @@ fun HomeScreen(
             .background(MaterialTheme.bondSurfaces.page),
     ) {
         val listState = rememberLazyListState()
+        val listItemSpacing = if (miuixLayout) 12.dp else 13.dp
+        val listHorizontalInset = if (miuixLayout) 12.dp else 16.dp
         val scrollScope = rememberCoroutineScope()
         val listBottomContentPadding by animateDpAsState(
             targetValue = if (chromeVisible) 112.dp else 18.dp,
@@ -398,7 +400,8 @@ fun HomeScreen(
                     listState.firstVisibleItemIndex > 0 &&
                         listState.firstVisibleItemScrollOffset > 420
                 val scrolledAwayFromTop =
-                    listState.firstVisibleItemIndex >= 4 || partiallyScrolled
+                    // One header precedes the mail rows, including any visible notices.
+                    listState.firstVisibleItemIndex >= 2 || partiallyScrolled
                 // The saved index is restored before LazyColumn completes its first measure, while
                 // canScrollForward temporarily falls back to false. Depending on that layout-only
                 // flag made the button disappear for one frame after closing a reader and replay
@@ -501,35 +504,28 @@ fun HomeScreen(
                         top = topChromeHeight + 6.dp,
                         bottom = listBottomContentPadding,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(if (miuixLayout) 12.dp else 13.dp),
+                    verticalArrangement = Arrangement.spacedBy(listItemSpacing),
                 ) {
+                // Keep optional notices inside the header: zero-height lazy items still receive
+                // Arrangement spacing and used to leave two extra gaps above the first message.
                 item(key = "folder-strip") {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bondStaggeredEntrance(entranceState, index = 1),
-                        // Match the MIUIX mail-card inset at both scroll boundaries. Individual
-                        // chips stay compact, but the first/last item no longer touches the screen.
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(folderItems, key = { it.id }) { folder ->
-                            FolderChip(
-                                label = folder.label,
-                                icon = folder.icon,
-                                selected = currentFolder == folder.id,
-                                onClick = { viewModel.selectFolder(folder.id) },
-                            )
+                    Column {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bondStaggeredEntrance(entranceState, index = 1),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items(folderItems, key = { it.id }) { folder ->
+                                FolderChip(
+                                    label = folder.label,
+                                    icon = folder.icon,
+                                    selected = currentFolder == folder.id,
+                                    onClick = { viewModel.selectFolder(folder.id) },
+                                )
+                            }
                         }
-                    }
-                }
-
-                item(key = "notification-permission") {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .bondStaggeredEntrance(entranceState, index = 2),
-                    ) {
                         AnimatedVisibility(
                             visible = !notificationPermissionGranted && showPermissionGuide,
                             enter = expandVertically(
@@ -541,17 +537,24 @@ fun HomeScreen(
                                 animationSpec = tween(260),
                             ) + fadeOut(animationSpec = tween(150)),
                         ) {
-                            Box(Modifier.padding(horizontal = 8.dp)) {
+                            Box(
+                                Modifier
+                                    .padding(top = listItemSpacing)
+                                    .padding(horizontal = listHorizontalInset)
+                                    .bondStaggeredEntrance(entranceState, index = 2),
+                            ) {
                                 NotificationPermissionCard(
                                     onAllow = onRequestNotificationPermission,
                                     onReject = onDismissPermissionGuide,
                                 )
                             }
                         }
+                        com.bond.mail.ui.components.SendQueueBanner(
+                            modifier = Modifier.padding(top = listItemSpacing)
+                                .padding(horizontal = listHorizontalInset),
+                        )
                     }
                 }
-
-                item(key = "send-queue") { com.bond.mail.ui.components.SendQueueBanner() }
 
                 if (messages.isEmpty()) {
                     item(key = "empty") {
@@ -601,7 +604,7 @@ fun HomeScreen(
                                 folderType = currentFolder,
                                 enabled = swipeEnabled,
                                 shape = itemShape,
-                                horizontalInset = if (miuixLayout) 12.dp else 16.dp,
+                                horizontalInset = listHorizontalInset,
                                 onStartToEnd = {
                                     when (currentFolder) {
                                         "DRAFTS" -> onOpenMessage(message)
