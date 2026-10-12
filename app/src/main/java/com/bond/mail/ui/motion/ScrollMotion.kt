@@ -4,7 +4,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.withFrameNanos
-import kotlin.math.roundToInt
 
 /**
  * Scrolls a long lazy list to its beginning with a mail-client style velocity profile.
@@ -13,7 +12,8 @@ import kotlin.math.roundToInt
  * large mailbox it can look almost constant-speed while forcing many intermediate rows through
  * measurement. This helper first accelerates through a short visible distance, performs the large
  * virtualized jump while the list is already moving quickly, and then decelerates through the last
- * few rows. The user sees one continuous "fast, then slow" motion instead of a rigid linear glide.
+ * few rows using LazyColumn's measured target. Headers, row spacing and variable row heights must
+ * be included in that final approach; an average-height estimate needs a visible corrective jump.
  */
 suspend fun LazyListState.animateToTopWithMomentum(motionEnabled: Boolean) {
     if (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0) return
@@ -42,32 +42,7 @@ suspend fun LazyListState.animateToTopWithMomentum(motionEnabled: Boolean) {
         }
     }
 
-    val visibleItems = layoutInfo.visibleItemsInfo
-    val averageItemSizePx = visibleItems
-        .map { it.size }
-        .filter { it > 0 }
-        .average()
-        .takeIf { !it.isNaN() && it > 0.0 }
-        ?.toFloat()
-        ?: (viewportPx / 6f).coerceAtLeast(1f)
-    val remainingDistancePx = (
-        firstVisibleItemIndex * averageItemSizePx + firstVisibleItemScrollOffset
-        ).coerceAtLeast(1f)
-    val remainingScreens = remainingDistancePx / viewportPx.toFloat()
-    val settleDuration = (270f + remainingScreens.coerceAtMost(3.2f) * 48f)
-        .roundToInt()
-        .coerceIn(270, 425)
-
-    animateScrollBy(
-        value = -remainingDistancePx,
-        animationSpec = tween(
-            durationMillis = settleDuration,
-            easing = BondMotionEasing.EmphasizedDecelerate,
-        ),
-    )
-
-    // Rounding and variable row heights can leave a sub-pixel remainder. End at the exact origin.
-    if (firstVisibleItemIndex != 0 || firstVisibleItemScrollOffset != 0) {
-        scrollToItem(0)
-    }
+    // This follows the measured first item all the way to the origin, accounting for content
+    // padding and item spacing. Do not append scrollToItem(0): that turns any remainder into a snap.
+    animateScrollToItem(index = 0, scrollOffset = 0)
 }
