@@ -5,6 +5,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.material.icons.filled.FavoriteBorder
 import com.bond.mail.data.support.sponsorshipWallets
 import com.bond.mail.ui.theme.BondTextAction
@@ -63,6 +66,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import com.bond.mail.ui.motion.BondBackScreen
+import com.bond.mail.ui.motion.bondForwardEnter
 import com.bond.mail.ui.motion.bondMotionEnabled
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
@@ -337,14 +341,30 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
         val body = remember(currentDocument) {
             context.assets.open("licenses/$currentDocument").bufferedReader().use { it.readText() }
         }
-        BondBackScreen(
-            backgroundSnapshot = documentBackground,
-            motionEnabled = motionEnabled,
-            onBackCommitted = { document = null; documentBackground = null },
-        ) { requestBack ->
-            LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
-                onBack = requestBack) {
-                SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+        // These documents are local destinations rather than NavHost entries. Apply the same
+        // forward cover transition here; BondBackScreen continues to own predictive return.
+        val entering = remember(currentDocument) {
+            MutableTransitionState(false).apply { targetState = true }
+        }
+        Box(Modifier.fillMaxSize()) {
+            documentBackground?.let { snapshot ->
+                Image(snapshot, contentDescription = null, modifier = Modifier.fillMaxSize())
+            }
+            AnimatedVisibility(
+                visibleState = entering,
+                enter = bondForwardEnter(enabled = motionEnabled),
+                exit = ExitTransition.None,
+            ) {
+                BondBackScreen(
+                    backgroundSnapshot = documentBackground,
+                    motionEnabled = motionEnabled,
+                    onBackCommitted = { document = null; documentBackground = null },
+                ) { requestBack ->
+                    LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
+                        onBack = requestBack) {
+                        SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+                    }
+                }
             }
         }
         return

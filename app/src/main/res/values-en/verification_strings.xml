@@ -1,0 +1,5 @@
+<resources>
+    <string name="copy_verification_code">Copy verification code</string>
+    <string name="verification_code_copied">Verification code copied</string>
+    <string name="verification_code_copy_failed">Could not copy. Please try again.</string>
+</resources>

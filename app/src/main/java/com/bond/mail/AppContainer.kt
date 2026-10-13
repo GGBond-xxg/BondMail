@@ -1,6 +1,7 @@
 package com.bond.mail
 
 import android.content.Context
+import kotlinx.coroutines.async
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -159,6 +160,17 @@ class AppContainer(context: Context) {
     )
     val scheduler = WorkScheduler(context)
     val notifications = MailNotificationManager(context)
+    suspend fun copyVerificationCode(message: MessageEntity, fromNotification: Boolean = true): Boolean =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+            val copied = com.bond.mail.data.mail.VerificationCodeClipboard.copy(appContext, message)
+            if (copied && fromNotification) {
+                // Match opening a message: persist read acknowledgement, defer server SEEN, and
+                // dismiss this mail's alert. There is no separate "copy button consumed" state.
+                repository.markReadFromNotification(message.id)
+                notifications.dismissMessage(message.id)
+            }
+            copied
+        }
 
     private val appForeground = AtomicBoolean(false)
     private val notificationMutex = Mutex()
@@ -219,6 +231,7 @@ class AppContainer(context: Context) {
         notificationMode: NewMailNotificationMode,
     ): List<MessageEntity> {
         val alertsEnabled = settings.settings.first().notifications
+        val notified = mutableListOf<MessageEntity>()
         notificationMutex.withLock {
             messages.forEach { message ->
                 val eligible = repository.shouldNotify(message)
@@ -226,11 +239,32 @@ class AppContainer(context: Context) {
                     eligible &&
                     alertsEnabled &&
                     !isAppForeground()
-                if (shouldAlert) notifications.show(message)
+                if (shouldAlert) {
+                    notifications.show(message)
+                    notified.add(message)
+                }
                 // Consume the UID even when alerts are disabled or this sync is visible in-app.
                 // Re-enabling notifications must not replay old mail as a burst of new alerts.
                 repository.markNotified(message)
             }
+        }
+        // Deliver all header alerts immediately. Then enrich still-visible notifications using
+        // BODY.PEEK, including messages whose subject contains no verification-code hint.
+        kotlinx.coroutines.coroutineScope {
+            notified.map { message -> async {
+                try {
+                    if (!notifications.hasMessageNotification(message) ||
+                        com.bond.mail.data.mail.VerificationCodeDetector.detect(message.subject, message.bodyText, message.bodyHtml, com.bond.mail.data.mail.VerificationRuleStore(appContext).rules()) != null) return@async
+                    val loaded = kotlinx.coroutines.withTimeoutOrNull(12_000L) {
+                        repository.ensureBodyLoaded(message.id, markSeen = false, priority = false)
+                    }
+                    if (loaded != null && !isAppForeground()) notifications.refreshVerificationAction(loaded)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    // Offline/body failures leave the ordinary mail alert intact.
+                }
+            } }.forEach { it.await() }
         }
         return messages
     }

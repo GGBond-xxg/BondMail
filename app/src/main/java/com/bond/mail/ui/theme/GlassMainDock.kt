@@ -10,7 +10,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bond.mail.ui.glass.components.LiquidBottomTab
 import com.bond.mail.ui.glass.components.LiquidBottomTabs
 import com.bond.mail.ui.glass.utils.glassDockGestureBoundary
@@ -32,7 +31,6 @@ internal fun GlassMainDock(selectedTab: Int, onSelectTab: (Int) -> Unit, onCompo
                 repeat(3) { index ->
                     LiquidBottomTab({ onSelectTab(index) }, Modifier.semantics { selected = selectedTab == index }) {
                         Icon(icons[index], labels[index], Modifier.size(24.dp))
-                        Text(labels[index], fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1)
                     }
                 }
             }
@@ -44,7 +42,6 @@ internal fun GlassMainDock(selectedTab: Int, onSelectTab: (Int) -> Unit, onCompo
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                     ) {
                         Icon(icons[index], labels[index], tint = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-                        Text(labels[index], fontSize = 10.sp)
                     }
                 }
             }

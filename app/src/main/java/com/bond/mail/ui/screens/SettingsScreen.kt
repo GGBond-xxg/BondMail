@@ -126,6 +126,7 @@ fun SettingsScreen(
     onOpenBackgroundSettings: () -> Unit,
     onOpenPushSettings: () -> Unit,
     onOpenAiSettings: () -> Unit,
+    onOpenVerificationRules: () -> Unit,
     onOpenAbout: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -333,7 +334,7 @@ fun SettingsScreen(
 
         item {
             StaggeredSettingsItem(entranceState, index = 5) {
-                SectionTitle(tr("sync"))
+                SectionTitle(tr("settings_tools"))
             }
         }
         item {
@@ -366,6 +367,13 @@ fun SettingsScreen(
                     title = tr("mail_tools"),
                     subtitle = tr("mail_tools_summary"),
                     onClick = { toolsOpen = true },
+                )
+                SettingsDivider()
+                SettingsActionRow(
+                    icon = Icons.Outlined.Build,
+                    title = tr("verification_rules"),
+                    subtitle = tr("verification_rules_summary"),
+                    onClick = onOpenVerificationRules,
                 )
                 SettingsDivider()
                 SettingsActionRow(

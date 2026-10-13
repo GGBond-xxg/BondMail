@@ -20,6 +20,10 @@
         android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.BondMail">
 
+        <activity android:name=".background.CopyVerificationCodeActivity"
+            android:exported="false" android:excludeFromRecents="true"
+            android:taskAffinity="" android:theme="@style/Theme.BondMail.Clipboard" />
+
         <!-- MSAL browser callback. The imported JSON supplies the signing-hash path; keeping the
              filter path-neutral allows open-source builds signed with the user's own key. -->
         <activity

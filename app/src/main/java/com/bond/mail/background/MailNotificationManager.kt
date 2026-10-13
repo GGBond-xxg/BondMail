@@ -79,7 +79,10 @@ class MailNotificationManager(private val context: Context) {
         // are checked immediately before notify(). Lint cannot infer that contract across methods.
         if (!canPostNotifications()) return
 
-        val notificationManager = NotificationManagerCompat.from(context)
+        NotificationManagerCompat.from(context).notify(message.id.hashCode(), buildMessageNotification(message, silent))
+    }
+
+    private fun buildMessageNotification(message: MessageEntity, silent: Boolean, onlyAlertOnce: Boolean = false): Notification {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("message_id", message.id)
@@ -90,7 +93,7 @@ class MailNotificationManager(private val context: Context) {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(context, if (silent) "mail_quiet" else NEW_MAIL_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, if (silent) "mail_quiet" else NEW_MAIL_CHANNEL_ID)
             .setSmallIcon(R.drawable.bondmail_notification_monet)
             .setContentTitle(message.senderName.ifBlank { message.senderAddress })
             .setContentText(message.subject)
@@ -111,11 +114,53 @@ class MailNotificationManager(private val context: Context) {
                     NotificationCompat.DEFAULT_LIGHTS,
             )
             .setSilent(silent)
-            .setOnlyAlertOnce(false)
+            .setOnlyAlertOnce(onlyAlertOnce)
             .setWhen(message.receivedAt)
             .setShowWhen(true)
-            .buildPreferringSmallIcon()
-        notificationManager.notify(message.id.hashCode(), notification)
+        if (com.bond.mail.data.mail.VerificationCodeDetector.detect(message.subject, message.bodyText, message.bodyHtml, com.bond.mail.data.mail.VerificationRuleStore(context).rules()) != null) {
+            val intent = Intent(context, CopyVerificationCodeActivity::class.java).apply {
+                data = android.net.Uri.Builder().scheme("bondmail").authority("copy-code").appendPath(message.id).build()
+                putExtra("message_id", message.id)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            val pending = PendingIntent.getActivity(context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val action = NotificationCompat.Action.Builder(
+                android.R.drawable.ic_menu_set_as,
+                context.getString(R.string.copy_verification_code), pending,
+            ).addExtras(android.os.Bundle().apply { putBoolean("bond_copy_code", true) })
+            if (Build.VERSION.SDK_INT >= 31) action.setAuthenticationRequired(true)
+            builder.addAction(action.build())
+        }
+        return builder.buildPreferringSmallIcon().apply {
+            extras.putString("bond_message_id", message.id)
+        }
+    }
+
+    /** Update only a still-visible alert; never resurrect a dismissed notification or alert again. */
+    fun hasMessageNotification(message: MessageEntity): Boolean =
+        context.getSystemService(NotificationManager::class.java).activeNotifications.any {
+            it.id == message.id.hashCode() && it.notification.extras.getString("bond_message_id") == message.id
+        }
+
+    fun dismissMessage(messageId: String) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.activeNotifications.filter { it.notification.extras.getString("bond_message_id") == messageId }
+            .forEach { manager.cancel(it.tag, it.id) }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun refreshVerificationAction(message: MessageEntity) {
+        if (!canPostNotifications()) return
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val active = manager.activeNotifications.firstOrNull {
+            it.id == message.id.hashCode() && it.notification.extras.getString("bond_message_id") == message.id
+        } ?: return
+        // Rebuild through the same compat template, including actions before layout generation.
+        // Recovering an already-built notification can retain an actionless OEM layout.
+        manager.notify(active.tag, active.id, buildMessageNotification(
+            message, silent = active.notification.channelId == "mail_quiet", onlyAlertOnce = true,
+        ))
     }
 
     @SuppressLint("MissingPermission")

@@ -272,7 +272,6 @@ fun DetailScreen(
     val detailTopBarHeight = if (measuredTopBarHeight > 0) {
         with(LocalDensity.current) { measuredTopBarHeight.toDp() }
     } else statusBarInset + if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 60.dp else 64.dp
-    val messageContentTopInset = detailTopBarHeight
 
     val item = remember(storedMessage, immediateOpenResult) {
         mergeImmediateOpenResult(
@@ -281,6 +280,8 @@ fun DetailScreen(
         )
     }
     val latestItem by rememberUpdatedState(item)
+    val verificationCode = rememberVerificationCode(item)
+    val messageContentTopInset = detailTopBarHeight
     val attachmentFallbackLabel = tr("attachment")
     val attachmentDownloadedMessage = tr("downloaded")
     val attachmentDownloadFailedMessage = tr("attachment_download_failed")
@@ -595,14 +596,6 @@ fun DetailScreen(
         label = "detail-bottom-chrome-slide",
     )
     val translationBottom = com.bond.mail.ui.motion.floatingActionBottomPadding(bottomChromeVisible)
-    val remoteButtonBottom by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (bottomChromeVisible) 158.dp else 88.dp,
-        animationSpec = tween(
-            durationMillis = BondMotionDuration.ChromeReveal,
-            easing = BondMotionEasing.Standard,
-        ),
-        label = "remote-image-bottom-inset",
-    )
 
     val glassEnabled = LocalGlassEffects.current
     val glassBackdrop = rememberLayerBackdrop()
@@ -764,22 +757,6 @@ fun DetailScreen(
                             renderRetryToken += 1
                         },
                         modifier = Modifier.fillMaxSize(),
-                    )
-                }
-                AnimatedVisibility(
-                    visible = hasRemoteImages && !loadImages,
-                    modifier = Modifier.align(Alignment.BottomEnd),
-                    enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
-                ) {
-                    RemoteImageFloatingButton(
-                        onClick = {
-                            loadImages = true
-                            scope.launch { container.repository.allowRemoteImages(item.id) }
-                        },
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .padding(end = 16.dp, bottom = remoteButtonBottom),
                     )
                 }
             }
@@ -969,12 +946,25 @@ fun DetailScreen(
                 )
             }
 
-            MessageTranslationActions(
-                translation = translation,
-                enabled = !bodyLoading && !bodyLoadFailed,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+            // One stack follows the bottom dock together. Content-dependent actions cannot
+            // collide with translation status, the copy action, or the remote-image control.
+            Column(
+                Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
                     .padding(start = 12.dp, end = 12.dp, bottom = translationBottom),
-            )
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                MessageTranslationActions(translation, enabled = !bodyLoading && !bodyLoadFailed,
+                    extraAction = {
+                        if (hasRemoteImages && !loadImages) RemoteImageFloatingButton(onClick = {
+                            loadImages = true
+                            scope.launch { container.repository.allowRemoteImages(item.id) }
+                        })
+                    })
+                if (verificationCode != null) {
+                    VerificationCodeAction(item, container, Modifier.padding(end = 5.dp))
+                }
+            }
             MessageActionDock(
                 onReply = ::reply,
                 onForward = ::forward,
@@ -1037,38 +1027,19 @@ private fun RemoteImageFloatingButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Surface(
-        modifier = modifier.size(46.dp),
-        shape = CircleShape,
-        color = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.90f),
+    FloatingCircleAction(
+        onClick = onClick,
+        modifier = modifier.size(48.dp),
+        containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
         contentColor = MaterialTheme.colorScheme.primary,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f),
-        ),
-        tonalElevation = 0.dp,
-        shadowElevation = 6.dp,
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().clickable(
-                interactionSource = interactionSource,
-                indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
-                onClick = onClick,
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Default.Image,
-                contentDescription = tr("load_images_once"),
-                modifier = Modifier.size(22.dp),
-            )
-        }
+        Icon(Icons.Default.Image, contentDescription = tr("load_images_once"), modifier = Modifier.size(22.dp))
     }
 }
 
 @Composable
-internal fun MessageTranslationActions(translation: InlineMailTranslationState, enabled: Boolean, modifier: Modifier = Modifier) {
+internal fun MessageTranslationActions(translation: InlineMailTranslationState, enabled: Boolean, modifier: Modifier = Modifier,
+    extraAction: (@Composable () -> Unit)? = null) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (translation.busy || translation.error != null) Box(modifier =
             if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) Modifier.glassSurface(shape = RoundedCornerShape(20.dp), prominent = true)
@@ -1080,6 +1051,7 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
         // Keep the smaller action centered over the 58dp delete button below.
         Row(Modifier.fillMaxWidth().padding(end = 5.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
+            extraAction?.invoke()
             if (translation.result != null) MessageTranslationButton(
                 icon = Icons.Outlined.Restore, label = tr("translation_original"),
                 onClick = { translation.showOriginal = true },

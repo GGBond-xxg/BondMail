@@ -1,0 +1,5 @@
+<resources>
+    <string name="copy_verification_code">複製驗證碼</string>
+    <string name="verification_code_copied">驗證碼已複製</string>
+    <string name="verification_code_copy_failed">複製失敗，請重試</string>
+</resources>

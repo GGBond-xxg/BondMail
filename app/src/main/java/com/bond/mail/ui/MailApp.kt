@@ -205,6 +205,7 @@ private const val ABOUT = "about"
 private const val SPONSORSHIP = "about/sponsorship"
 private const val PUSH_SETTINGS = "settings/push"
 private const val AI_SETTINGS = "settings/ai"
+private const val VERIFICATION_RULES = "settings/verification-rules"
 private const val REPLY_SKILLS = "settings/ai/reply-skills"
 private const val OPEN_SOURCE_LICENSES = "about/open-source"
 private const val APP_LICENSE = "about/app-license"
@@ -318,6 +319,7 @@ fun MailApp(
     var pushSettingsBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
+    var verificationRulesBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var aiSettingsBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var aboutChildBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
@@ -879,6 +881,10 @@ fun MailApp(
                         store = { aboutBackBackground = it },
                     )
                 },
+                onOpenVerificationRules = {
+                    navigateAfterSnapshot(expectedSourceRoute = MAIN, route = VERIFICATION_RULES,
+                        capture = { mailboxSnapshotLayer.toImageBitmap() }, store = { verificationRulesBackBackground = it })
+                },
                 onOpenAiSettings = {
                     navigateAfterSnapshot(
                         expectedSourceRoute = MAIN,
@@ -1022,6 +1028,12 @@ fun MailApp(
                             onBackCommitted = ::popBackStackOnce,
                         ) { requestBack ->
                             com.bond.mail.ui.components.ReplySkillsScreen(onDismiss = requestBack)
+                        }
+                    }
+
+                    composable(route = VERIFICATION_RULES) {
+                        BondBackScreen(verificationRulesBackBackground, motionEnabled, ::popBackStackOnce) { requestBack ->
+                            com.bond.mail.ui.screens.VerificationRulesScreen(onBack = requestBack)
                         }
                     }
 
@@ -1382,6 +1394,7 @@ private fun MainTabs(
     onOpenBackgroundSettings: () -> Unit,
     onOpenPushSettings: () -> Unit,
     onOpenAiSettings: () -> Unit,
+    onOpenVerificationRules: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     mainChromeVisible: Boolean,
@@ -1556,6 +1569,7 @@ private fun MainTabs(
                             onOpenBackgroundSettings = onOpenBackgroundSettings,
                             onOpenPushSettings = onOpenPushSettings,
                             onOpenAiSettings = onOpenAiSettings,
+                            onOpenVerificationRules = onOpenVerificationRules,
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

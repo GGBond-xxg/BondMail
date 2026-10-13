@@ -1459,6 +1459,13 @@ class MailRepository(
         prepareMessageForOpen(messageId = messageId, markSeen = true)
     }
 
+    /** A notification copy acknowledges the mail without fetching/opening its body again. */
+    suspend fun markReadFromNotification(messageId: String) {
+        registerPendingOpenSeen(messageId)
+        markReadLocally(messageId)
+        scheduleRemoteSeenAfterOpen(messageId)
+    }
+
     suspend fun toggleStarred(messageId: String) {
         database.messageDao().byId(messageId)?.let { current ->
             setStarred(current, starred = !current.starred)
