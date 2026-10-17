@@ -130,18 +130,19 @@ class VerificationCodeFeatureTest {
                 } }
                 for (style in UiStyle.entries) for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
                     scenario.onActivity { settings.value = AppSettings(uiStyle = style, themeMode = mode) }
-                    val visible = device.wait(Until.hasObject(By.text("复制验证码")), 10_000)
+                    val visible = device.wait(Until.hasObject(By.desc("复制验证码")), 10_000)
                     if (!visible) {
                         device.takeScreenshot(File(context.getExternalFilesDir(null), "verification-failure.png"))
                         device.dumpWindowHierarchy(File(context.getExternalFilesDir(null), "verification-failure.xml"))
                     }
                     assertTrue("copy action missing for $style/$mode", visible)
                     android.os.SystemClock.sleep(700)
-                    val button = device.findObject(By.text("复制验证码"))
-                    assertTrue(button.visibleBounds.width() > 80)
+                    val button = device.findObject(By.desc("复制验证码"))
+                    assertFalse("copy action should be icon-only", device.hasObject(By.text("复制验证码")))
                     val translate = device.findObject(By.desc("翻译邮件"))
                     assertNotNull(translate)
-                    assertTrue(translate.visibleBounds.bottom < button.visibleBounds.top)
+                    assertTrue(button.visibleBounds.bottom < translate.visibleBounds.top)
+                    assertEquals(translate.visibleBounds.centerX(), button.visibleBounds.centerX())
                     device.takeScreenshot(File(context.getExternalFilesDir(null), "verification-${style}-${mode}.png"))
                 }
                 container.notifications.show(fixture, reminder = true)
@@ -149,9 +150,9 @@ class VerificationCodeFeatureTest {
                 assertTrue(manager.activeNotifications.first { it.id == fixture.id.hashCode() }.notification.actions.any {
                     it.extras.getBoolean("bond_copy_code")
                 })
-                device.findObject(By.text("复制验证码")).click()
+                device.findObject(By.desc("复制验证码")).click()
                 android.os.SystemClock.sleep(600)
-                assertTrue(device.hasObject(By.text("复制验证码")))
+                assertTrue(device.hasObject(By.desc("复制验证码")))
                 scenario.onActivity { activity ->
                     val clipboard = activity.getSystemService(ClipboardManager::class.java)
                     assertEquals("003821", clipboard.primaryClip!!.getItemAt(0).text.toString())
@@ -167,11 +168,11 @@ class VerificationCodeFeatureTest {
                 // Seed a known identity for the separately launched process-restart test.
                 scenario.onActivity { it.getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(android.content.ClipData.newPlainText("QA", "unchanged")) }
-                device.findObject(By.text("复制验证码")).click()
+                device.findObject(By.desc("复制验证码")).click()
                 android.os.SystemClock.sleep(600)
                 scenario.onActivity { assertEquals("003821", it.getSystemService(ClipboardManager::class.java)
                     .primaryClip!!.getItemAt(0).text.toString()) }
-                assertTrue(device.hasObject(By.text("复制验证码")))
+                assertTrue(device.hasObject(By.desc("复制验证码")))
                 runBlocking {
                     container.database.messageDao().upsert(verificationFixture())
                     assertTrue(container.copyVerificationCode(verificationFixture(), fromNotification = true))

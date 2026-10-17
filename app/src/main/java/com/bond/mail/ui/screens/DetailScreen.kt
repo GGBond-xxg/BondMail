@@ -954,6 +954,9 @@ fun DetailScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                if (verificationCode != null) {
+                    VerificationCodeAction(item, container, Modifier.padding(end = 5.dp))
+                }
                 MessageTranslationActions(translation, enabled = !bodyLoading && !bodyLoadFailed,
                     extraAction = {
                         if (hasRemoteImages && !loadImages) RemoteImageFloatingButton(onClick = {
@@ -961,9 +964,6 @@ fun DetailScreen(
                             scope.launch { container.repository.allowRemoteImages(item.id) }
                         })
                     })
-                if (verificationCode != null) {
-                    VerificationCodeAction(item, container, Modifier.padding(end = 5.dp))
-                }
             }
             MessageActionDock(
                 onReply = ::reply,
@@ -1052,11 +1052,11 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
         Row(Modifier.fillMaxWidth().padding(end = 5.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
             extraAction?.invoke()
-            if (translation.result != null) MessageTranslationButton(
+            if (translation.result != null) MessageFloatingIconAction(
                 icon = Icons.Outlined.Restore, label = tr("translation_original"),
                 onClick = { translation.showOriginal = true },
             )
-            MessageTranslationButton(
+            MessageFloatingIconAction(
                 icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
                 label = tr(if (translation.busy) "cancel" else "translate_body"),
                 enabled = enabled, onClick = translation::translateOrCancel,
@@ -1066,16 +1066,17 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
 }
 
 @Composable
-private fun MessageTranslationButton(
+internal fun MessageFloatingIconAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     FloatingCircleAction(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.size(48.dp),
+        modifier = modifier.size(48.dp),
         containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
         contentColor = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else 0.38f),
     ) {

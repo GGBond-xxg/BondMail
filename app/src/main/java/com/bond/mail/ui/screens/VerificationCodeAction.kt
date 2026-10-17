@@ -2,20 +2,15 @@ package com.bond.mail.ui.screens
 
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Password
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.bond.mail.AppContainer
 import com.bond.mail.R
 import com.bond.mail.data.db.MessageEntity
 import com.bond.mail.ui.i18n.tr
-import com.bond.mail.ui.theme.BondSecondaryButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,9 +35,10 @@ internal fun VerificationCodeAction(message: MessageEntity, container: AppContai
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var copying by remember(message.id) { mutableStateOf(false) }
-    BondSecondaryButton(
-        modifier = modifier.heightIn(min = 44.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+    MessageFloatingIconAction(
+        icon = Icons.Outlined.ContentCopy,
+        label = tr("copy_verification_code"),
+        modifier = modifier,
         enabled = !copying,
         onClick = {
             copying = true
@@ -61,9 +57,5 @@ internal fun VerificationCodeAction(message: MessageEntity, container: AppContai
                 }
             }
         },
-    ) {
-        Icon(Icons.Outlined.Password, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(tr("copy_verification_code"), maxLines = 1)
-    }
+    )
 }

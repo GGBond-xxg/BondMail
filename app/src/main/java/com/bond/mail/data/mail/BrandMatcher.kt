@@ -566,6 +566,28 @@ object BrandMatcher {
         "outlook" to Brand("outlook", "O"), "yahoo" to Brand("yahoo", "Y"),
     )
 
+    // Match sender domains on label boundaries; a brand mentioned in a subject is not evidence.
+    private val gamingDomains = mapOf(
+        "epicgames.com" to Brand("epicgames", "EPIC"),
+        "riotgames.com" to Brand("riotgames", "RIOT"),
+        "ubisoft.com" to Brand("ubisoft", "UBI"),
+        "ubi.com" to Brand("ubisoft", "UBI"),
+        "battle.net" to Brand("battledotnet", "BN"),
+        "gog.com" to Brand("gogdotcom", "GOG"),
+    )
+    private val gamingNames = mapOf(
+        "epic games" to Brand("epicgames", "EPIC"),
+        "riot games" to Brand("riotgames", "RIOT"),
+        "ubisoft" to Brand("ubisoft", "UBI"),
+        "ubisoft connect" to Brand("ubisoft", "UBI"),
+        "育碧" to Brand("ubisoft", "UBI"),
+        "battle.net" to Brand("battledotnet", "BN"),
+        "战网" to Brand("battledotnet", "BN"),
+        "戰網" to Brand("battledotnet", "BN"),
+        "gog.com" to Brand("gogdotcom", "GOG"),
+        "gog" to Brand("gogdotcom", "GOG"),
+    )
+
     // Curated retail/technology names; never search the message body for branding.
     private val retailDomains = mapOf(
         "muji.com" to Brand("muji", "MUJI"),
@@ -814,7 +836,8 @@ object BrandMatcher {
             ?: retailBrands.firstOrNull { (pattern, _) -> pattern.containsMatchIn(normalizedDisplayName) }?.second
         // Explicit domains beat loose name aliases (Maya Bank vs Maya Mobile, for example).
         // Dedicated domain icons still beat generic category icons.
-        val dedicatedDomain = rules.entries.firstOrNull { (key, _) ->
+        val dedicatedDomain = gamingDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
+            ?: rules.entries.firstOrNull { (key, _) ->
             domainRuleRegex.matches(key) && domainMatches(senderDomain, key)
         }?.value ?: retailDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
         val categoryDomain = GenericSenderCategories.byDomain(senderDomain) ?: when {
@@ -823,7 +846,7 @@ object BrandMatcher {
             else -> null
         }
         val metaName = if (normalizedDisplayName in setOf("meta", "meta platforms")) Brand("meta", "M") else null
-        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: retailBrand ?: entry?.value ?: metaName ?:
+        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: gamingNames[normalizedDisplayName] ?: retailBrand ?: entry?.value ?: metaName ?:
             GenericSenderCategories.byName(normalizedDisplayName) ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||

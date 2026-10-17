@@ -34,12 +34,20 @@ The full MIT License text is included at `licenses/MSAL-MIT.txt`.
 
 ## Simple Icons
 
-BondMail bundles selected monochrome brand SVGs from Simple Icons. The icons are
-distributed under CC0 1.0 Universal; brand names and trademarks remain the property
-of their respective owners.
+BondMail bundles selected monochrome brand SVGs from Simple Icons. Simple Icons is
+released under CC0 1.0 Universal; this does not override any individual icon's
+license or brand guidelines. Brand names and trademarks remain the property of
+their respective owners. These marks identify senders and do not indicate endorsement
+or authenticated sender identity.
 
 The bundled CC0 text is included at
 `app/src/main/assets/contact_logos/simpleicons/LICENSE.txt`.
+
+Epic Games, Riot Games, Ubisoft, Battle.net and GOG.com SVGs were added from
+Simple Icons commit `4d29a35c954699b389a834aacc97dd6e7e74143c`, unchanged. BondMail
+applies theme tint and size only when rendering. Per-icon upstream sources are
+recorded in `app/src/main/assets/contact_logos/simpleicons/gaming-sources.json`.
+See the upstream [disclaimer](https://github.com/simple-icons/simple-icons/blob/4d29a35c954699b389a834aacc97dd6e7e74143c/DISCLAIMER.md).
 
 ## Google Play services authentication / Google Identity Services
 

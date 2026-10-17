@@ -52,6 +52,11 @@ class ContactLogoAssetTest {
     fun addedBrandLogosLoadFromBundledAssets() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val senders = listOf(
+            "Epic Games" to "notice@mail.epicgames.com",
+            "Riot Games" to "notice@mail.riotgames.com",
+            "Ubisoft" to "notice@mail.ubi.com",
+            "Battle.net" to "notice@mail.battle.net",
+            "GOG.com" to "notice@mail.gog.com",
             "去哪儿旅行" to "offers@qunar.com",
             "同程旅行" to "notice@ly.com",
             "飞常准" to "notice@variflight.com",

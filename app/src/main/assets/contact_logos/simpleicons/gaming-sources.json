@@ -1,0 +1,37 @@
+{
+  "upstream": "https://github.com/simple-icons/simple-icons",
+  "commit": "4d29a35c954699b389a834aacc97dd6e7e74143c",
+  "icons": [
+    {
+      "title": "Battle.net",
+      "hex": "4381C3",
+      "source": "https://battle.net",
+      "asset": "battledotnet.svg"
+    },
+    {
+      "title": "Epic Games",
+      "hex": "313131",
+      "source": "https://dev.epicgames.com/docs/services/en-US/EpicAccountServices/DesignGuidelines/index.html#epicgamesbrandguidelines",
+      "guidelines": "https://dev.epicgames.com/docs/services/en-US/EpicAccountServices/DesignGuidelines/index.html#epicgamesbrandguidelines",
+      "asset": "epicgames.svg"
+    },
+    {
+      "title": "GOG.com",
+      "hex": "86328A",
+      "source": "https://www.cdprojekt.com/en/media/logotypes/",
+      "asset": "gogdotcom.svg"
+    },
+    {
+      "title": "Riot Games",
+      "hex": "EB0029",
+      "source": "https://www.riotgames.com/en/press",
+      "asset": "riotgames.svg"
+    },
+    {
+      "title": "Ubisoft",
+      "hex": "000000",
+      "source": "https://www.ubisoft.com/en-US/company/overview.aspx",
+      "asset": "ubisoft.svg"
+    }
+  ]
+}

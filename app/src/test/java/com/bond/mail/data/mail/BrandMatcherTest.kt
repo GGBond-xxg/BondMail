@@ -4,6 +4,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BrandMatcherTest {
+    @Test fun gamingBrandsMatchDomainsWithoutMatchingLookalikesOrSubjectMentions() {
+        mapOf("epicgames.com" to "epicgames", "riotgames.com" to "riotgames",
+            "ubisoft.com" to "ubisoft", "ubi.com" to "ubisoft",
+            "battle.net" to "battledotnet", "gog.com" to "gogdotcom").forEach { (domain, key) ->
+            assertEquals(key, BrandMatcher.match("Account", "notice@$domain").key)
+            assertEquals(key, BrandMatcher.match("Account", "notice@mail.$domain").key)
+            assertEquals("unknown", BrandMatcher.match("Notice", "notice@not$domain").key)
+            assertEquals("unknown", BrandMatcher.match("Notice", "notice@$domain.example.org").key)
+        }
+        mapOf("Epic Games" to "epicgames", "Riot Games" to "riotgames", "Ubisoft Connect" to "ubisoft",
+            "育碧" to "ubisoft", "戰網" to "battledotnet", "GOG" to "gogdotcom").forEach { (name, key) ->
+            assertEquals(key, BrandMatcher.match(name, "notice@example.org").key)
+        }
+        assertEquals("unknown", BrandMatcher.match("Notice", "notice@example.org", "Epic Games Riot Games Ubisoft GOG").key)
+        assertEquals("unknown", BrandMatcher.match("Goggles", "notice@example.org").key)
+        assertEquals("unknown", BrandMatcher.match("Epic Adventure", "notice@example.org").key)
+    }
+
     @Test fun metaMatchesItsDomainAndExactNameWithoutTakingOverOtherBrands() {
         assertEquals("meta", BrandMatcher.match("Notice", "notice@mail.meta.com").key)
         assertEquals("meta", BrandMatcher.match("Meta", "notice@example.org").key)
