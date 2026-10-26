@@ -8,6 +8,15 @@ Selected SVG resources are synchronized from `@thesvg/icons` 3.3.8
 property of their owners. `thesvg/sources.json` identifies package and local overrides;
 the upstream icon modules also include per-icon license and source metadata.
 
+## Official exchange marks
+
+Toobit, BloFin, Tapbit and XT.COM marks were obtained from their public websites or
+official media assets linked by those websites. The exact source URLs and monochrome
+adaptations are recorded in `tools/icon-sync/brands.json` and
+`app/src/main/assets/contact_logos/thesvg/sources.json`. Their trademarks and artwork
+remain the property of their respective owners. They are used solely to identify
+mail senders visually; an icon does not establish sender authenticity or endorsement.
+
 ## Thunderbird Android / K-9 Mail
 
 BondMail v0.2.14.0 studied and adapted architectural ideas from the Thunderbird Android source tree supplied for comparison, especially the message WebView configuration, local-first message loading, and partial body download flow. BondMail's Compose/Room/JavaMail implementation was written for this project rather than copied as a complete module.

@@ -7,8 +7,9 @@ class GenericSenderCategoriesTest {
     @Test fun everyRegisteredDomainResolvesWithBoundaries() {
         GenericSenderCategories.entries.forEach { entry ->
             entry.domains.forEach { domain ->
-                assertEquals(domain, entry.category, BrandMatcher.match("Notice", "notice@$domain").key)
-                assertEquals(domain, entry.category, BrandMatcher.match("Notice", "notice@EMAIL.$domain".uppercase()).key)
+                val expected = if (domain == "zara.com") "zara" else entry.category
+                assertEquals(domain, expected, BrandMatcher.match("Notice", "notice@$domain").key)
+                assertEquals(domain, expected, BrandMatcher.match("Notice", "notice@EMAIL.$domain".uppercase()).key)
                 assertEquals(domain, "unknown", BrandMatcher.match("Notice", "notice@not$domain").key)
                 assertEquals(domain, "unknown", BrandMatcher.match("Notice", "notice@$domain.example.org").key)
             }
@@ -17,7 +18,8 @@ class GenericSenderCategoriesTest {
     @Test fun knownNamesWorkWithoutOfficialDomainAndShortWordsStayBounded() {
         GenericSenderCategories.entries.forEach { entry ->
             (entry.names + entry.exactNames).forEach { name ->
-                assertEquals(name, entry.category, BrandMatcher.match(name.uppercase(), "notice@example.org").key)
+                val expected = if (name == "zara") "zara" else entry.category
+                assertEquals(name, expected, BrandMatcher.match(name.uppercase(), "notice@example.org").key)
             }
         }
         listOf("Mind the gap", "Mango recipes", "Delivery vans", "M1 chip", "Giga bytes",

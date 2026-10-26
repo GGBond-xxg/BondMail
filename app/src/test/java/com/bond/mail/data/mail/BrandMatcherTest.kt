@@ -32,11 +32,11 @@ class BrandMatcherTest {
         assertEquals("instagram", BrandMatcher.match("Instagram", "notice@instagram.com").key)
     }
 
-    @Test fun carriersCouriersAndHotelsUseSharedCategoryIcons() {
+    @Test fun carriersAndHotelsKeepFallbacksWhileCouriersUseDedicatedIcons() {
         val domains = mapOf("dito.ph" to "simcard", "globe.com.ph" to "simcard",
             "smart.com.ph" to "simcard", "gomo.ph" to "simcard", "singtel.com" to "simcard",
-            "starhub.com" to "simcard", "simba.sg" to "simcard", "dhl.com" to "expressdelivery",
-            "fedex.com" to "expressdelivery", "ups.com" to "expressdelivery",
+            "starhub.com" to "simcard", "simba.sg" to "simcard", "dhl.com" to "dhl",
+            "fedex.com" to "fedex", "ups.com" to "ups",
             "hilton.com" to "hotel", "marriott.com" to "hotel")
         domains.forEach { (domain, key) ->
             assertEquals(domain, key, BrandMatcher.match("Notice", "notice@$domain").key)
@@ -47,7 +47,7 @@ class BrandMatcherTest {
         mapOf("DITO" to "simcard", "DITO Telecommunity" to "simcard", "GOMO" to "simcard",
             "Smart Communications" to "simcard", "Globe Telecom" to "simcard",
             "Singtel" to "simcard", "StarHub" to "simcard", "SIMBA Telecom" to "simcard",
-            "DHL Express" to "expressdelivery", "FedEx" to "expressdelivery", "UPS" to "expressdelivery",
+            "DHL Express" to "dhl", "FedEx" to "fedex", "UPS" to "ups",
             "Hilton Honors" to "hotel", "Marriott Bonvoy" to "hotel").forEach { (name, key) ->
             assertEquals(name, key, BrandMatcher.match(name, "notice@example.org").key)
         }
@@ -247,7 +247,7 @@ class BrandMatcherTest {
     @Test
     fun genericExchangeStaysBehindDedicatedBrandsAndRejectsLookalikes() {
         val cases = listOf(
-            Triple("KuCoin", "news@kucoin.com", "exchange"),
+            Triple("KuCoin", "news@kucoin.com", "kucoin"),
             Triple("Gemini", "notice@gemini.com", "exchange"),
             Triple("Digital Asset Exchange", "notice@example.org", "exchange"),
             Triple("MEXC", "notice@mexc.com", "mexc"),
@@ -266,7 +266,7 @@ class BrandMatcherTest {
     fun airlineAndSimCardFallbacksStayBehindSpecificBrands() {
         val cases = listOf(
             Triple("Singapore Airlines", "notice@singaporeair.com", "airplane"),
-            Triple("阿联酋航空", "notice@emirates.com", "airplane"),
+            Triple("阿联酋航空", "notice@emirates.com", "emirates"),
             Triple("SoSIM", "service@sosimhk.com", "simcard"),
             Triple("Airalo eSIM", "hello@airalo.com", "simcard"),
             Triple("Airbnb", "notice@airbnb.com", "airbnb"),

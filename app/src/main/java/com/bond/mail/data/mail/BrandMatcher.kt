@@ -836,7 +836,8 @@ object BrandMatcher {
             ?: retailBrands.firstOrNull { (pattern, _) -> pattern.containsMatchIn(normalizedDisplayName) }?.second
         // Explicit domains beat loose name aliases (Maya Bank vs Maya Mobile, for example).
         // Dedicated domain icons still beat generic category icons.
-        val dedicatedDomain = gamingDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
+        val dedicatedDomain = BundledSenderBrands.byDomain(senderDomain)
+            ?: gamingDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
             ?: rules.entries.firstOrNull { (key, _) ->
             domainRuleRegex.matches(key) && domainMatches(senderDomain, key)
         }?.value ?: retailDomains.entries.firstOrNull { domainMatches(senderDomain, it.key) }?.value
@@ -846,7 +847,7 @@ object BrandMatcher {
             else -> null
         }
         val metaName = if (normalizedDisplayName in setOf("meta", "meta platforms")) Brand("meta", "M") else null
-        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: gamingNames[normalizedDisplayName] ?: retailBrand ?: entry?.value ?: metaName ?:
+        val resolved = contextualBrand ?: dedicatedDomain ?: categoryDomain ?: BundledSenderBrands.byName(normalizedDisplayName) ?: gamingNames[normalizedDisplayName] ?: retailBrand ?: entry?.value ?: metaName ?:
             GenericSenderCategories.byName(normalizedDisplayName) ?: when {
             exchangeDomains.any { domainMatches(senderDomain, it) } ||
                 normalizedDisplayName == "exchange" ||

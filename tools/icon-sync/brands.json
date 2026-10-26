@@ -1,0 +1,2389 @@
+{
+  "kucoin": {
+    "title": "KuCoin",
+    "sector": "exchange",
+    "slug": "kucoin",
+    "domains": [
+      "kucoin.com"
+    ],
+    "names": [
+      "kucoin"
+    ]
+  },
+  "wise": {
+    "title": "Wise",
+    "sector": "finance",
+    "slug": "wise",
+    "domains": [
+      "wise.com",
+      "transferwise.com"
+    ],
+    "names": [
+      "wise"
+    ]
+  },
+  "revolut": {
+    "title": "Revolut",
+    "sector": "finance",
+    "slug": "revolut",
+    "domains": [
+      "revolut.com"
+    ],
+    "names": [
+      "revolut"
+    ]
+  },
+  "monzo": {
+    "title": "Monzo",
+    "sector": "finance",
+    "slug": "monzo",
+    "domains": [
+      "monzo.com"
+    ],
+    "names": [
+      "monzo"
+    ]
+  },
+  "stripe": {
+    "title": "Stripe",
+    "sector": "finance",
+    "slug": "stripe",
+    "domains": [
+      "stripe.com"
+    ],
+    "names": [
+      "stripe"
+    ]
+  },
+  "square": {
+    "title": "Square",
+    "sector": "finance",
+    "slug": "square",
+    "domains": [
+      "squareup.com"
+    ],
+    "names": [
+      "square"
+    ]
+  },
+  "adyen": {
+    "title": "Adyen",
+    "sector": "finance",
+    "slug": "adyen",
+    "domains": [
+      "adyen.com"
+    ],
+    "names": [
+      "adyen"
+    ]
+  },
+  "affirm": {
+    "title": "Affirm",
+    "sector": "finance",
+    "slug": "affirm",
+    "domains": [
+      "affirm.com"
+    ],
+    "names": [
+      "affirm"
+    ]
+  },
+  "klarna": {
+    "title": "Klarna",
+    "sector": "finance",
+    "slug": "klarna",
+    "domains": [
+      "klarna.com"
+    ],
+    "names": [
+      "klarna"
+    ]
+  },
+  "afterpay": {
+    "title": "Afterpay",
+    "sector": "finance",
+    "slug": "afterpay",
+    "domains": [
+      "afterpay.com"
+    ],
+    "names": [
+      "afterpay"
+    ]
+  },
+  "payoneer": {
+    "title": "Payoneer",
+    "sector": "finance",
+    "slug": "payoneer",
+    "domains": [
+      "payoneer.com"
+    ],
+    "names": [
+      "payoneer"
+    ]
+  },
+  "venmo": {
+    "title": "Venmo",
+    "sector": "finance",
+    "slug": "venmo",
+    "domains": [
+      "venmo.com"
+    ],
+    "names": [
+      "venmo"
+    ]
+  },
+  "paytm": {
+    "title": "Paytm",
+    "sector": "finance",
+    "slug": "paytm",
+    "domains": [
+      "paytm.com"
+    ],
+    "names": [
+      "paytm"
+    ]
+  },
+  "chime": {
+    "title": "Chime",
+    "sector": "finance",
+    "slug": "chime",
+    "domains": [
+      "chime.com"
+    ],
+    "names": [
+      "chime"
+    ],
+    "sourceUrl": "https://www.chime.com",
+    "license": "Fair Use",
+    "modifications": "From @thesvg/icons/chime 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  "moneygram": {
+    "title": "MoneyGram",
+    "sector": "finance",
+    "slug": "moneygram",
+    "domains": [
+      "moneygram.com"
+    ],
+    "names": [
+      "moneygram"
+    ]
+  },
+  "tradingview": {
+    "title": "TradingView",
+    "sector": "finance",
+    "slug": "tradingview",
+    "domains": [
+      "tradingview.com"
+    ],
+    "names": [
+      "tradingview"
+    ]
+  },
+  "ebay": {
+    "title": "eBay",
+    "sector": "shopping",
+    "slug": "ebay",
+    "domains": [
+      "ebay.com",
+      "ebay.co.uk",
+      "ebay.de",
+      "ebay.com.au",
+      "ebay.ca",
+      "ebay.fr",
+      "ebay.it",
+      "ebay.es"
+    ],
+    "names": [
+      "ebay",
+      "ebay.com"
+    ]
+  },
+  "etsy": {
+    "title": "Etsy",
+    "sector": "shopping",
+    "slug": "etsy",
+    "domains": [
+      "etsy.com"
+    ],
+    "names": [
+      "etsy"
+    ]
+  },
+  "aliexpress": {
+    "title": "AliExpress",
+    "sector": "shopping",
+    "slug": "aliexpress",
+    "domains": [
+      "aliexpress.com"
+    ],
+    "names": [
+      "aliexpress",
+      "速卖通"
+    ]
+  },
+  "shopee": {
+    "title": "Shopee",
+    "sector": "shopping",
+    "slug": "shopee",
+    "domains": [
+      "shopee.com",
+      "shopee.sg",
+      "shopee.com.my",
+      "shopee.co.id",
+      "shopee.co.th",
+      "shopee.vn",
+      "shopee.ph",
+      "shopee.tw",
+      "shopee.com.br"
+    ],
+    "names": [
+      "shopee",
+      "虾皮"
+    ]
+  },
+  "rakuten": {
+    "title": "Rakuten",
+    "sector": "shopping",
+    "slug": "rakuten",
+    "domains": [
+      "rakuten.com",
+      "rakuten.co.jp"
+    ],
+    "names": [
+      "rakuten"
+    ]
+  },
+  "newegg": {
+    "title": "Newegg",
+    "sector": "shopping",
+    "slug": "newegg",
+    "domains": [
+      "newegg.com"
+    ],
+    "names": [
+      "newegg"
+    ]
+  },
+  "ikea": {
+    "title": "IKEA",
+    "sector": "shopping",
+    "slug": "ikea",
+    "domains": [
+      "ikea.com"
+    ],
+    "names": [
+      "ikea"
+    ]
+  },
+  "target": {
+    "title": "Target",
+    "sector": "shopping",
+    "slug": "target",
+    "domains": [
+      "target.com"
+    ],
+    "names": [
+      "target"
+    ]
+  },
+  "tesco": {
+    "title": "Tesco",
+    "sector": "shopping",
+    "slug": "tesco",
+    "domains": [
+      "tesco.com"
+    ],
+    "names": [
+      "tesco"
+    ]
+  },
+  "carrefour": {
+    "title": "Carrefour",
+    "sector": "shopping",
+    "slug": "carrefour",
+    "domains": [
+      "carrefour.com",
+      "carrefour.fr"
+    ],
+    "names": [
+      "carrefour"
+    ]
+  },
+  "zalando": {
+    "title": "Zalando",
+    "sector": "shopping",
+    "slug": "zalando",
+    "domains": [
+      "zalando.com",
+      "zalando.de"
+    ],
+    "names": [
+      "zalando"
+    ]
+  },
+  "vinted": {
+    "title": "Vinted",
+    "sector": "shopping",
+    "slug": "vinted",
+    "domains": [
+      "vinted.com",
+      "vinted.co.uk",
+      "vinted.fr"
+    ],
+    "names": [
+      "vinted"
+    ]
+  },
+  "wish": {
+    "title": "Wish",
+    "sector": "shopping",
+    "slug": "wish",
+    "domains": [
+      "wish.com"
+    ],
+    "names": [
+      "wish"
+    ]
+  },
+  "zara": {
+    "title": "Zara",
+    "sector": "shopping",
+    "slug": "zara",
+    "domains": [
+      "zara.com"
+    ],
+    "names": [
+      "zara"
+    ]
+  },
+  "dior": {
+    "title": "Dior",
+    "sector": "shopping",
+    "slug": "dior",
+    "domains": [
+      "dior.com"
+    ],
+    "names": [
+      "dior"
+    ]
+  },
+  "notion": {
+    "title": "Notion",
+    "sector": "productivity",
+    "slug": "notion",
+    "domains": [
+      "notion.so",
+      "notion.com"
+    ],
+    "names": [
+      "notion"
+    ]
+  },
+  "figma": {
+    "title": "Figma",
+    "sector": "productivity",
+    "slug": "figma",
+    "domains": [
+      "figma.com"
+    ],
+    "names": [
+      "figma"
+    ]
+  },
+  "canva": {
+    "title": "Canva",
+    "sector": "productivity",
+    "slug": "canva",
+    "domains": [
+      "canva.com"
+    ],
+    "names": [
+      "canva"
+    ],
+    "sourceUrl": "https://www.canva.com",
+    "license": "MIT",
+    "modifications": "From @thesvg/icons/canva 3.3.8; background removed; original foreground paths preserved."
+  },
+  "slack": {
+    "title": "Slack",
+    "sector": "productivity",
+    "slug": "slack",
+    "domains": [
+      "slack.com"
+    ],
+    "names": [
+      "slack"
+    ]
+  },
+  "zoom": {
+    "title": "Zoom",
+    "sector": "productivity",
+    "slug": "zoom-2025",
+    "domains": [
+      "zoom.us",
+      "zoom.com"
+    ],
+    "names": [
+      "zoom"
+    ],
+    "sourceUrl": "https://zoom.us/",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/zoom-2025 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  "dropbox": {
+    "title": "Dropbox",
+    "sector": "productivity",
+    "slug": "dropbox",
+    "domains": [
+      "dropbox.com",
+      "dropboxmail.com"
+    ],
+    "names": [
+      "dropbox"
+    ]
+  },
+  "asana": {
+    "title": "Asana",
+    "sector": "productivity",
+    "slug": "asana",
+    "domains": [
+      "asana.com"
+    ],
+    "names": [
+      "asana"
+    ]
+  },
+  "trello": {
+    "title": "Trello",
+    "sector": "productivity",
+    "slug": "trello",
+    "domains": [
+      "trello.com"
+    ],
+    "names": [
+      "trello"
+    ]
+  },
+  "atlassian": {
+    "title": "Atlassian",
+    "sector": "productivity",
+    "slug": "atlassian",
+    "domains": [
+      "atlassian.com"
+    ],
+    "names": [
+      "atlassian"
+    ]
+  },
+  "clickup": {
+    "title": "ClickUp",
+    "sector": "productivity",
+    "slug": "clickup",
+    "domains": [
+      "clickup.com"
+    ],
+    "names": [
+      "clickup"
+    ]
+  },
+  "monday": {
+    "title": "monday.com",
+    "sector": "productivity",
+    "slug": "monday",
+    "domains": [
+      "monday.com"
+    ],
+    "names": [
+      "monday.com"
+    ]
+  },
+  "airtable": {
+    "title": "Airtable",
+    "sector": "productivity",
+    "slug": "airtable",
+    "domains": [
+      "airtable.com"
+    ],
+    "names": [
+      "airtable"
+    ]
+  },
+  "miro": {
+    "title": "Miro",
+    "sector": "productivity",
+    "slug": "miro",
+    "domains": [
+      "miro.com"
+    ],
+    "names": [
+      "miro"
+    ]
+  },
+  "linear": {
+    "title": "Linear",
+    "sector": "productivity",
+    "slug": "linear",
+    "domains": [
+      "linear.app"
+    ],
+    "names": [
+      "linear"
+    ]
+  },
+  "calendly": {
+    "title": "Calendly",
+    "sector": "productivity",
+    "slug": "calendly",
+    "domains": [
+      "calendly.com"
+    ],
+    "names": [
+      "calendly"
+    ]
+  },
+  "docusign": {
+    "title": "DocuSign",
+    "sector": "productivity",
+    "slug": "docusign",
+    "domains": [
+      "docusign.com",
+      "docusign.net"
+    ],
+    "names": [
+      "docusign"
+    ]
+  },
+  "evernote": {
+    "title": "Evernote",
+    "sector": "productivity",
+    "slug": "evernote",
+    "domains": [
+      "evernote.com"
+    ],
+    "names": [
+      "evernote"
+    ]
+  },
+  "obsidian": {
+    "title": "Obsidian",
+    "sector": "productivity",
+    "slug": "obsidian",
+    "domains": [
+      "obsidian.md"
+    ],
+    "names": [
+      "obsidian"
+    ]
+  },
+  "todoist": {
+    "title": "Todoist",
+    "sector": "productivity",
+    "slug": "todoist",
+    "domains": [
+      "todoist.com"
+    ],
+    "names": [
+      "todoist"
+    ]
+  },
+  "grammarly": {
+    "title": "Grammarly",
+    "sector": "productivity",
+    "slug": "grammarly",
+    "domains": [
+      "grammarly.com"
+    ],
+    "names": [
+      "grammarly"
+    ]
+  },
+  "zapier": {
+    "title": "Zapier",
+    "sector": "productivity",
+    "slug": "zapier",
+    "domains": [
+      "zapier.com"
+    ],
+    "names": [
+      "zapier"
+    ]
+  },
+  "typeform": {
+    "title": "Typeform",
+    "sector": "productivity",
+    "slug": "typeform",
+    "domains": [
+      "typeform.com"
+    ],
+    "names": [
+      "typeform"
+    ]
+  },
+  "surveymonkey": {
+    "title": "SurveyMonkey",
+    "sector": "productivity",
+    "slug": "surveymonkey",
+    "domains": [
+      "surveymonkey.com"
+    ],
+    "names": [
+      "surveymonkey"
+    ]
+  },
+  "perplexity": {
+    "title": "Perplexity",
+    "sector": "ai",
+    "slug": "perplexity",
+    "domains": [
+      "perplexity.ai"
+    ],
+    "names": [
+      "perplexity"
+    ]
+  },
+  "midjourney": {
+    "title": "Midjourney",
+    "sector": "ai",
+    "slug": "midjourney",
+    "domains": [
+      "midjourney.com"
+    ],
+    "names": [
+      "midjourney"
+    ]
+  },
+  "huggingface": {
+    "title": "Hugging Face",
+    "sector": "ai",
+    "slug": "hugging-face",
+    "domains": [
+      "huggingface.co"
+    ],
+    "names": [
+      "hugging face"
+    ]
+  },
+  "cursor": {
+    "title": "Cursor",
+    "sector": "ai",
+    "slug": "cursor",
+    "domains": [
+      "cursor.com",
+      "cursor.sh"
+    ],
+    "names": [
+      "cursor"
+    ]
+  },
+  "runway": {
+    "title": "Runway",
+    "sector": "ai",
+    "slug": "runway",
+    "domains": [
+      "runwayml.com"
+    ],
+    "names": [
+      "runway"
+    ],
+    "sourceUrl": "https://runwayml.com",
+    "license": "MIT",
+    "modifications": "From @thesvg/icons/runway 3.3.8; keep original foreground path including its interior cutout contours, omit background and duplicate black interior paths."
+  },
+  "replicate": {
+    "title": "Replicate",
+    "sector": "ai",
+    "slug": "replicate",
+    "domains": [
+      "replicate.com"
+    ],
+    "names": [
+      "replicate"
+    ]
+  },
+  "replit": {
+    "title": "Replit",
+    "sector": "ai",
+    "slug": "replit",
+    "domains": [
+      "replit.com"
+    ],
+    "names": [
+      "replit"
+    ]
+  },
+  "vercel": {
+    "title": "Vercel",
+    "sector": "developer",
+    "slug": "vercel",
+    "domains": [
+      "vercel.com"
+    ],
+    "names": [
+      "vercel"
+    ]
+  },
+  "netlify": {
+    "title": "Netlify",
+    "sector": "developer",
+    "slug": "netlify",
+    "domains": [
+      "netlify.com"
+    ],
+    "names": [
+      "netlify"
+    ]
+  },
+  "supabase": {
+    "title": "Supabase",
+    "sector": "developer",
+    "slug": "supabase",
+    "domains": [
+      "supabase.com"
+    ],
+    "names": [
+      "supabase"
+    ]
+  },
+  "digitalocean": {
+    "title": "DigitalOcean",
+    "sector": "developer",
+    "slug": "digitalocean",
+    "domains": [
+      "digitalocean.com"
+    ],
+    "names": [
+      "digitalocean"
+    ]
+  },
+  "vultr": {
+    "title": "Vultr",
+    "sector": "developer",
+    "slug": "vultr",
+    "domains": [
+      "vultr.com"
+    ],
+    "names": [
+      "vultr"
+    ]
+  },
+  "linode": {
+    "title": "Linode",
+    "sector": "developer",
+    "slug": "linode",
+    "domains": [
+      "linode.com"
+    ],
+    "names": [
+      "linode"
+    ]
+  },
+  "hetzner": {
+    "title": "Hetzner",
+    "sector": "developer",
+    "slug": "hetzner",
+    "domains": [
+      "hetzner.com",
+      "hetzner.de"
+    ],
+    "names": [
+      "hetzner"
+    ]
+  },
+  "render": {
+    "title": "Render",
+    "sector": "developer",
+    "slug": "render",
+    "domains": [
+      "render.com"
+    ],
+    "names": [
+      "render"
+    ]
+  },
+  "railway": {
+    "title": "Railway",
+    "sector": "developer",
+    "slug": "railway",
+    "domains": [
+      "railway.com",
+      "railway.app"
+    ],
+    "names": [
+      "railway"
+    ]
+  },
+  "jetbrains": {
+    "title": "JetBrains",
+    "sector": "developer",
+    "slug": "jetbrains",
+    "domains": [
+      "jetbrains.com"
+    ],
+    "names": [
+      "jetbrains"
+    ]
+  },
+  "postman": {
+    "title": "Postman",
+    "sector": "developer",
+    "slug": "postman",
+    "domains": [
+      "postman.com"
+    ],
+    "names": [
+      "postman"
+    ]
+  },
+  "sentry": {
+    "title": "Sentry",
+    "sector": "developer",
+    "slug": "sentry",
+    "domains": [
+      "sentry.io"
+    ],
+    "names": [
+      "sentry"
+    ]
+  },
+  "datadog": {
+    "title": "Datadog",
+    "sector": "developer",
+    "slug": "datadog",
+    "domains": [
+      "datadoghq.com",
+      "datadoghq.eu"
+    ],
+    "names": [
+      "datadog"
+    ]
+  },
+  "mongodb": {
+    "title": "MongoDB",
+    "sector": "developer",
+    "slug": "mongodb",
+    "domains": [
+      "mongodb.com"
+    ],
+    "names": [
+      "mongodb"
+    ]
+  },
+  "elastic": {
+    "title": "Elastic",
+    "sector": "developer",
+    "slug": "elastic",
+    "domains": [
+      "elastic.co"
+    ],
+    "names": [
+      "elastic"
+    ]
+  },
+  "bitbucket": {
+    "title": "Bitbucket",
+    "sector": "developer",
+    "slug": "bitbucket",
+    "domains": [
+      "bitbucket.org"
+    ],
+    "names": [
+      "bitbucket"
+    ]
+  },
+  "npm": {
+    "title": "npm",
+    "sector": "developer",
+    "slug": "npm",
+    "domains": [
+      "npmjs.com"
+    ],
+    "names": [
+      "npm"
+    ]
+  },
+  "pypi": {
+    "title": "PyPI",
+    "sector": "developer",
+    "slug": "pypi",
+    "domains": [
+      "pypi.org"
+    ],
+    "names": [
+      "pypi"
+    ]
+  },
+  "packagist": {
+    "title": "Packagist",
+    "sector": "developer",
+    "slug": "packagist",
+    "domains": [
+      "packagist.org"
+    ],
+    "names": [
+      "packagist"
+    ]
+  },
+  "rubygems": {
+    "title": "RubyGems",
+    "sector": "developer",
+    "slug": "rubygems",
+    "domains": [
+      "rubygems.org"
+    ],
+    "names": [
+      "rubygems"
+    ]
+  },
+  "bluesky": {
+    "title": "Bluesky",
+    "sector": "social",
+    "slug": "bluesky",
+    "domains": [
+      "bsky.app",
+      "bsky.social"
+    ],
+    "names": [
+      "bluesky"
+    ]
+  },
+  "mastodon": {
+    "title": "Mastodon",
+    "sector": "social",
+    "slug": "mastodon",
+    "domains": [
+      "joinmastodon.org",
+      "mastodon.social"
+    ],
+    "names": [
+      "mastodon"
+    ]
+  },
+  "signal": {
+    "title": "Signal",
+    "sector": "social",
+    "slug": "signal",
+    "domains": [
+      "signal.org"
+    ],
+    "names": [
+      "signal"
+    ]
+  },
+  "line": {
+    "title": "LINE",
+    "sector": "social",
+    "slug": "line",
+    "domains": [
+      "line.me"
+    ],
+    "names": [
+      "line"
+    ]
+  },
+  "wechat": {
+    "title": "WeChat",
+    "sector": "social",
+    "slug": "wechat",
+    "domains": [
+      "wechat.com",
+      "weixin.qq.com"
+    ],
+    "names": [
+      "wechat",
+      "微信"
+    ]
+  },
+  "viber": {
+    "title": "Viber",
+    "sector": "social",
+    "slug": "viber",
+    "domains": [
+      "viber.com"
+    ],
+    "names": [
+      "viber"
+    ]
+  },
+  "snapchat": {
+    "title": "Snapchat",
+    "sector": "social",
+    "slug": "snapchat",
+    "domains": [
+      "snapchat.com"
+    ],
+    "names": [
+      "snapchat"
+    ]
+  },
+  "pinterest": {
+    "title": "Pinterest",
+    "sector": "social",
+    "slug": "pinterest",
+    "domains": [
+      "pinterest.com"
+    ],
+    "names": [
+      "pinterest"
+    ]
+  },
+  "tumblr": {
+    "title": "Tumblr",
+    "sector": "social",
+    "slug": "tumblr",
+    "domains": [
+      "tumblr.com"
+    ],
+    "names": [
+      "tumblr"
+    ]
+  },
+  "threads": {
+    "title": "Threads",
+    "sector": "social",
+    "slug": "threads",
+    "domains": [
+      "threads.com",
+      "threads.net"
+    ],
+    "names": [
+      "threads"
+    ]
+  },
+  "medium": {
+    "title": "Medium",
+    "sector": "social",
+    "slug": "medium",
+    "domains": [
+      "medium.com"
+    ],
+    "names": [
+      "medium"
+    ]
+  },
+  "substack": {
+    "title": "Substack",
+    "sector": "social",
+    "slug": "substack",
+    "domains": [
+      "substack.com"
+    ],
+    "names": [
+      "substack"
+    ]
+  },
+  "quora": {
+    "title": "Quora",
+    "sector": "social",
+    "slug": "quora",
+    "domains": [
+      "quora.com"
+    ],
+    "names": [
+      "quora"
+    ]
+  },
+  "zhihu": {
+    "title": "知乎",
+    "sector": "social",
+    "slug": "zhihu",
+    "domains": [
+      "zhihu.com"
+    ],
+    "names": [
+      "知乎"
+    ]
+  },
+  "xiaohongshu": {
+    "title": "小红书",
+    "sector": "social",
+    "slug": "xiaohongshu",
+    "domains": [
+      "xiaohongshu.com"
+    ],
+    "names": [
+      "小红书",
+      "rednote"
+    ]
+  },
+  "kuaishou": {
+    "title": "快手",
+    "sector": "social",
+    "slug": "kuaishou",
+    "domains": [
+      "kuaishou.com"
+    ],
+    "names": [
+      "快手"
+    ]
+  },
+  "meetup": {
+    "title": "Meetup",
+    "sector": "social",
+    "slug": "meetup",
+    "domains": [
+      "meetup.com"
+    ],
+    "names": [
+      "meetup"
+    ]
+  },
+  "twitch": {
+    "title": "Twitch",
+    "sector": "entertainment",
+    "slug": "twitch",
+    "domains": [
+      "twitch.tv"
+    ],
+    "names": [
+      "twitch"
+    ]
+  },
+  "vimeo": {
+    "title": "Vimeo",
+    "sector": "entertainment",
+    "slug": "vimeo",
+    "domains": [
+      "vimeo.com"
+    ],
+    "names": [
+      "vimeo"
+    ]
+  },
+  "hulu": {
+    "title": "Hulu",
+    "sector": "entertainment",
+    "slug": "hulu",
+    "domains": [
+      "hulu.com"
+    ],
+    "names": [
+      "hulu"
+    ]
+  },
+  "hbomax": {
+    "title": "HBO Max",
+    "sector": "entertainment",
+    "slug": "hbo-max",
+    "domains": [
+      "hbomax.com",
+      "max.com"
+    ],
+    "names": [
+      "hbo max"
+    ]
+  },
+  "crunchyroll": {
+    "title": "Crunchyroll",
+    "sector": "entertainment",
+    "slug": "crunchyroll",
+    "domains": [
+      "crunchyroll.com"
+    ],
+    "names": [
+      "crunchyroll"
+    ]
+  },
+  "plex": {
+    "title": "Plex",
+    "sector": "entertainment",
+    "slug": "plex",
+    "domains": [
+      "plex.tv"
+    ],
+    "names": [
+      "plex"
+    ]
+  },
+  "jellyfin": {
+    "title": "Jellyfin",
+    "sector": "entertainment",
+    "slug": "jellyfin",
+    "domains": [
+      "jellyfin.org"
+    ],
+    "names": [
+      "jellyfin"
+    ]
+  },
+  "soundcloud": {
+    "title": "SoundCloud",
+    "sector": "entertainment",
+    "slug": "soundcloud",
+    "domains": [
+      "soundcloud.com"
+    ],
+    "names": [
+      "soundcloud"
+    ]
+  },
+  "deezer": {
+    "title": "Deezer",
+    "sector": "entertainment",
+    "slug": "deezer",
+    "domains": [
+      "deezer.com"
+    ],
+    "names": [
+      "deezer"
+    ]
+  },
+  "tidal": {
+    "title": "TIDAL",
+    "sector": "entertainment",
+    "slug": "tidal",
+    "domains": [
+      "tidal.com"
+    ],
+    "names": [
+      "tidal"
+    ]
+  },
+  "audible": {
+    "title": "Audible",
+    "sector": "entertainment",
+    "slug": "audible",
+    "domains": [
+      "audible.com",
+      "audible.co.uk",
+      "audible.de"
+    ],
+    "names": [
+      "audible"
+    ]
+  },
+  "ticketmaster": {
+    "title": "Ticketmaster",
+    "sector": "entertainment",
+    "slug": "ticketmaster",
+    "domains": [
+      "ticketmaster.com",
+      "ticketmaster.co.uk"
+    ],
+    "names": [
+      "ticketmaster"
+    ]
+  },
+  "eventbrite": {
+    "title": "Eventbrite",
+    "sector": "entertainment",
+    "slug": "eventbrite",
+    "domains": [
+      "eventbrite.com"
+    ],
+    "names": [
+      "eventbrite"
+    ],
+    "sourceUrl": "https://www.eventbrite.com",
+    "license": "brand-use",
+    "modifications": "From @thesvg/icons/eventbrite 3.3.8; background removed; original foreground paths preserved."
+  },
+  "stubhub": {
+    "title": "StubHub",
+    "sector": "entertainment",
+    "slug": "stubhub",
+    "domains": [
+      "stubhub.com"
+    ],
+    "names": [
+      "stubhub"
+    ]
+  },
+  "coursera": {
+    "title": "Coursera",
+    "sector": "education",
+    "slug": "coursera",
+    "domains": [
+      "coursera.org"
+    ],
+    "names": [
+      "coursera"
+    ]
+  },
+  "udemy": {
+    "title": "Udemy",
+    "sector": "education",
+    "slug": "udemy",
+    "domains": [
+      "udemy.com"
+    ],
+    "names": [
+      "udemy"
+    ]
+  },
+  "edx": {
+    "title": "edX",
+    "sector": "education",
+    "slug": "edx",
+    "domains": [
+      "edx.org"
+    ],
+    "names": [
+      "edx"
+    ]
+  },
+  "udacity": {
+    "title": "Udacity",
+    "sector": "education",
+    "slug": "udacity",
+    "domains": [
+      "udacity.com"
+    ],
+    "names": [
+      "udacity"
+    ]
+  },
+  "khanacademy": {
+    "title": "Khan Academy",
+    "sector": "education",
+    "slug": "khan-academy",
+    "domains": [
+      "khanacademy.org"
+    ],
+    "names": [
+      "khan academy"
+    ]
+  },
+  "skillshare": {
+    "title": "Skillshare",
+    "sector": "education",
+    "slug": "skillshare",
+    "domains": [
+      "skillshare.com"
+    ],
+    "names": [
+      "skillshare"
+    ]
+  },
+  "codecademy": {
+    "title": "Codecademy",
+    "sector": "education",
+    "slug": "codecademy",
+    "domains": [
+      "codecademy.com"
+    ],
+    "names": [
+      "codecademy"
+    ]
+  },
+  "datacamp": {
+    "title": "DataCamp",
+    "sector": "education",
+    "slug": "datacamp",
+    "domains": [
+      "datacamp.com"
+    ],
+    "names": [
+      "datacamp"
+    ]
+  },
+  "quizlet": {
+    "title": "Quizlet",
+    "sector": "education",
+    "slug": "quizlet",
+    "domains": [
+      "quizlet.com"
+    ],
+    "names": [
+      "quizlet"
+    ]
+  },
+  "kahoot": {
+    "title": "Kahoot!",
+    "sector": "education",
+    "slug": "kahoot",
+    "domains": [
+      "kahoot.com",
+      "kahoot.it"
+    ],
+    "names": [
+      "kahoot!"
+    ]
+  },
+  "leetcode": {
+    "title": "LeetCode",
+    "sector": "education",
+    "slug": "leetcode",
+    "domains": [
+      "leetcode.com",
+      "leetcode.cn"
+    ],
+    "names": [
+      "leetcode"
+    ]
+  },
+  "hackerrank": {
+    "title": "HackerRank",
+    "sector": "education",
+    "slug": "hackerrank",
+    "domains": [
+      "hackerrank.com"
+    ],
+    "names": [
+      "hackerrank"
+    ]
+  },
+  "overleaf": {
+    "title": "Overleaf",
+    "sector": "education",
+    "slug": "overleaf",
+    "domains": [
+      "overleaf.com"
+    ],
+    "names": [
+      "overleaf"
+    ]
+  },
+  "arxiv": {
+    "title": "arXiv",
+    "sector": "education",
+    "slug": "arxiv",
+    "domains": [
+      "arxiv.org"
+    ],
+    "names": [
+      "arxiv"
+    ]
+  },
+  "orcid": {
+    "title": "ORCID",
+    "sector": "education",
+    "slug": "orcid",
+    "domains": [
+      "orcid.org"
+    ],
+    "names": [
+      "orcid"
+    ]
+  },
+  "researchgate": {
+    "title": "ResearchGate",
+    "sector": "education",
+    "slug": "researchgate",
+    "domains": [
+      "researchgate.net"
+    ],
+    "names": [
+      "researchgate"
+    ]
+  },
+  "ieee": {
+    "title": "IEEE",
+    "sector": "education",
+    "slug": "ieee",
+    "domains": [
+      "ieee.org"
+    ],
+    "names": [
+      "ieee"
+    ]
+  },
+  "elsevier": {
+    "title": "Elsevier",
+    "sector": "education",
+    "slug": "elsevier",
+    "domains": [
+      "elsevier.com"
+    ],
+    "names": [
+      "elsevier"
+    ]
+  },
+  "zotero": {
+    "title": "Zotero",
+    "sector": "education",
+    "slug": "zotero",
+    "domains": [
+      "zotero.org"
+    ],
+    "names": [
+      "zotero"
+    ]
+  },
+  "mendeley": {
+    "title": "Mendeley",
+    "sector": "education",
+    "slug": "mendeley",
+    "domains": [
+      "mendeley.com"
+    ],
+    "names": [
+      "mendeley"
+    ]
+  },
+  "goodreads": {
+    "title": "Goodreads",
+    "sector": "education",
+    "slug": "goodreads",
+    "domains": [
+      "goodreads.com"
+    ],
+    "names": [
+      "goodreads"
+    ]
+  },
+  "starbucks": {
+    "title": "Starbucks",
+    "sector": "food",
+    "slug": "starbucks",
+    "domains": [
+      "starbucks.com",
+      "starbucks.com.cn"
+    ],
+    "names": [
+      "starbucks"
+    ]
+  },
+  "kfc": {
+    "title": "KFC",
+    "sector": "food",
+    "slug": "kfc",
+    "domains": [
+      "kfc.com",
+      "kfc.com.cn"
+    ],
+    "names": [
+      "kfc"
+    ],
+    "sourceUrl": "https://global.kfc.com/asset-library/",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/kfc 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  "dominos": {
+    "title": "Domino's",
+    "sector": "food",
+    "slug": "dominos",
+    "domains": [
+      "dominos.com",
+      "dominos.co.uk"
+    ],
+    "names": [
+      "domino's"
+    ],
+    "sourceUrl": "https://www.dominos.com",
+    "license": "Fair Use",
+    "modifications": "From @thesvg/icons/dominos 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  "subway": {
+    "title": "Subway",
+    "sector": "food",
+    "slug": "subway",
+    "domains": [
+      "subway.com"
+    ],
+    "names": [
+      "subway"
+    ]
+  },
+  "doordash": {
+    "title": "DoorDash",
+    "sector": "food",
+    "slug": "doordash",
+    "domains": [
+      "doordash.com"
+    ],
+    "names": [
+      "doordash"
+    ]
+  },
+  "deliveroo": {
+    "title": "Deliveroo",
+    "sector": "food",
+    "slug": "deliveroo",
+    "domains": [
+      "deliveroo.com",
+      "deliveroo.co.uk"
+    ],
+    "names": [
+      "deliveroo"
+    ]
+  },
+  "foodpanda": {
+    "title": "foodpanda",
+    "sector": "food",
+    "slug": "foodpanda",
+    "domains": [
+      "foodpanda.com",
+      "foodpanda.sg"
+    ],
+    "names": [
+      "foodpanda"
+    ]
+  },
+  "swiggy": {
+    "title": "Swiggy",
+    "sector": "food",
+    "slug": "swiggy",
+    "domains": [
+      "swiggy.com"
+    ],
+    "names": [
+      "swiggy"
+    ]
+  },
+  "zomato": {
+    "title": "Zomato",
+    "sector": "food",
+    "slug": "zomato",
+    "domains": [
+      "zomato.com"
+    ],
+    "names": [
+      "zomato"
+    ]
+  },
+  "yelp": {
+    "title": "Yelp",
+    "sector": "food",
+    "slug": "yelp",
+    "domains": [
+      "yelp.com"
+    ],
+    "names": [
+      "yelp"
+    ]
+  },
+  "tripadvisor": {
+    "title": "Tripadvisor",
+    "sector": "travel",
+    "slug": "tripadvisor",
+    "domains": [
+      "tripadvisor.com"
+    ],
+    "names": [
+      "tripadvisor"
+    ]
+  },
+  "tripcom": {
+    "title": "Trip.com",
+    "sector": "travel",
+    "slug": "tripdotcom",
+    "domains": [
+      "trip.com"
+    ],
+    "names": [
+      "trip.com"
+    ]
+  },
+  "trivago": {
+    "title": "trivago",
+    "sector": "travel",
+    "slug": "trivago",
+    "domains": [
+      "trivago.com"
+    ],
+    "names": [
+      "trivago"
+    ]
+  },
+  "klook": {
+    "title": "Klook",
+    "sector": "travel",
+    "slug": "klook",
+    "domains": [
+      "klook.com"
+    ],
+    "names": [
+      "klook"
+    ]
+  },
+  "delta": {
+    "title": "Delta Air Lines",
+    "sector": "travel",
+    "slug": "delta",
+    "domains": [
+      "delta.com"
+    ],
+    "names": [
+      "delta air lines"
+    ]
+  },
+  "unitedairlines": {
+    "title": "United Airlines",
+    "sector": "travel",
+    "slug": "united-airlines",
+    "domains": [
+      "united.com"
+    ],
+    "names": [
+      "united airlines"
+    ]
+  },
+  "southwestairlines": {
+    "title": "Southwest Airlines",
+    "sector": "travel",
+    "slug": "southwest-airlines",
+    "domains": [
+      "southwest.com"
+    ],
+    "names": [
+      "southwest airlines"
+    ]
+  },
+  "emirates": {
+    "title": "Emirates",
+    "sector": "travel",
+    "slug": "emirates",
+    "domains": [
+      "emirates.com"
+    ],
+    "names": [
+      "emirates"
+    ]
+  },
+  "qatarairways": {
+    "title": "Qatar Airways",
+    "sector": "travel",
+    "slug": "qatar-airways",
+    "domains": [
+      "qatarairways.com"
+    ],
+    "names": [
+      "qatar airways"
+    ]
+  },
+  "lufthansa": {
+    "title": "Lufthansa",
+    "sector": "travel",
+    "slug": "lufthansa",
+    "domains": [
+      "lufthansa.com"
+    ],
+    "names": [
+      "lufthansa"
+    ]
+  },
+  "ryanair": {
+    "title": "Ryanair",
+    "sector": "travel",
+    "slug": "ryanair",
+    "domains": [
+      "ryanair.com"
+    ],
+    "names": [
+      "ryanair"
+    ]
+  },
+  "easyjet": {
+    "title": "easyJet",
+    "sector": "travel",
+    "slug": "easyjet",
+    "domains": [
+      "easyjet.com"
+    ],
+    "names": [
+      "easyjet"
+    ]
+  },
+  "dhl": {
+    "title": "DHL",
+    "sector": "logistics",
+    "slug": "dhl",
+    "domains": [
+      "dhl.com",
+      "dhl.de"
+    ],
+    "names": [
+      "dhl",
+      "dhl express"
+    ]
+  },
+  "fedex": {
+    "title": "FedEx",
+    "sector": "logistics",
+    "slug": "fedex",
+    "domains": [
+      "fedex.com"
+    ],
+    "names": [
+      "fedex"
+    ]
+  },
+  "ups": {
+    "title": "UPS",
+    "sector": "logistics",
+    "slug": "ups",
+    "domains": [
+      "ups.com"
+    ],
+    "names": [
+      "ups"
+    ]
+  },
+  "usps": {
+    "title": "USPS",
+    "sector": "logistics",
+    "slug": "usps",
+    "domains": [
+      "usps.com"
+    ],
+    "names": [
+      "usps"
+    ],
+    "sourceUrl": "https://www.usps.com",
+    "license": "CC0-1.0",
+    "modifications": "From @thesvg/icons/usps 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  "dpd": {
+    "title": "DPD",
+    "sector": "logistics",
+    "slug": "dpd",
+    "domains": [
+      "dpd.com",
+      "dpd.co.uk"
+    ],
+    "names": [
+      "dpd"
+    ]
+  },
+  "fitbit": {
+    "title": "Fitbit",
+    "sector": "health",
+    "slug": "fitbit",
+    "domains": [
+      "fitbit.com"
+    ],
+    "names": [
+      "fitbit"
+    ]
+  },
+  "garmin": {
+    "title": "Garmin",
+    "sector": "health",
+    "slug": "garmin",
+    "domains": [
+      "garmin.com"
+    ],
+    "names": [
+      "garmin"
+    ]
+  },
+  "strava": {
+    "title": "Strava",
+    "sector": "health",
+    "slug": "strava",
+    "domains": [
+      "strava.com"
+    ],
+    "names": [
+      "strava"
+    ]
+  },
+  "peloton": {
+    "title": "Peloton",
+    "sector": "health",
+    "slug": "peloton",
+    "domains": [
+      "onepeloton.com"
+    ],
+    "names": [
+      "peloton"
+    ]
+  },
+  "alltrails": {
+    "title": "AllTrails",
+    "sector": "health",
+    "slug": "alltrails",
+    "domains": [
+      "alltrails.com"
+    ],
+    "names": [
+      "alltrails"
+    ]
+  },
+  "headspace": {
+    "title": "Headspace",
+    "sector": "health",
+    "slug": "headspace",
+    "domains": [
+      "headspace.com"
+    ],
+    "names": [
+      "headspace"
+    ]
+  },
+  "cvs": {
+    "title": "CVS",
+    "sector": "health",
+    "slug": "cvs",
+    "domains": [
+      "cvs.com",
+      "cvshealth.com"
+    ],
+    "names": [
+      "cvs"
+    ]
+  },
+  "walgreens": {
+    "title": "Walgreens",
+    "sector": "health",
+    "slug": "walgreens",
+    "domains": [
+      "walgreens.com"
+    ],
+    "names": [
+      "walgreens"
+    ]
+  },
+  "salesforce": {
+    "title": "Salesforce",
+    "sector": "business",
+    "slug": "salesforce",
+    "domains": [
+      "salesforce.com"
+    ],
+    "names": [
+      "salesforce"
+    ]
+  },
+  "hubspot": {
+    "title": "HubSpot",
+    "sector": "business",
+    "slug": "hubspot",
+    "domains": [
+      "hubspot.com"
+    ],
+    "names": [
+      "hubspot"
+    ]
+  },
+  "zendesk": {
+    "title": "Zendesk",
+    "sector": "business",
+    "slug": "zendesk",
+    "domains": [
+      "zendesk.com"
+    ],
+    "names": [
+      "zendesk"
+    ]
+  },
+  "intercom": {
+    "title": "Intercom",
+    "sector": "business",
+    "slug": "intercom",
+    "domains": [
+      "intercom.com",
+      "intercom.io"
+    ],
+    "names": [
+      "intercom"
+    ]
+  },
+  "mailchimp": {
+    "title": "Mailchimp",
+    "sector": "business",
+    "slug": "mailchimp",
+    "domains": [
+      "mailchimp.com"
+    ],
+    "names": [
+      "mailchimp"
+    ]
+  },
+  "brevo": {
+    "title": "Brevo",
+    "sector": "business",
+    "slug": "brevo",
+    "domains": [
+      "brevo.com"
+    ],
+    "names": [
+      "brevo"
+    ]
+  },
+  "twilio": {
+    "title": "Twilio",
+    "sector": "business",
+    "slug": "twilio",
+    "domains": [
+      "twilio.com"
+    ],
+    "names": [
+      "twilio"
+    ]
+  },
+  "intuit": {
+    "title": "Intuit",
+    "sector": "business",
+    "slug": "intuit",
+    "domains": [
+      "intuit.com"
+    ],
+    "names": [
+      "intuit"
+    ]
+  },
+  "quickbooks": {
+    "title": "QuickBooks",
+    "sector": "business",
+    "slug": "quickbooks",
+    "domains": [
+      "quickbooks.intuit.com"
+    ],
+    "names": [
+      "quickbooks"
+    ]
+  },
+  "xero": {
+    "title": "Xero",
+    "sector": "business",
+    "slug": "xero",
+    "domains": [
+      "xero.com"
+    ],
+    "names": [
+      "xero"
+    ]
+  },
+  "workday": {
+    "title": "Workday",
+    "sector": "business",
+    "slug": "workday",
+    "domains": [
+      "workday.com",
+      "myworkday.com",
+      "myworkdayjobs.com"
+    ],
+    "names": [
+      "workday"
+    ]
+  },
+  "gusto": {
+    "title": "Gusto",
+    "sector": "business",
+    "slug": "gusto",
+    "domains": [
+      "gusto.com"
+    ],
+    "names": [
+      "gusto"
+    ]
+  },
+  "rippling": {
+    "title": "Rippling",
+    "sector": "business",
+    "slug": "rippling",
+    "domains": [
+      "rippling.com"
+    ],
+    "names": [
+      "rippling"
+    ],
+    "sourceUrl": "https://www.rippling.com",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/rippling 3.3.8; background removed; original foreground paths preserved."
+  },
+  "indeed": {
+    "title": "Indeed",
+    "sector": "jobs",
+    "slug": "indeed",
+    "domains": [
+      "indeed.com"
+    ],
+    "names": [
+      "indeed"
+    ]
+  },
+  "glassdoor": {
+    "title": "Glassdoor",
+    "sector": "jobs",
+    "slug": "glassdoor",
+    "domains": [
+      "glassdoor.com"
+    ],
+    "names": [
+      "glassdoor"
+    ]
+  },
+  "wellfound": {
+    "title": "Wellfound",
+    "sector": "jobs",
+    "slug": "wellfound",
+    "domains": [
+      "wellfound.com"
+    ],
+    "names": [
+      "wellfound"
+    ]
+  },
+  "greenhouse": {
+    "title": "Greenhouse",
+    "sector": "jobs",
+    "slug": "greenhouse",
+    "domains": [
+      "greenhouse.io"
+    ],
+    "names": [
+      "greenhouse"
+    ]
+  },
+  "upwork": {
+    "title": "Upwork",
+    "sector": "jobs",
+    "slug": "upwork",
+    "domains": [
+      "upwork.com"
+    ],
+    "names": [
+      "upwork"
+    ]
+  },
+  "fiverr": {
+    "title": "Fiverr",
+    "sector": "jobs",
+    "slug": "fiverr",
+    "domains": [
+      "fiverr.com"
+    ],
+    "names": [
+      "fiverr"
+    ]
+  },
+  "freelancer": {
+    "title": "Freelancer",
+    "sector": "jobs",
+    "slug": "freelancer",
+    "domains": [
+      "freelancer.com"
+    ],
+    "names": [
+      "freelancer"
+    ]
+  },
+  "toptal": {
+    "title": "Toptal",
+    "sector": "jobs",
+    "slug": "toptal",
+    "domains": [
+      "toptal.com"
+    ],
+    "names": [
+      "toptal"
+    ]
+  },
+  "dell": {
+    "title": "Dell",
+    "sector": "hardware",
+    "slug": "dell",
+    "domains": [
+      "dell.com"
+    ],
+    "names": [
+      "dell"
+    ]
+  },
+  "hp": {
+    "title": "HP",
+    "sector": "hardware",
+    "slug": "hp",
+    "domains": [
+      "hp.com"
+    ],
+    "names": [
+      "hp"
+    ]
+  },
+  "sony": {
+    "title": "Sony",
+    "sector": "hardware",
+    "slug": "sony",
+    "domains": [
+      "sony.com",
+      "sony.net"
+    ],
+    "names": [
+      "sony"
+    ]
+  },
+  "epson": {
+    "title": "Epson",
+    "sector": "hardware",
+    "slug": "epson",
+    "domains": [
+      "epson.com"
+    ],
+    "names": [
+      "epson"
+    ]
+  },
+  "nikon": {
+    "title": "Nikon",
+    "sector": "hardware",
+    "slug": "nikon",
+    "domains": [
+      "nikon.com"
+    ],
+    "names": [
+      "nikon"
+    ]
+  },
+  "3m": {
+    "title": "3M",
+    "sector": "industry",
+    "slug": "3m",
+    "domains": [
+      "3m.com"
+    ],
+    "names": [
+      "3m"
+    ]
+  },
+  "siemens": {
+    "title": "Siemens",
+    "sector": "industry",
+    "slug": "siemens",
+    "domains": [
+      "siemens.com"
+    ],
+    "names": [
+      "siemens"
+    ]
+  },
+  "bosch": {
+    "title": "Bosch",
+    "sector": "industry",
+    "slug": "bosch",
+    "domains": [
+      "bosch.com"
+    ],
+    "names": [
+      "bosch"
+    ]
+  },
+  "schneiderelectric": {
+    "title": "Schneider Electric",
+    "sector": "industry",
+    "slug": "schneider-electric",
+    "domains": [
+      "se.com",
+      "schneider-electric.com"
+    ],
+    "names": [
+      "schneider electric"
+    ]
+  },
+  "abb": {
+    "title": "ABB",
+    "sector": "industry",
+    "slug": "abb",
+    "domains": [
+      "abb.com"
+    ],
+    "names": [
+      "abb"
+    ]
+  },
+  "caterpillar": {
+    "title": "Caterpillar",
+    "sector": "industry",
+    "slug": "caterpillar",
+    "domains": [
+      "caterpillar.com",
+      "cat.com"
+    ],
+    "names": [
+      "caterpillar"
+    ]
+  },
+  "airbus": {
+    "title": "Airbus",
+    "sector": "industry",
+    "slug": "airbus",
+    "domains": [
+      "airbus.com"
+    ],
+    "names": [
+      "airbus"
+    ]
+  },
+  "boeing": {
+    "title": "Boeing",
+    "sector": "industry",
+    "slug": "boeing",
+    "domains": [
+      "boeing.com"
+    ],
+    "names": [
+      "boeing"
+    ]
+  },
+  "shell": {
+    "title": "Shell",
+    "sector": "industry",
+    "slug": "shell",
+    "domains": [
+      "shell.com"
+    ],
+    "names": [
+      "shell"
+    ]
+  },
+  "unilever": {
+    "title": "Unilever",
+    "sector": "industry",
+    "slug": "unilever",
+    "domains": [
+      "unilever.com"
+    ],
+    "names": [
+      "unilever"
+    ]
+  },
+  "toobit": {
+    "title": "Toobit",
+    "sector": "exchange",
+    "domains": [
+      "toobit.com"
+    ],
+    "names": [
+      "toobit"
+    ],
+    "sourceUrl": "https://image.tbstatic.com/images/2026/03/6c4b713993644dbe.svg",
+    "website": "https://www.toobit.com/en-US",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Official header symbol; circular blue backplate removed for theme tinting."
+  },
+  "blofin": {
+    "title": "BloFin",
+    "sector": "exchange",
+    "domains": [
+      "blofin.com"
+    ],
+    "names": [
+      "blofin"
+    ],
+    "sourceUrl": "https://blofin.com/en",
+    "website": "https://blofin.com/en",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "B symbol paths from the official site logo; wordmark omitted."
+  },
+  "tapbit": {
+    "title": "Tapbit",
+    "sector": "exchange",
+    "domains": [
+      "tapbit.com"
+    ],
+    "names": [
+      "tapbit"
+    ],
+    "sourceUrl": "https://drive.google.com/file/d/1spk1b1Lqmrhkw7Wyi0dGc2oP-HCxVgDg/view",
+    "website": "https://www.tapbit.com/en",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Symbol group from Black Main Tapbit Logo.svg; CSS fill rule made explicit; wordmark omitted."
+  },
+  "xt": {
+    "title": "XT.COM",
+    "sector": "exchange",
+    "domains": [
+      "xt.com"
+    ],
+    "names": [
+      "xt.com",
+      "xt"
+    ],
+    "sourceUrl": "https://www.xt.com/en",
+    "website": "https://www.xt.com/en",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Official app symbol embedded as SVG; square background and redundant clipping removed."
+  }
+}

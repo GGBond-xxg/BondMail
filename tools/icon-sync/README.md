@@ -32,6 +32,24 @@ Only catalog-selected library icons are packaged, not the entire npm catalog. No
 network request runs on the phone. `thesvg/sources.json` records the source of each synced asset.
 Package updates are deliberate, not an automatic fetch of latest code on every Gradle build.
 
+## Dedicated brand registry
+
+`brands.json` selects common brands across industries, with a title, sector, library slug,
+official sender domains and exact display-name aliases. The sync tool generates
+`BundledSenderBrands.kt`, packaged SVGs and domain aliases from the same registry.
+The longest matching domain wins (QuickBooks before Intuit); dedicated brands precede
+generic categories. Names match the whole display name, case-insensitively, and never
+subjects, address local-parts or word fragments (especially short brands such as XT).
+These associations are for display, not sender authentication. Shared delivery-service
+domains must not be mapped to any one client brand.
+
+Official marks absent from the library are curated in the root asset directory; their
+`sourceUrl`, `license` and `modifications` are recorded in the registry and generated
+`thesvg/sources.json`. Preserve the actual brand paths, remove decorative backplates and
+retain explicit fill rules so tinting does not turn a logo into a solid tile.
+`BundledSenderBrandsTest` checks aliases and domain boundaries; `BundledBrandAssetTest`
+uses the Android renderer to check every selected SVG and writes light/dark contact sheets.
+
 Source: https://github.com/glincker/thesvg . Tooling is MIT; individual brand marks retain
 their respective rights. See the bundled LICENSE and THIRD_PARTY_NOTICES.md.
 

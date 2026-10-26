@@ -4,6 +4,18 @@
     "source": "contact_logos/361sport.svg (curated)"
   },
   {
+    "key": "3m",
+    "source": "@thesvg/icons/3m (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.3m.com"
+  },
+  {
+    "key": "abb",
+    "source": "@thesvg/icons/abb (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://global.abb"
+  },
+  {
     "key": "abbvie",
     "source": "contact_logos/abbvie.svg (curated)"
   },
@@ -20,6 +32,24 @@
     "source": "contact_logos/adobe.svg (curated)"
   },
   {
+    "key": "adyen",
+    "source": "@thesvg/icons/adyen (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.adyen.com/press-and-media/presskit"
+  },
+  {
+    "key": "affirm",
+    "source": "@thesvg/icons/affirm (mono)",
+    "license": "Fair Use",
+    "upstreamUrl": "https://www.affirm.com"
+  },
+  {
+    "key": "afterpay",
+    "source": "@thesvg/icons/afterpay (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.afterpay.com/en-AU/business/resources/marketing/logos"
+  },
+  {
     "key": "agoda",
     "source": "contact_logos/agoda.svg (curated)"
   },
@@ -32,12 +62,24 @@
     "source": "contact_logos/airbnb.svg (curated)"
   },
   {
+    "key": "airbus",
+    "source": "@thesvg/icons/airbus (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brand.airbus.com/en/asset-library/airbus-logo"
+  },
+  {
     "key": "airchina",
     "source": "contact_logos/airchina.svg (curated)"
   },
   {
     "key": "airplane",
     "source": "contact_logos/airplane.svg (curated)"
+  },
+  {
+    "key": "airtable",
+    "source": "@thesvg/icons/airtable (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://airtable.com/newsroom"
   },
   {
     "key": "alibaba",
@@ -52,8 +94,20 @@
     "source": "contact_logos/alienware.svg (curated)"
   },
   {
+    "key": "aliexpress",
+    "source": "@thesvg/icons/aliexpress (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://aliexpress.com/"
+  },
+  {
     "key": "alipay",
     "source": "contact_logos/alipay.svg (curated)"
+  },
+  {
+    "key": "alltrails",
+    "source": "@thesvg/icons/alltrails (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.alltrails.com/press?section=press-page-kit"
   },
   {
     "key": "altria",
@@ -84,6 +138,18 @@
     "source": "contact_logos/arc.svg (curated)"
   },
   {
+    "key": "arxiv",
+    "source": "@thesvg/icons/arxiv (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://arxiv.org"
+  },
+  {
+    "key": "asana",
+    "source": "@thesvg/icons/asana (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://asana.com"
+  },
+  {
     "key": "asics",
     "source": "contact_logos/asics.svg (curated)"
   },
@@ -96,12 +162,24 @@
     "source": "contact_logos/asus.svg (curated)"
   },
   {
+    "key": "atlassian",
+    "source": "@thesvg/icons/atlassian (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.atlassian.com/"
+  },
+  {
     "key": "att",
     "source": "contact_logos/att.svg (curated)"
   },
   {
     "key": "audi",
     "source": "contact_logos/audi.svg (curated)"
+  },
+  {
+    "key": "audible",
+    "source": "@thesvg/icons/audible (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.audible.com"
   },
   {
     "key": "autocad",
@@ -132,12 +210,31 @@
     "source": "contact_logos/bilibili.svg (curated)"
   },
   {
+    "key": "bitbucket",
+    "source": "@thesvg/icons/bitbucket (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://atlassian.design/resources/logo-library"
+  },
+  {
     "key": "bitget",
     "source": "contact_logos/bitget.svg (curated)"
   },
   {
     "key": "blackberry",
     "source": "contact_logos/blackberry.svg (curated)"
+  },
+  {
+    "key": "blofin",
+    "source": "contact_logos/blofin.svg (curated)",
+    "upstreamUrl": "https://blofin.com/en",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "B symbol paths from the official site logo; wordmark omitted."
+  },
+  {
+    "key": "bluesky",
+    "source": "@thesvg/icons/bluesky (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://blueskyweb.xyz/"
   },
   {
     "key": "bmw",
@@ -148,6 +245,12 @@
     "source": "contact_logos/bocbank.svg (curated)"
   },
   {
+    "key": "boeing",
+    "source": "@thesvg/icons/boeing (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://commons.wikimedia.org/wiki/File:Boeing_full_logo.svg"
+  },
+  {
     "key": "bolt",
     "source": "contact_logos/bolt.svg (curated)"
   },
@@ -156,12 +259,24 @@
     "source": "contact_logos/booking.svg (curated)"
   },
   {
+    "key": "bosch",
+    "source": "@thesvg/icons/bosch (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.bosch.de"
+  },
+  {
     "key": "bosszhipin",
     "source": "contact_logos/bosszhipin.svg (curated)"
   },
   {
     "key": "brave",
     "source": "contact_logos/brave.svg (curated)"
+  },
+  {
+    "key": "brevo",
+    "source": "@thesvg/icons/brevo (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.brevo.com"
   },
   {
     "key": "broadcom",
@@ -184,12 +299,44 @@
     "source": "contact_logos/cabify.svg (curated)"
   },
   {
+    "key": "calendly",
+    "source": "@thesvg/icons/calendly (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://calendly.com/"
+  },
+  {
+    "key": "canva",
+    "source": "contact_logos/canva.svg (curated)",
+    "upstreamUrl": "https://www.canva.com",
+    "license": "MIT",
+    "modifications": "From @thesvg/icons/canva 3.3.8; background removed; original foreground paths preserved."
+  },
+  {
+    "key": "carrefour",
+    "source": "@thesvg/icons/carrefour (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://en.wikipedia.org/wiki/File:Carrefour_logo_no_tag.svg"
+  },
+  {
+    "key": "caterpillar",
+    "source": "@thesvg/icons/caterpillar (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://commons.wikimedia.org/wiki/File:Caterpillar_logo.svg"
+  },
+  {
     "key": "cathay",
     "source": "contact_logos/cathay.svg (curated)"
   },
   {
     "key": "charlesschwab",
     "source": "contact_logos/charlesschwab.svg (curated)"
+  },
+  {
+    "key": "chime",
+    "source": "contact_logos/chime.svg (curated)",
+    "upstreamUrl": "https://www.chime.com",
+    "license": "Fair Use",
+    "modifications": "From @thesvg/icons/chime 3.3.8; background removed, paths preserved for monochrome tinting."
   },
   {
     "key": "chinapost",
@@ -206,6 +353,12 @@
   {
     "key": "claude",
     "source": "contact_logos/claude.svg (curated)"
+  },
+  {
+    "key": "clickup",
+    "source": "@thesvg/icons/clickup (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://clickup.com/brand"
   },
   {
     "key": "clothes",
@@ -236,6 +389,12 @@
     "source": "contact_logos/cocacola.svg (curated)"
   },
   {
+    "key": "codecademy",
+    "source": "@thesvg/icons/codecademy (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.codecademy.com"
+  },
+  {
     "key": "codex",
     "source": "contact_logos/codex.svg (curated)"
   },
@@ -260,6 +419,42 @@
     "source": "contact_logos/costco.svg (curated)"
   },
   {
+    "key": "coursera",
+    "source": "@thesvg/icons/coursera (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.coursera.org/"
+  },
+  {
+    "key": "crunchyroll",
+    "source": "@thesvg/icons/crunchyroll (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.crunchyroll.com"
+  },
+  {
+    "key": "cursor",
+    "source": "@thesvg/icons/cursor (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.cursor.com"
+  },
+  {
+    "key": "cvs",
+    "source": "@thesvg/icons/cvs (default)",
+    "license": "Fair Use",
+    "upstreamUrl": "https://www.cvs.com"
+  },
+  {
+    "key": "datacamp",
+    "source": "@thesvg/icons/datacamp (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.datacamp.com"
+  },
+  {
+    "key": "datadog",
+    "source": "@thesvg/icons/datadog (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.datadoghq.com/"
+  },
+  {
     "key": "dazhongdianping",
     "source": "contact_logos/dazhongdianping.svg (curated)"
   },
@@ -276,12 +471,54 @@
     "source": "contact_logos/deepseek.svg (curated)"
   },
   {
+    "key": "deezer",
+    "source": "@thesvg/icons/deezer (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://deezerbrand.com/document/37#/-/logo"
+  },
+  {
+    "key": "deliveroo",
+    "source": "@thesvg/icons/deliveroo (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://deliveroo.com"
+  },
+  {
+    "key": "dell",
+    "source": "@thesvg/icons/dell (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.dell.com"
+  },
+  {
+    "key": "delta",
+    "source": "@thesvg/icons/delta (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://news.delta.com/delta-air-lines-logos-brand-guidelines"
+  },
+  {
     "key": "developer",
     "source": "contact_logos/developer.svg (curated)"
   },
   {
+    "key": "dhl",
+    "source": "@thesvg/icons/dhl (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.dpdhl-brands.com/dhl/en/guides/design-basics/logo-and-claim.html"
+  },
+  {
     "key": "didi",
     "source": "contact_logos/didi.svg (curated)"
+  },
+  {
+    "key": "digitalocean",
+    "source": "@thesvg/icons/digitalocean (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.digitalocean.com/press/"
+  },
+  {
+    "key": "dior",
+    "source": "@thesvg/icons/dior (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.dior.com"
   },
   {
     "key": "discord",
@@ -296,8 +533,27 @@
     "source": "contact_logos/docker.svg (curated)"
   },
   {
+    "key": "docusign",
+    "source": "@thesvg/icons/docusign (default)",
+    "license": "Trademark",
+    "upstreamUrl": "https://www.docusign.com"
+  },
+  {
     "key": "dolby",
     "source": "contact_logos/dolby.svg (curated)"
+  },
+  {
+    "key": "dominos",
+    "source": "contact_logos/dominos.svg (curated)",
+    "upstreamUrl": "https://www.dominos.com",
+    "license": "Fair Use",
+    "modifications": "From @thesvg/icons/dominos 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  {
+    "key": "doordash",
+    "source": "@thesvg/icons/doordash (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.doordash.com/about/"
   },
   {
     "key": "douban",
@@ -306,6 +562,18 @@
   {
     "key": "dowjones",
     "source": "contact_logos/dowjones.svg (curated)"
+  },
+  {
+    "key": "dpd",
+    "source": "@thesvg/icons/dpd (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.dpd.com"
+  },
+  {
+    "key": "dropbox",
+    "source": "@thesvg/icons/dropbox (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.dropbox.com/"
   },
   {
     "key": "drupal",
@@ -320,20 +588,81 @@
     "source": "contact_logos/eastwestbank.svg (curated)"
   },
   {
+    "key": "easyjet",
+    "source": "@thesvg/icons/easyjet (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.easyjet.com"
+  },
+  {
+    "key": "ebay",
+    "source": "@thesvg/icons/ebay (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.ebay.com"
+  },
+  {
     "key": "education",
     "source": "contact_logos/education.svg (curated)"
+  },
+  {
+    "key": "edx",
+    "source": "@thesvg/icons/edx (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.edx.org"
+  },
+  {
+    "key": "elastic",
+    "source": "@thesvg/icons/elastic (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.elastic.co/brand"
   },
   {
     "key": "elililly",
     "source": "contact_logos/elililly.svg (curated)"
   },
   {
+    "key": "elsevier",
+    "source": "@thesvg/icons/elsevier (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.elsevier.com"
+  },
+  {
+    "key": "emirates",
+    "source": "@thesvg/icons/emirates (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.emirates.com/ie/english/"
+  },
+  {
     "key": "entertainment",
     "source": "contact_logos/entertainment.svg (curated)"
   },
   {
+    "key": "epson",
+    "source": "@thesvg/icons/epson (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://global.epson.com/IR/library/"
+  },
+  {
     "key": "erke",
     "source": "contact_logos/erke.svg (curated)"
+  },
+  {
+    "key": "etsy",
+    "source": "@thesvg/icons/etsy (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.etsy.com/uk/press"
+  },
+  {
+    "key": "eventbrite",
+    "source": "contact_logos/eventbrite.svg (curated)",
+    "upstreamUrl": "https://www.eventbrite.com",
+    "license": "brand-use",
+    "modifications": "From @thesvg/icons/eventbrite 3.3.8; background removed; original foreground paths preserved."
+  },
+  {
+    "key": "evernote",
+    "source": "@thesvg/icons/evernote (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://evernote.com/about-us"
   },
   {
     "key": "exchange",
@@ -348,20 +677,56 @@
     "source": "contact_logos/expressdelivery.svg (curated)"
   },
   {
+    "key": "fedex",
+    "source": "@thesvg/icons/fedex (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://newsroom.fedex.com"
+  },
+  {
     "key": "ferrari",
     "source": "contact_logos/ferrari.svg (curated)"
+  },
+  {
+    "key": "figma",
+    "source": "@thesvg/icons/figma (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.figma.com/"
   },
   {
     "key": "firstrade",
     "source": "contact_logos/firstrade.svg (curated)"
   },
   {
+    "key": "fitbit",
+    "source": "@thesvg/icons/fitbit (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.fitbit.com/uk/home"
+  },
+  {
+    "key": "fiverr",
+    "source": "@thesvg/icons/fiverr (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.fiverr.com/press-kit"
+  },
+  {
     "key": "food",
     "source": "contact_logos/food.svg (curated)"
   },
   {
+    "key": "foodpanda",
+    "source": "@thesvg/icons/foodpanda (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.foodpanda.com"
+  },
+  {
     "key": "ford",
     "source": "contact_logos/ford.svg (curated)"
+  },
+  {
+    "key": "freelancer",
+    "source": "@thesvg/icons/freelancer (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.freelancer.com"
   },
   {
     "key": "gamebanana",
@@ -370,6 +735,12 @@
   {
     "key": "gaming",
     "source": "contact_logos/gaming.svg (curated)"
+  },
+  {
+    "key": "garmin",
+    "source": "@thesvg/icons/garmin (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://creative.garmin.com/styleguide/logo/"
   },
   {
     "key": "gemini",
@@ -392,12 +763,24 @@
     "source": "contact_logos/gitlab.svg (curated)"
   },
   {
+    "key": "glassdoor",
+    "source": "@thesvg/icons/glassdoor (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.glassdoor.com/about/newsroom"
+  },
+  {
     "key": "gmail",
     "source": "contact_logos/gmail.svg (curated)"
   },
   {
     "key": "gmx",
     "source": "contact_logos/gmx.svg (curated)"
+  },
+  {
+    "key": "goodreads",
+    "source": "@thesvg/icons/goodreads (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.goodreads.com/about/press"
   },
   {
     "key": "google",
@@ -408,6 +791,18 @@
     "source": "contact_logos/grab.svg (curated)"
   },
   {
+    "key": "grammarly",
+    "source": "@thesvg/icons/grammarly (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.grammarly.com/media-assets"
+  },
+  {
+    "key": "greenhouse",
+    "source": "@thesvg/icons/greenhouse (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brand.greenhouse.io/brand-portal/p/6"
+  },
+  {
     "key": "grok",
     "source": "contact_logos/grok.svg (curated)"
   },
@@ -416,8 +811,38 @@
     "source": "contact_logos/guirenniao.svg (curated)"
   },
   {
+    "key": "gusto",
+    "source": "@thesvg/icons/gusto (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://gusto.com"
+  },
+  {
+    "key": "hackerrank",
+    "source": "@thesvg/icons/hackerrank (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.hackerrank.com/about-us/"
+  },
+  {
+    "key": "hbomax",
+    "source": "@thesvg/icons/hbo-max (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://commons.wikimedia.org/wiki/File:Max_2025_logo.svg"
+  },
+  {
+    "key": "headspace",
+    "source": "@thesvg/icons/headspace (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.headspace.com/press-and-media"
+  },
+  {
     "key": "health",
     "source": "contact_logos/health.svg (curated)"
+  },
+  {
+    "key": "hetzner",
+    "source": "@thesvg/icons/hetzner (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.hetzner.com"
   },
   {
     "key": "hey",
@@ -446,12 +871,36 @@
     "source": "contact_logos/hotels.com.svg (curated)"
   },
   {
+    "key": "hp",
+    "source": "@thesvg/icons/hp (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brandcentral.hp.com/us/en/elements/hp-logo.html"
+  },
+  {
     "key": "huatai",
     "source": "contact_logos/huatai.svg (curated)"
   },
   {
     "key": "huawei",
     "source": "contact_logos/huawei.svg (curated)"
+  },
+  {
+    "key": "hubspot",
+    "source": "@thesvg/icons/hubspot (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.hubspot.com/style-guide"
+  },
+  {
+    "key": "huggingface",
+    "source": "@thesvg/icons/hugging-face (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://huggingface.co/"
+  },
+  {
+    "key": "hulu",
+    "source": "@thesvg/icons/hulu (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.hulu.com/"
   },
   {
     "key": "huobi",
@@ -468,8 +917,26 @@
     "upstreamUrl": "https://www.icloud.com"
   },
   {
+    "key": "ieee",
+    "source": "@thesvg/icons/ieee (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brand-experience.ieee.org/templates-tools-resources/resources/master-brand-and-logos/"
+  },
+  {
     "key": "ifast",
     "source": "contact_logos/ifast.svg (curated)"
+  },
+  {
+    "key": "ikea",
+    "source": "@thesvg/icons/ikea (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.ikea.com"
+  },
+  {
+    "key": "indeed",
+    "source": "@thesvg/icons/indeed (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://indeed.design/resources"
   },
   {
     "key": "instagram",
@@ -480,6 +947,30 @@
     "source": "contact_logos/intel.svg (curated)"
   },
   {
+    "key": "intercom",
+    "source": "@thesvg/icons/intercom (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.intercom.com/press"
+  },
+  {
+    "key": "intuit",
+    "source": "@thesvg/icons/intuit (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.intuit.com"
+  },
+  {
+    "key": "jellyfin",
+    "source": "@thesvg/icons/jellyfin (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://jellyfin.org/docs/general/contributing/branding.html"
+  },
+  {
+    "key": "jetbrains",
+    "source": "@thesvg/icons/jetbrains (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.jetbrains.com/"
+  },
+  {
     "key": "jobs",
     "source": "contact_logos/jobs.svg (curated)"
   },
@@ -488,8 +979,57 @@
     "source": "contact_logos/johnsonandjohnson.svg (curated)"
   },
   {
+    "key": "kahoot",
+    "source": "@thesvg/icons/kahoot (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://kahoot.com/library/kahoot-logo/"
+  },
+  {
+    "key": "kfc",
+    "source": "contact_logos/kfc.svg (curated)",
+    "upstreamUrl": "https://global.kfc.com/asset-library/",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/kfc 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  {
+    "key": "khanacademy",
+    "source": "@thesvg/icons/khan-academy (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://khanacademy.zendesk.com/hc/en-us/articles/202483630-Press-room"
+  },
+  {
+    "key": "klarna",
+    "source": "@thesvg/icons/klarna (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://klarna.design"
+  },
+  {
+    "key": "klook",
+    "source": "@thesvg/icons/klook (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.klook.com/en-GB/newsroom/"
+  },
+  {
     "key": "kraken",
     "source": "contact_logos/kraken.svg (curated)"
+  },
+  {
+    "key": "kuaishou",
+    "source": "@thesvg/icons/kuaishou (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.kuaishou.com/official/material-lib"
+  },
+  {
+    "key": "kucoin",
+    "source": "@thesvg/icons/kucoin (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.kucoin.com/news/en-kucoin-media-kit"
+  },
+  {
+    "key": "leetcode",
+    "source": "@thesvg/icons/leetcode (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://leetcode.com/store"
   },
   {
     "key": "lenovo",
@@ -500,12 +1040,30 @@
     "source": "contact_logos/lexus.svg (curated)"
   },
   {
+    "key": "line",
+    "source": "@thesvg/icons/line (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://line.me/en/logo"
+  },
+  {
+    "key": "linear",
+    "source": "@thesvg/icons/linear (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://linear.app/"
+  },
+  {
     "key": "lining",
     "source": "contact_logos/lining.svg (curated)"
   },
   {
     "key": "linkedin",
     "source": "contact_logos/linkedin.svg (curated)"
+  },
+  {
+    "key": "linode",
+    "source": "@thesvg/icons/linode (default)",
+    "license": "brand-use",
+    "upstreamUrl": "https://www.linode.com"
   },
   {
     "key": "logitech",
@@ -516,12 +1074,24 @@
     "source": "contact_logos/longbridge.svg (curated)"
   },
   {
+    "key": "lufthansa",
+    "source": "@thesvg/icons/lufthansa (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.lufthansa.com"
+  },
+  {
     "key": "lululemon",
     "source": "contact_logos/lululemon.svg (curated)"
   },
   {
     "key": "lyft",
     "source": "contact_logos/lyft.svg (curated)"
+  },
+  {
+    "key": "mailchimp",
+    "source": "@thesvg/icons/mailchimp (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://mailchimp.com/about/brand-assets"
   },
   {
     "key": "maildotcom",
@@ -540,12 +1110,36 @@
     "source": "contact_logos/mastercard.svg (curated)"
   },
   {
+    "key": "mastodon",
+    "source": "@thesvg/icons/mastodon (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://joinmastodon.org/"
+  },
+  {
     "key": "mazda",
     "source": "contact_logos/mazda.svg (curated)"
   },
   {
+    "key": "medium",
+    "source": "@thesvg/icons/medium (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://medium.design/logos-and-brand-guidelines-f1a01a733592"
+  },
+  {
+    "key": "meetup",
+    "source": "@thesvg/icons/meetup (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.meetup.com/media/"
+  },
+  {
     "key": "meituan",
     "source": "contact_logos/meituan.svg (curated)"
+  },
+  {
+    "key": "mendeley",
+    "source": "@thesvg/icons/mendeley (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.mendeley.com"
   },
   {
     "key": "mercedesbenz",
@@ -570,6 +1164,42 @@
   {
     "key": "microsoftoutlook",
     "source": "contact_logos/microsoftoutlook.svg (curated)"
+  },
+  {
+    "key": "midjourney",
+    "source": "@thesvg/icons/midjourney (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.midjourney.com/"
+  },
+  {
+    "key": "miro",
+    "source": "@thesvg/icons/miro (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://miro.com"
+  },
+  {
+    "key": "monday",
+    "source": "@thesvg/icons/monday (mono)",
+    "license": "Fair Use",
+    "upstreamUrl": "https://monday.com"
+  },
+  {
+    "key": "moneygram",
+    "source": "@thesvg/icons/moneygram (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://moneygram.com"
+  },
+  {
+    "key": "mongodb",
+    "source": "@thesvg/icons/mongodb (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.mongodb.com"
+  },
+  {
+    "key": "monzo",
+    "source": "@thesvg/icons/monzo (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://monzo.com/press/"
   },
   {
     "key": "moovit",
@@ -600,12 +1230,30 @@
     "source": "contact_logos/netflix.svg (curated)"
   },
   {
+    "key": "netlify",
+    "source": "@thesvg/icons/netlify (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.netlify.com/"
+  },
+  {
     "key": "newbalance",
     "source": "contact_logos/newbalance.svg (curated)"
   },
   {
+    "key": "newegg",
+    "source": "@thesvg/icons/newegg (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.newegg.com"
+  },
+  {
     "key": "nike",
     "source": "contact_logos/nike.svg (curated)"
+  },
+  {
+    "key": "nikon",
+    "source": "@thesvg/icons/nikon (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.nikon.com"
   },
   {
     "key": "nissan",
@@ -616,8 +1264,26 @@
     "source": "contact_logos/nokia.svg (curated)"
   },
   {
+    "key": "notion",
+    "source": "@thesvg/icons/notion (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://notion.so/"
+  },
+  {
+    "key": "npm",
+    "source": "@thesvg/icons/npm (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.npmjs.com/"
+  },
+  {
     "key": "nvidia",
     "source": "contact_logos/nvidia.svg (curated)"
+  },
+  {
+    "key": "obsidian",
+    "source": "@thesvg/icons/obsidian (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://obsidian.md/"
   },
   {
     "key": "okx",
@@ -636,28 +1302,76 @@
     "source": "contact_logos/oracle.svg (curated)"
   },
   {
+    "key": "orcid",
+    "source": "@thesvg/icons/orcid (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://orcid.figshare.com/articles/figure/ORCID_iD_icon_graphics/5008697"
+  },
+  {
     "key": "osl",
     "source": "contact_logos/osl.svg (curated)"
+  },
+  {
+    "key": "overleaf",
+    "source": "@thesvg/icons/overleaf (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.overleaf.com/for/press/media-resources"
+  },
+  {
+    "key": "packagist",
+    "source": "@thesvg/icons/packagist (mono)",
+    "license": "MIT",
+    "upstreamUrl": "https://github.com/composer/packagist/issues/1147#issuecomment-747951608"
   },
   {
     "key": "patreon",
     "source": "contact_logos/patreon.svg (curated)"
   },
   {
+    "key": "payoneer",
+    "source": "@thesvg/icons/payoneer (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.payoneer.com"
+  },
+  {
     "key": "paypal",
     "source": "contact_logos/paypal.svg (curated)"
+  },
+  {
+    "key": "paytm",
+    "source": "@thesvg/icons/paytm (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://paytm.com"
   },
   {
     "key": "peaksport",
     "source": "contact_logos/peaksport.svg (curated)"
   },
   {
+    "key": "peloton",
+    "source": "@thesvg/icons/peloton (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://press.onepeloton.com/#logos"
+  },
+  {
     "key": "pepsi",
     "source": "contact_logos/pepsi.svg (curated)"
   },
   {
+    "key": "perplexity",
+    "source": "@thesvg/icons/perplexity (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.perplexity.ai"
+  },
+  {
     "key": "philips",
     "source": "contact_logos/philips.svg (curated)"
+  },
+  {
+    "key": "pinterest",
+    "source": "@thesvg/icons/pinterest (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://pinterest.com/"
   },
   {
     "key": "pixiv",
@@ -668,8 +1382,20 @@
     "source": "contact_logos/plasmaone.svg (curated)"
   },
   {
+    "key": "plex",
+    "source": "@thesvg/icons/plex (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brand.plex.tv"
+  },
+  {
     "key": "porsche",
     "source": "contact_logos/porsche.svg (curated)"
+  },
+  {
+    "key": "postman",
+    "source": "@thesvg/icons/postman (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.getpostman.com/"
   },
   {
     "key": "procterandgamble",
@@ -686,12 +1412,54 @@
     "source": "contact_logos/puma.svg (curated)"
   },
   {
+    "key": "pypi",
+    "source": "@thesvg/icons/pypi (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://pypi.org"
+  },
+  {
+    "key": "qatarairways",
+    "source": "@thesvg/icons/qatar-airways (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.qatarairways.com/press-releases/en-WW/media_kits"
+  },
+  {
     "key": "qq",
     "source": "contact_logos/qq.svg (curated)"
   },
   {
+    "key": "quickbooks",
+    "source": "@thesvg/icons/quickbooks (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://design.intuit.com/quickbooks/brand"
+  },
+  {
     "key": "quickq",
     "source": "contact_logos/quickq.svg (curated)"
+  },
+  {
+    "key": "quizlet",
+    "source": "@thesvg/icons/quizlet (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://quizlet.com"
+  },
+  {
+    "key": "quora",
+    "source": "@thesvg/icons/quora (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.quora.com"
+  },
+  {
+    "key": "railway",
+    "source": "@thesvg/icons/railway (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://railway.app/"
+  },
+  {
+    "key": "rakuten",
+    "source": "@thesvg/icons/rakuten (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://global.rakuten.com/corp/news/media"
   },
   {
     "key": "ralphlauren",
@@ -702,12 +1470,74 @@
     "source": "contact_logos/redteago.svg (curated)"
   },
   {
+    "key": "render",
+    "source": "@thesvg/icons/render (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://render.com"
+  },
+  {
+    "key": "replicate",
+    "source": "@thesvg/icons/replicate (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://replicate.com/"
+  },
+  {
+    "key": "replit",
+    "source": "@thesvg/icons/replit (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://replit.com/"
+  },
+  {
+    "key": "researchgate",
+    "source": "@thesvg/icons/researchgate (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.researchgate.net"
+  },
+  {
+    "key": "revolut",
+    "source": "@thesvg/icons/revolut (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://developer.revolut.com/docs/resources/marketing-assets-guidelines/marketing-guidelines"
+  },
+  {
+    "key": "rippling",
+    "source": "contact_logos/rippling.svg (curated)",
+    "upstreamUrl": "https://www.rippling.com",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/rippling 3.3.8; background removed; original foreground paths preserved."
+  },
+  {
     "key": "rome2rio",
     "source": "contact_logos/rome2rio.svg (curated)"
   },
   {
+    "key": "rubygems",
+    "source": "@thesvg/icons/rubygems (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://rubygems.org/pages/about"
+  },
+  {
+    "key": "runway",
+    "source": "contact_logos/runway.svg (curated)",
+    "upstreamUrl": "https://runwayml.com",
+    "license": "MIT",
+    "modifications": "From @thesvg/icons/runway 3.3.8; keep original foreground path including its interior cutout contours, omit background and duplicate black interior paths."
+  },
+  {
+    "key": "ryanair",
+    "source": "@thesvg/icons/ryanair (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://corporate.ryanair.com/media-centre/stock-images-gallery/#album-container-3"
+  },
+  {
     "key": "safepal",
     "source": "contact_logos/safepal.svg (curated)"
+  },
+  {
+    "key": "salesforce",
+    "source": "@thesvg/icons/salesforce (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.salesforce.com"
   },
   {
     "key": "samsung",
@@ -718,16 +1548,52 @@
     "source": "contact_logos/sandisk.svg (curated)"
   },
   {
+    "key": "schneiderelectric",
+    "source": "@thesvg/icons/schneider-electric (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.se.com/us/en/assets/739/media/202250/SE_logo-LIO-white_header.svg"
+  },
+  {
     "key": "semir",
     "source": "contact_logos/semir.svg (curated)"
+  },
+  {
+    "key": "sentry",
+    "source": "@thesvg/icons/sentry (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://sentry.io/"
   },
   {
     "key": "sfexpress",
     "source": "contact_logos/sfexpress.svg (curated)"
   },
   {
+    "key": "shell",
+    "source": "@thesvg/icons/shell (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://en.wikipedia.org/wiki/File:Shell_logo.svg"
+  },
+  {
+    "key": "shopee",
+    "source": "@thesvg/icons/shopee (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://shopee.com"
+  },
+  {
     "key": "shopping",
     "source": "contact_logos/shopping.svg (curated)"
+  },
+  {
+    "key": "siemens",
+    "source": "@thesvg/icons/siemens (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://siemens.com"
+  },
+  {
+    "key": "signal",
+    "source": "@thesvg/icons/signal (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://signal.org/brand"
   },
   {
     "key": "simcard",
@@ -742,8 +1608,44 @@
     "source": "contact_logos/skhynix.svg (curated)"
   },
   {
+    "key": "skillshare",
+    "source": "@thesvg/icons/skillshare (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.skillshare.com"
+  },
+  {
+    "key": "slack",
+    "source": "@thesvg/icons/slack (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.slack.com"
+  },
+  {
+    "key": "snapchat",
+    "source": "@thesvg/icons/snapchat (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.snapchat.com"
+  },
+  {
     "key": "social",
     "source": "contact_logos/social.svg (curated)"
+  },
+  {
+    "key": "sony",
+    "source": "@thesvg/icons/sony (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.sony.com"
+  },
+  {
+    "key": "soundcloud",
+    "source": "@thesvg/icons/soundcloud (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://soundcloud.com/"
+  },
+  {
+    "key": "southwestairlines",
+    "source": "@thesvg/icons/southwest-airlines (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.southwest.com"
   },
   {
     "key": "spacex",
@@ -762,6 +1664,79 @@
     "source": "contact_logos/spotify.svg (curated)"
   },
   {
+    "key": "square",
+    "source": "@thesvg/icons/square (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://squareup.com"
+  },
+  {
+    "key": "starbucks",
+    "source": "@thesvg/icons/starbucks (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://starbucks.com"
+  },
+  {
+    "key": "strava",
+    "source": "@thesvg/icons/strava (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://itunes.apple.com/us/app/strava-running-and-cycling-gps/id426826309"
+  },
+  {
+    "key": "stripe",
+    "source": "@thesvg/icons/stripe (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://stripe.com/"
+  },
+  {
+    "key": "stubhub",
+    "source": "@thesvg/icons/stubhub (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.stubhub.com"
+  },
+  {
+    "key": "substack",
+    "source": "@thesvg/icons/substack (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://on.substack.com"
+  },
+  {
+    "key": "subway",
+    "source": "@thesvg/icons/subway (default)",
+    "license": "Fair Use",
+    "upstreamUrl": "https://www.subway.com"
+  },
+  {
+    "key": "supabase",
+    "source": "@thesvg/icons/supabase (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://supabase.com/"
+  },
+  {
+    "key": "surveymonkey",
+    "source": "@thesvg/icons/surveymonkey (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.surveymonkey.com/mp/brandassets/"
+  },
+  {
+    "key": "swiggy",
+    "source": "@thesvg/icons/swiggy (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.swiggy.com"
+  },
+  {
+    "key": "tapbit",
+    "source": "contact_logos/tapbit.svg (curated)",
+    "upstreamUrl": "https://drive.google.com/file/d/1spk1b1Lqmrhkw7Wyi0dGc2oP-HCxVgDg/view",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Symbol group from Black Main Tapbit Logo.svg; CSS fill rule made explicit; wordmark omitted."
+  },
+  {
+    "key": "target",
+    "source": "@thesvg/icons/target (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.target.com"
+  },
+  {
     "key": "tecno",
     "source": "contact_logos/tecno.svg (curated)"
   },
@@ -770,16 +1745,65 @@
     "source": "contact_logos/telegram.svg (curated)"
   },
   {
+    "key": "tesco",
+    "source": "@thesvg/icons/tesco (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.tesco.com"
+  },
+  {
     "key": "tesla",
     "source": "contact_logos/tesla.svg (curated)"
+  },
+  {
+    "key": "threads",
+    "source": "@thesvg/icons/threads (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://threads.net/"
+  },
+  {
+    "key": "ticketmaster",
+    "source": "@thesvg/icons/ticketmaster (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://design.ticketmaster.com/brand/overview/"
+  },
+  {
+    "key": "tidal",
+    "source": "@thesvg/icons/tidal (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://tidal.com/"
   },
   {
     "key": "tiktok",
     "source": "contact_logos/tiktok.svg (curated)"
   },
   {
+    "key": "todoist",
+    "source": "@thesvg/icons/todoist (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://todoist.com/"
+  },
+  {
+    "key": "toobit",
+    "source": "contact_logos/toobit.svg (curated)",
+    "upstreamUrl": "https://image.tbstatic.com/images/2026/03/6c4b713993644dbe.svg",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Official header symbol; circular blue backplate removed for theme tinting."
+  },
+  {
+    "key": "toptal",
+    "source": "@thesvg/icons/toptal (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.toptal.com/branding"
+  },
+  {
     "key": "toyota",
     "source": "contact_logos/toyota.svg (curated)"
+  },
+  {
+    "key": "tradingview",
+    "source": "@thesvg/icons/tradingview (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.tradingview.com/media-kit"
   },
   {
     "key": "trae",
@@ -794,8 +1818,38 @@
     "source": "contact_logos/transport.svg (curated)"
   },
   {
+    "key": "trello",
+    "source": "@thesvg/icons/trello (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://atlassian.design/resources/logo-library"
+  },
+  {
+    "key": "tripadvisor",
+    "source": "@thesvg/icons/tripadvisor (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://tripadvisor.mediaroom.com/logo-guidelines"
+  },
+  {
+    "key": "tripcom",
+    "source": "@thesvg/icons/tripdotcom (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://careers.trip.com"
+  },
+  {
+    "key": "trivago",
+    "source": "@thesvg/icons/trivago (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://company.trivago.com/press-media"
+  },
+  {
     "key": "tsmc",
     "source": "contact_logos/tsmc.svg (curated)"
+  },
+  {
+    "key": "tumblr",
+    "source": "@thesvg/icons/tumblr (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.tumblr.com/logo"
   },
   {
     "key": "tuta",
@@ -804,16 +1858,107 @@
     "upstreamUrl": "https://github.com/tutao/tutanota/blob/65d087b1bc2cb7aee46e7a46431303483d2da986/resources/favicon/logo-favicon.svg"
   },
   {
+    "key": "twilio",
+    "source": "@thesvg/icons/twilio (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://twilio.com"
+  },
+  {
+    "key": "twitch",
+    "source": "@thesvg/icons/twitch (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://twitch.tv"
+  },
+  {
+    "key": "typeform",
+    "source": "@thesvg/icons/typeform (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.typeform.com"
+  },
+  {
     "key": "uber",
     "source": "contact_logos/uber.svg (curated)"
+  },
+  {
+    "key": "udacity",
+    "source": "@thesvg/icons/udacity (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.udacity.com/"
+  },
+  {
+    "key": "udemy",
+    "source": "@thesvg/icons/udemy (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.udemy.com/"
   },
   {
     "key": "underarmour",
     "source": "contact_logos/underarmour.svg (curated)"
   },
   {
+    "key": "unilever",
+    "source": "@thesvg/icons/unilever (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.unilever.com/our-company/the-logo"
+  },
+  {
     "key": "uniqlo",
     "source": "contact_logos/uniqlo.svg (curated)"
+  },
+  {
+    "key": "unitedairlines",
+    "source": "@thesvg/icons/united-airlines (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.united.com"
+  },
+  {
+    "key": "ups",
+    "source": "@thesvg/icons/ups (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.ups.com"
+  },
+  {
+    "key": "upwork",
+    "source": "@thesvg/icons/upwork (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.upwork.com/press/"
+  },
+  {
+    "key": "usps",
+    "source": "contact_logos/usps.svg (curated)",
+    "upstreamUrl": "https://www.usps.com",
+    "license": "CC0-1.0",
+    "modifications": "From @thesvg/icons/usps 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  {
+    "key": "venmo",
+    "source": "@thesvg/icons/venmo (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://venmo.com/about/brand"
+  },
+  {
+    "key": "vercel",
+    "source": "@thesvg/icons/vercel (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://vercel.com/"
+  },
+  {
+    "key": "viber",
+    "source": "@thesvg/icons/viber (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.viber.com/brand-center"
+  },
+  {
+    "key": "vimeo",
+    "source": "@thesvg/icons/vimeo (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://press.vimeo.com/brand-guidelines"
+  },
+  {
+    "key": "vinted",
+    "source": "@thesvg/icons/vinted (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.vinted.com"
   },
   {
     "key": "visa",
@@ -834,6 +1979,18 @@
   {
     "key": "volkswagen",
     "source": "contact_logos/volkswagen.svg (curated)"
+  },
+  {
+    "key": "vultr",
+    "source": "@thesvg/icons/vultr (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.vultr.com/company/brand-assets"
+  },
+  {
+    "key": "walgreens",
+    "source": "@thesvg/icons/walgreens (default)",
+    "license": "Fair Use",
+    "upstreamUrl": "https://www.walgreens.com"
   },
   {
     "key": "wallet",
@@ -858,12 +2015,61 @@
     "upstreamUrl": "https://web.de"
   },
   {
+    "key": "wechat",
+    "source": "@thesvg/icons/wechat (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://wechat.design/tool/brand"
+  },
+  {
+    "key": "wellfound",
+    "source": "@thesvg/icons/wellfound (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://wellfound.com/logo"
+  },
+  {
     "key": "whatsapp",
     "source": "contact_logos/whatsapp.svg (curated)"
   },
   {
+    "key": "wise",
+    "source": "@thesvg/icons/wise (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://wise.design/foundations/logo"
+  },
+  {
+    "key": "wish",
+    "source": "@thesvg/icons/wish (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://wish.com"
+  },
+  {
+    "key": "workday",
+    "source": "@thesvg/icons/workday (default)",
+    "license": "MIT",
+    "upstreamUrl": "https://www.workday.com"
+  },
+  {
+    "key": "xero",
+    "source": "@thesvg/icons/xero (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.xero.com/uk/about/media/downloads"
+  },
+  {
+    "key": "xiaohongshu",
+    "source": "@thesvg/icons/xiaohongshu (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://pro.xiaohongshu.com"
+  },
+  {
     "key": "xiaomimimo",
     "source": "contact_logos/xiaomimimo.svg (curated)"
+  },
+  {
+    "key": "xt",
+    "source": "contact_logos/xt.svg (curated)",
+    "upstreamUrl": "https://www.xt.com/en",
+    "license": "Trademark; rights retained by the respective brand",
+    "modifications": "Official app symbol embedded as SVG; square background and redundant clipping removed."
   },
   {
     "key": "xtep",
@@ -880,6 +2086,12 @@
     "upstreamUrl": "https://ai.yandex.com"
   },
   {
+    "key": "yelp",
+    "source": "@thesvg/icons/yelp (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.yelp.com/brand"
+  },
+  {
     "key": "youtube",
     "source": "contact_logos/youtube.svg (curated)"
   },
@@ -888,13 +2100,62 @@
     "source": "contact_logos/zabank.svg (curated)"
   },
   {
+    "key": "zalando",
+    "source": "@thesvg/icons/zalando (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.zalando.co.uk"
+  },
+  {
+    "key": "zapier",
+    "source": "@thesvg/icons/zapier (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.figma.com/file/NQFxTCE5pGR3dHZt0DkOyy/Zapier-Brand-Guidelines-%5BExternal%5D?type=design&node-id=101-9701&mode=design"
+  },
+  {
+    "key": "zara",
+    "source": "@thesvg/icons/zara (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.zara.com"
+  },
+  {
     "key": "zeiss",
     "source": "contact_logos/zeiss.svg (curated)"
+  },
+  {
+    "key": "zendesk",
+    "source": "@thesvg/icons/zendesk (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://brandland.zendesk.com"
+  },
+  {
+    "key": "zhihu",
+    "source": "@thesvg/icons/zhihu (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.zhihu.com"
   },
   {
     "key": "zohomail",
     "source": "@thesvg/icons/zohomail (default)",
     "license": "Trademark of Zoho Corporation. Used for identification under nominative fair use.",
     "upstreamUrl": "https://www.zoho.com/mail/"
+  },
+  {
+    "key": "zomato",
+    "source": "@thesvg/icons/zomato (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.zomato.com/business/apps"
+  },
+  {
+    "key": "zoom",
+    "source": "contact_logos/zoom.svg (curated)",
+    "upstreamUrl": "https://zoom.us/",
+    "license": "Trademark",
+    "modifications": "From @thesvg/icons/zoom-2025 3.3.8; background removed, paths preserved for monochrome tinting."
+  },
+  {
+    "key": "zotero",
+    "source": "@thesvg/icons/zotero (mono)",
+    "license": "CC0-1.0",
+    "upstreamUrl": "https://www.zotero.org/support/brand"
   }
 ]

@@ -182,7 +182,7 @@ class ContactLogoAssetTest {
             missingLogos.isEmpty(),
         )
 
-        val exchangeMarkup = contactLogoSvgMarkup(context, "KuCoin", "news@kucoin.com")
+        val exchangeMarkup = contactLogoSvgMarkup(context, "Gemini", "news@gemini.com")
         assertTrue("Generic exchange arrows were not parsed", exchangeMarkup.orEmpty().contains("<polyline"))
     }
 }
