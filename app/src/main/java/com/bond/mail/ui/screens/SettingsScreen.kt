@@ -127,6 +127,8 @@ fun SettingsScreen(
     onOpenPushSettings: () -> Unit,
     onOpenAiSettings: () -> Unit,
     onOpenVerificationRules: () -> Unit,
+    onOpenGlassSettings: () -> Unit,
+    onOpenWidgets: () -> Unit,
     onOpenAbout: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
@@ -135,8 +137,6 @@ fun SettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
-    var glassSettingsOpen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    if (glassSettingsOpen) GlassSettingsScreen(settings.glass, viewModel::glass) { glassSettingsOpen = false }
     var toolsOpen by remember { mutableStateOf(false) }
     if (toolsOpen) com.bond.mail.ui.components.MailToolsDialog { toolsOpen = false }
     var translationSettingsOpen by remember { mutableStateOf(false) }
@@ -303,11 +303,11 @@ fun SettingsScreen(
                 if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
                     SettingsDivider()
                     SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
-                        onClick = { glassSettingsOpen = true })
+                        onClick = onOpenGlassSettings)
                 }
                 SettingsDivider()
                 SettingsActionRow(Icons.Default.Settings, tr("widget_settings"), tr("widget_independent"),
-                    onClick = { context.startActivity(android.content.Intent(context, com.bond.mail.widget.WidgetConfigActivity::class.java)) })
+                    onClick = onOpenWidgets)
                 if (settings.uiStyle == UiStyle.MATERIAL3) {
                     SettingsDivider()
                     SwitchSettingRow(

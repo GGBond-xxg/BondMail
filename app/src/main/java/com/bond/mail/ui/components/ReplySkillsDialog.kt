@@ -110,7 +110,8 @@ internal fun ReplySkillsScreen(onChanged: () -> Unit = {}, onDismiss: () -> Unit
     fun back() {
         if (editing) { editing = false; error = null } else onDismiss()
     }
-    BackHandler { back() }
+    // Let the page container receive predictive progress when leaving the skills list.
+    BackHandler(enabled = editing) { back() }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.bondSurfaces.page) {
         Column(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) {
             BondTopAppBar(title = tr(if (editing) "ai_edit_profile" else "ai_skills_title"), navigationIcon = {

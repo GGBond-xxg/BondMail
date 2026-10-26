@@ -203,6 +203,8 @@ private const val CREDENTIALS = "credentials/{providerId}"
 private const val DETAIL = "detail/{messageId}"
 private const val ABOUT = "about"
 private const val SPONSORSHIP = "about/sponsorship"
+private const val GLASS_SETTINGS = "settings/glass"
+private const val WIDGET_SETTINGS = "settings/widgets"
 private const val PUSH_SETTINGS = "settings/push"
 private const val AI_SETTINGS = "settings/ai"
 private const val VERIFICATION_RULES = "settings/verification-rules"
@@ -320,6 +322,8 @@ fun MailApp(
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
     var verificationRulesBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var glassBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var widgetBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var aiSettingsBackBackground by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var aboutChildBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
@@ -869,6 +873,14 @@ fun MailApp(
                 onDismissPermissionGuide = ::rejectNotificationPermissionGuide,
                 onOpenNotificationSettings = ::openNotificationSettings,
                 onOpenBackgroundSettings = ::openBackgroundSettings,
+                onOpenGlassSettings = {
+                    navigateAfterSnapshot(MAIN, GLASS_SETTINGS,
+                        { mailboxSnapshotLayer.toImageBitmap() }, { glassBackBackground = it })
+                },
+                onOpenWidgets = {
+                    navigateAfterSnapshot(MAIN, WIDGET_SETTINGS,
+                        { mailboxSnapshotLayer.toImageBitmap() }, { widgetBackBackground = it })
+                },
                 onOpenAbout = {
                     providersBackBackground = null
                     credentialsBackBackground = null
@@ -1018,6 +1030,17 @@ fun MailApp(
                                         !settings.notificationPermissionPromptDismissed
                                 },
                             )
+                        }
+                    }
+
+                    composable(route = GLASS_SETTINGS) {
+                        BondBackScreen(glassBackBackground, motionEnabled, ::popBackStackOnce) { requestBack ->
+                            com.bond.mail.ui.screens.GlassSettingsScreen(settings.glass, settingsVm::glass, requestBack)
+                        }
+                    }
+                    composable(route = WIDGET_SETTINGS) {
+                        BondBackScreen(widgetBackBackground, motionEnabled, ::popBackStackOnce) { requestBack ->
+                            com.bond.mail.widget.WidgetSettingsHost(settings = settings, onBack = requestBack)
                         }
                     }
 
@@ -1395,6 +1418,8 @@ private fun MainTabs(
     onOpenPushSettings: () -> Unit,
     onOpenAiSettings: () -> Unit,
     onOpenVerificationRules: () -> Unit,
+    onOpenGlassSettings: () -> Unit,
+    onOpenWidgets: () -> Unit,
     onOpenAbout: () -> Unit,
     onAddAccount: () -> Unit,
     mainChromeVisible: Boolean,
@@ -1570,6 +1595,8 @@ private fun MainTabs(
                             onOpenPushSettings = onOpenPushSettings,
                             onOpenAiSettings = onOpenAiSettings,
                             onOpenVerificationRules = onOpenVerificationRules,
+                            onOpenGlassSettings = onOpenGlassSettings,
+                            onOpenWidgets = onOpenWidgets,
                             onOpenAbout = onOpenAbout,
                             chromeVisible = mainChromeVisible,
                             onChromeVisibilityChanged = { visible ->

@@ -19,6 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -32,6 +36,8 @@ import com.bond.mail.ui.i18n.JsonStringsProvider
 import com.bond.mail.ui.i18n.loadJsonStrings
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.*
+import com.bond.mail.ui.motion.BondBackScreen
+import com.bond.mail.ui.motion.bondMotionEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -48,20 +54,87 @@ class WidgetConfigActivity : ComponentActivity() {
             val settings = container.settings.settings.first()
             setContent {
                 BondMailTheme(settings) {
-                    JsonStringsProvider(settings.languageCode) { Configure(id, settings) }
+                    JsonStringsProvider(settings.languageCode) {
+                        WidgetSettingsHost(settings, id, intent.getStringExtra("widget_size"),
+                            onBack = { finish() }, onSaved = { savedId ->
+                                setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, savedId))
+                                finish()
+                            })
+                    }
                 }
             }
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
-    @Composable
-    private fun Configure(id: Int, settings: AppSettings) {
-        val container = (application as MailApplication).container
+}
+
+/** Shared by settings navigation and the launcher's APPWIDGET_CONFIGURE entry point. */
+@Composable
+fun WidgetSettingsHost(
+    settings: AppSettings,
+    initialId: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
+    initialSize: String? = null,
+    onBack: () -> Unit,
+    onSaved: (Int) -> Unit = { onBack() },
+) {
+    var childId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var childSize by rememberSaveable { mutableStateOf<String?>(null) }
+    var preview by remember { mutableStateOf<ImageBitmap?>(null) }
+    var opening by remember { mutableStateOf(false) }
+    val layer = rememberGraphicsLayer()
+    val scope = rememberCoroutineScope()
+    val motionEnabled = bondMotionEnabled()
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().drawWithContent {
+            layer.record { this@drawWithContent.drawContent() }
+            drawLayer(layer)
+        }) {
+            WidgetSettingsScreen(initialId, initialSize, settings, onBack, { id, size ->
+                if (!opening && childId == null) {
+                    opening = true
+                    scope.launch {
+                        try {
+                            preview = try { layer.toImageBitmap() }
+                                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                                catch (_: Exception) { null }
+                            childSize = size
+                            childId = id
+                        } finally { opening = false }
+                    }
+                }
+            }, onSaved)
+        }
+        childId?.let { id ->
+            key(id, childSize) {
+                BondBackScreen(preview, motionEnabled, onBackCommitted = {
+                    childId = null
+                    childSize = null
+                    preview = null
+                }, animateOpening = true) { requestBack ->
+                    WidgetSettingsScreen(id, childSize, settings, requestBack,
+                        onConfigure = { _, _ -> }, onSaved = {
+                            // Internal configuration returns to the manager; the launcher still
+                            // receives RESULT_OK through the Activity's root configuration above.
+                            requestBack()
+                        })
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WidgetSettingsScreen(
+    id: Int, selectedSize: String?, settings: AppSettings,
+    onBack: () -> Unit, onConfigure: (Int, String?) -> Unit, onSaved: (Int) -> Unit,
+) {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val container = (context.applicationContext as MailApplication).container
         val accounts by container.repository.accounts.collectAsState(initial = emptyList())
-        val store = remember { WidgetStore(this) }
+        val store = remember { WidgetStore(context) }
         var encoded by rememberSaveable { mutableStateOf(store.get(id)?.encode()) }
-        var selectedSize by rememberSaveable { mutableStateOf(intent.getStringExtra("widget_size")) }
         val isManager = id == AppWidgetManager.INVALID_APPWIDGET_ID && selectedSize == null
         LaunchedEffect(accounts, isManager) {
             if (encoded == null && !isManager && accounts.isNotEmpty()) {
@@ -82,27 +155,27 @@ class WidgetConfigActivity : ComponentActivity() {
         }
         fun change(value: WidgetConfig) { encoded = value.encode(); error = false }
         Scaffold(topBar = { BondTopAppBar(title = tr("widget_settings"), navigationIcon = {
-            BondIconButton(onClick = { finish() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("back")) }
+            BondIconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("back")) }
         }) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 if (isManager) {
                     Text(tr("widget_intro"), style = MaterialTheme.typography.bodyMedium)
                     listOf("small" to "2 × 2", "medium" to "4 × 2", "large" to "4 × 4").forEach { (size, label) ->
-                        BondSecondaryButton(onClick = { selectedSize = size }, modifier = Modifier.fillMaxWidth()) { Text(tr("widget_add_size", label)) }
+                        BondSecondaryButton(onClick = { onConfigure(AppWidgetManager.INVALID_APPWIDGET_ID, size) }, modifier = Modifier.fillMaxWidth()) { Text(tr("widget_add_size", label)) }
                     }
-                    WidgetUpdates.ids(this@WidgetConfigActivity).forEach { existing ->
+                    WidgetUpdates.ids(context).forEach { existing ->
                         val c = store.get(existing)
                         val name = accounts.firstOrNull { it.id == c?.accountId }?.displayName ?: tr("widget_account_missing")
                         BondSecondaryButton(onClick = {
-                            startActivity(Intent(this@WidgetConfigActivity, WidgetConfigActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, existing))
+                            onConfigure(existing, null)
                         }, modifier = Modifier.fillMaxWidth()) { Text("$name · #$existing") }
                     }
                 } else if (accounts.none { it.enabled }) {
                     Text(tr("widget_no_accounts"))
-                    BondPrimaryButton(onClick = { startActivity(Intent(this@WidgetConfigActivity, MainActivity::class.java)); finish() }) { Text(tr("widget_open_app")) }
+                    BondPrimaryButton(onClick = { context.startActivity(Intent(context, MainActivity::class.java)); onBack() }) { Text(tr("widget_open_app")) }
                 } else if (config != null) {
                     Text(tr("widget_preview_title"), style = MaterialTheme.typography.titleMedium)
-                    val size = when (selectedSize ?: AppWidgetManager.getInstance(this@WidgetConfigActivity).getAppWidgetInfo(id)?.provider?.className?.substringAfterLast('.')) {
+                    val size = when (selectedSize ?: AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.provider?.className?.substringAfterLast('.')) {
                         "small", "SmallMailWidget" -> SizeF(160f, 170f)
                         "large", "LargeMailWidget" -> SizeF(320f, 380f)
                         else -> SizeF(320f, 190f)
@@ -126,22 +199,22 @@ class WidgetConfigActivity : ComponentActivity() {
                     if (error) Text(tr("widget_save_error"), color = MaterialTheme.colorScheme.error)
                     BondPrimaryButton(enabled = !saving && snapshot.valid, modifier = Modifier.fillMaxWidth(), onClick = {
                         saving = true
-                        lifecycleScope.launch {
+                        scope.launch {
                             try {
                                 if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                                    withContext(Dispatchers.IO) { WidgetUpdates.save(this@WidgetConfigActivity, id, config) }
-                                    setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)); finish()
+                                    withContext(Dispatchers.IO) { WidgetUpdates.save(context, id, config) }
+                                    onSaved(id)
                                 } else {
-                                    val manager = AppWidgetManager.getInstance(this@WidgetConfigActivity)
+                                    val manager = AppWidgetManager.getInstance(context)
                                     val provider = when (selectedSize) { "small" -> SmallMailWidget::class.java; "large" -> LargeMailWidget::class.java; else -> MediumMailWidget::class.java }
-                                    val callback = Intent(this@WidgetConfigActivity, WidgetPinReceiver::class.java).setAction("widget.pin")
+                                    val callback = Intent(context, WidgetPinReceiver::class.java).setAction("widget.pin")
                                         .setData(android.net.Uri.parse("bondmail-widget://pin/${java.util.UUID.randomUUID()}"))
                                         .putExtra("config", config.encode())
                                     // The launcher fills in the newly allocated appWidgetId. Explicit receiver limits mutability.
-                                    val pending = PendingIntent.getBroadcast(this@WidgetConfigActivity, 0, callback,
+                                    val pending = PendingIntent.getBroadcast(context, 0, callback,
                                         PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_MUTABLE)
-                                    val accepted = manager.isRequestPinAppWidgetSupported && manager.requestPinAppWidget(ComponentName(this@WidgetConfigActivity, provider), null, pending)
-                                    if (accepted) finish() else error = true
+                                    val accepted = manager.isRequestPinAppWidgetSupported && manager.requestPinAppWidget(ComponentName(context, provider), null, pending)
+                                    if (accepted) onSaved(id) else error = true
                                 }
                             } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                               catch (_: Exception) { error = true }
@@ -152,7 +225,6 @@ class WidgetConfigActivity : ComponentActivity() {
                 Spacer(Modifier.height(16.dp))
             }
         }
-    }
 }
 
 @Composable

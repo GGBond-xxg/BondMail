@@ -60,7 +60,9 @@ class LicensePredictiveBackTest {
                     it.onBackPressedDispatcher.dispatchOnBackProgressed(BackEventCompat(250f, 700f, .45f, BackEventCompat.EDGE_LEFT))
                 }
                 android.os.SystemClock.sleep(200)
-                assertTrue("Document must move with back progress", find(title).visibleBounds.left > initial.left + 60)
+                val preview = find(title).visibleBounds
+                assertTrue("Document must shrink into a preview card", preview.top > initial.top)
+                assertTrue("Held preview must remain on screen", preview.right <= device.displayWidth)
                 device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "license-back-progress-$index.png"))
                 scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackCancelled() }
                 android.os.SystemClock.sleep(350)

@@ -14,6 +14,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CornerSize
@@ -42,15 +45,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 import kotlin.coroutines.resume
 
 private const val TELEGRAM_OPEN_DURATION_MS = 260
-private const val TELEGRAM_BACK_DURATION_MS = 170
+private const val TELEGRAM_BACK_DURATION_MS = 220
 private const val TELEGRAM_CANCEL_DURATION_MS = 150
-private const val TELEGRAM_BACK_SCALE_REDUCTION = 0.10f
 
 /*
  * Keep the quick Telegram settle, but distribute more of the travel through the middle of the
@@ -112,7 +114,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 /**
- * Telegram-style two-layer mail reader transition with predictive-back progress.
+ * Two-layer mail reader with the same card preview as every other page.
  *
  * The list remains stationary underneath the reader. Predictive back follows the finger and moves
  * one frozen reader bitmap so Chromium does not have to re-rasterize HTML on every gesture frame.
@@ -144,7 +146,8 @@ fun TelegramMailTransition(
 /**
  * Predictive-back container for lightweight Compose destinations.
  *
- * It intentionally has no opening animation. The previous destination is only a frozen preview
+ * NavHost normally owns opening; local child pages can opt into the same cover animation.
+ * The previous destination is only a frozen preview
  * underneath the live current page while a back gesture is active, so revealing a back-stack entry
  * cannot restart an entry animation and produce the old page-switching flash.
  */
@@ -153,12 +156,13 @@ fun BondBackScreen(
     backgroundSnapshot: ImageBitmap?,
     motionEnabled: Boolean,
     onBackCommitted: () -> Unit,
+    animateOpening: Boolean = false,
     content: @Composable (requestBack: () -> Unit) -> Unit,
 ) {
     BondBackTransition(
         backgroundSnapshot = backgroundSnapshot,
         motionEnabled = motionEnabled,
-        animateOpening = false,
+        animateOpening = animateOpening,
         contentReadyInitially = true,
         freezeContentOnBack = false,
         backgroundIsLive = false,
@@ -202,7 +206,9 @@ private fun BondBackTransition(
     }
     var contentReady by remember { mutableStateOf(contentReadyInitially) }
     val backProgress = remember { Animatable(0f) }
+    val backCompletion = remember { Animatable(0f) }
     var backEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
+    var touchDeltaY by remember { mutableFloatStateOf(0f) }
     var frozenReader by remember { mutableStateOf<ImageBitmap?>(null) }
     var backIsFinishing by remember { mutableStateOf(false) }
     val maximumCornerPx = with(density) { 28.dp.toPx() }
@@ -243,20 +249,16 @@ private fun BondBackTransition(
         val readerFullyOpened = openingProgress.value >= 0.999f
         if (
             motionEnabled &&
-            (backgroundIsLive || backgroundSnapshot != null) &&
             readerFullyOpened
         ) {
             freezeReader()
-            val remaining = (1f - backProgress.value).coerceIn(0f, 1f)
-            backProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = (TELEGRAM_BACK_DURATION_MS * remaining)
-                        .roundToInt()
-                        .coerceAtLeast(1),
-                    easing = TelegramBackEasing,
-                ),
-            )
+            // A button/legacy back event has no progress stream. Give it the same card motion.
+            // Never use gesture progress as the off-screen translation: a held gesture must keep
+            // the current page readable, as in the system cross-activity preview.
+            coroutineScope {
+                launch { backProgress.animateTo(1f, tween(TELEGRAM_BACK_DURATION_MS, easing = TelegramBackEasing)) }
+                backCompletion.animateTo(1f, tween(TELEGRAM_BACK_DURATION_MS, easing = TelegramBackEasing))
+            }
         }
         // The visual endpoint is already on screen. Commit now instead of retaining the outgoing
         // gesture layer for another frame, which made the first scroll on the revealed page miss.
@@ -281,15 +283,18 @@ private fun BondBackTransition(
             events.collect { }
             return@PredictiveBackHandler
         }
-        if (!motionEnabled || (!backgroundIsLive && backgroundSnapshot == null)) {
+        if (!motionEnabled) {
             events.collect { }
             finishBack()
             return@PredictiveBackHandler
         }
 
-        freezeReader()
         try {
+            freezeReader()
+            var firstTouchY: Float? = null
             events.collect { event ->
+                if (firstTouchY == null) firstTouchY = event.touchY
+                touchDeltaY = (event.touchY - (firstTouchY ?: event.touchY)) * 0.15f
                 backEdge = event.swipeEdge
                 backProgress.snapTo(event.progress.coerceIn(0f, 1f))
             }
@@ -312,6 +317,7 @@ private fun BondBackTransition(
             } finally {
                 frozenReader = null
                 backIsFinishing = false
+                touchDeltaY = 0f
             }
         }
     }
@@ -328,6 +334,11 @@ private fun BondBackTransition(
             )
         }
 
+        Box(Modifier.fillMaxSize().drawBehind {
+            val transform = backCardTransform(backProgress.value, backCompletion.value, size.width, size.height, false)
+            drawRect(Color.Black.copy(alpha = transform.scrimAlpha))
+        })
+
         val frozen = frozenReader
         Box(
             modifier = Modifier
@@ -337,26 +348,23 @@ private fun BondBackTransition(
                     // position. Keep the whole destination hidden while it is waiting at the
                     // right edge; Chromium's offscreen preraster still prepares its native tiles.
                     alpha = if (animateOpening && openingProgress.value <= 0f) 0f else 1f
-                    val interactiveProgress = backProgress.value.coerceIn(0f, 1f)
-                    val cardProgress = 1f - (1f - interactiveProgress) *
-                        (1f - interactiveProgress) *
-                        (1f - interactiveProgress)
-                    val direction = if (backEdge == BackEventCompat.EDGE_RIGHT) -1f else 1f
-                    translationX = if (interactiveProgress > 0f || backIsFinishing) {
-                        direction * size.width * interactiveProgress
+                    val transform = backCardTransform(backProgress.value, backCompletion.value,
+                        size.width, size.height, backEdge == BackEventCompat.EDGE_RIGHT, touchDeltaY)
+                    translationX = if (backProgress.value > 0f || backIsFinishing) {
+                        transform.translationX
                     } else {
                         size.width * (1f - openingProgress.value)
                     }
-                    val backScale = 1f - TELEGRAM_BACK_SCALE_REDUCTION * cardProgress
-                    scaleX = backScale
-                    scaleY = backScale
+                    translationY = transform.translationY
+                    scaleX = transform.scale
+                    scaleY = transform.scale
                     transformOrigin = TransformOrigin.Center
-                    val cornerPx = maximumCornerPx * cardProgress
+                    val cornerPx = maximumCornerPx * transform.cornerFraction
                     shape = RoundedCornerShape(CornerSize(cornerPx))
                     // WebView must stay clipped even before rounded back-gesture corners apply.
                     clip = true
                     compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
-                    shadowElevation = maximumCornerPx * cardProgress
+                    shadowElevation = maximumCornerPx * transform.cornerFraction
                 },
         ) {
             Box(Modifier.fillMaxSize()) { content(requestBack, reportContentReady) }
