@@ -8,6 +8,43 @@ import org.junit.Test
 
 class MailWebViewCacheTest {
     @Test
+    fun renderedHeaderKeepsDateAtRightAndBodyGapOutsideCard() = runBlocking {
+        val prepared = prepare("notice@example.com", "<html><body><p>Newsletter body</p></body></html>")
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val result = java.util.concurrent.atomic.AtomicReference<String>()
+        var webView: android.webkit.WebView? = null
+        instrumentation.runOnMainSync {
+            webView = android.webkit.WebView(instrumentation.targetContext).apply {
+                settings.javaScriptEnabled = true
+                settings.useWideViewPort = true
+                layout(0, 0, 720, 1200)
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView, url: String?) {
+                        view.evaluateJavascript("""
+                            (function() {
+                                var h=document.getElementById('bondmail-message-header').getBoundingClientRect();
+                                var b=document.getElementById('bondmail-message-body').getBoundingClientRect();
+                                var d=document.querySelector('.bondmail-date').getBoundingClientRect();
+                                return [b.top-h.bottom,h.right-d.right];
+                            })()
+                        """.trimIndent()) { result.set(it); ready.countDown() }
+                    }
+                }
+                loadDataWithBaseURL("https://example.invalid", prepared.html, "text/html", "UTF-8", null)
+            }
+        }
+        try {
+            assertTrue("WebView should render the document", ready.await(15, java.util.concurrent.TimeUnit.SECONDS))
+            val bounds = org.json.JSONArray(result.get())
+            assertEquals("Body must start below the card", 12.0, bounds.getDouble(0), 0.5)
+            assertEquals("Date must share the right content inset", 16.0, bounds.getDouble(1), 0.5)
+        } finally {
+            instrumentation.runOnMainSync { webView?.destroy() }
+        }
+    }
+
+    @Test
     fun responsiveFallbackCanvasIsKeptFluid() = runBlocking {
         val prepared = prepare(
             senderAddress = "google-gemini-noreply@google.com",

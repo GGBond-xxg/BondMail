@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -155,6 +156,7 @@ import com.bond.mail.ui.components.brandAvatarPalette
 import com.bond.mail.ui.components.contactAvatarText
 import com.bond.mail.ui.components.MailContentHeightHint
 import com.bond.mail.ui.components.MailWebHeader
+import com.bond.mail.ui.components.MailHeaderSpacing
 import com.bond.mail.ui.components.contactLogoSvgMarkup
 import com.bond.mail.ui.components.MailWebViewCache
 import com.bond.mail.ui.components.MailWebViewPool
@@ -2009,23 +2011,31 @@ private fun MailContentFailure(
     }
 }
 
-private data class MailHeaderLayout(
+internal data class MailHeaderLayout(
     val subjectFontSize: TextUnit,
     val subjectLineHeight: TextUnit,
     val subjectBlockHeight: Dp,
     val senderBlockHeight: Dp,
 )
 
+private fun mailSubjectTextStyle(fontSize: TextUnit, lineHeight: TextUnit) = TextStyle(
+    fontSize = fontSize,
+    lineHeight = lineHeight,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = 0.sp,
+)
+
 @Composable
-private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
+internal fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
     val density = LocalDensity.current
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
     val textMeasurer = rememberTextMeasurer()
     val availableWidthPx = with(density) {
-        // Match the subject to the sender avatar edge: 12 dp document gutters plus 14 dp header
+        // Match the subject to the sender avatar edge: 12 dp document gutters plus header
         // insets on each side. Measure at that exact width so long subjects gain another line of
         // height before the sender row is placed, rather than being covered by it.
-        (windowWidthPx - 52.dp.roundToPx()).coerceAtLeast(220.dp.roundToPx())
+        (windowWidthPx - 2 * 12.dp.roundToPx() - 2 * MailHeaderSpacing.INSET.dp.roundToPx())
+            .coerceAtLeast(1)
     }
     val fontScale = density.fontScale
 
@@ -2048,12 +2058,7 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
         val chosen = candidates.firstOrNull { candidate ->
             val result = textMeasurer.measure(
                 text = AnnotatedString(subject),
-                style = TextStyle(
-                    fontSize = candidate.fontSize,
-                    lineHeight = candidate.lineHeight,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.sp,
-                ),
+                style = mailSubjectTextStyle(candidate.fontSize, candidate.lineHeight),
                 softWrap = true,
                 maxLines = Int.MAX_VALUE,
                 overflow = TextOverflow.Clip,
@@ -2064,12 +2069,7 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
 
         val finalMeasure = textMeasurer.measure(
             text = AnnotatedString(subject),
-            style = TextStyle(
-                fontSize = chosen.fontSize,
-                lineHeight = chosen.lineHeight,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.sp,
-            ),
+            style = mailSubjectTextStyle(chosen.fontSize, chosen.lineHeight),
             softWrap = true,
             // Normal mail subjects fit in one to three lines. Keep extra room for unusually long
             // subjects instead of silently cropping the last line; pathological subjects still
@@ -2078,16 +2078,19 @@ private fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
             overflow = TextOverflow.Ellipsis,
             constraints = Constraints(maxWidth = availableWidthPx),
         )
-        val measuredTextHeight = with(density) { finalMeasure.size.height.toDp() }
-        val blockHeight = (measuredTextHeight + 28.dp).coerceAtLeast(52.dp)
-        // The first metadata row also contains the reserved 32 dp attachment button, so its real
-        // height is max(20sp, 32dp), not merely the sender-name line height. Account for that row,
-        // both 16sp address rows, the two 1dp gaps and 24dp vertical padding. The previous 80dp
-        // minimum cropped the recipient line by roughly 10dp at the default font scale.
-        val senderContentHeight = maxOf(32f, 20f * fontScale) +
-            (16f * fontScale * 2f) +
-            2f
-        val senderBlockHeight = (senderContentHeight.dp + 24.dp).coerceIn(90.dp, 190.dp)
+        val blockHeight = with(density) {
+            // Round each inset as Compose padding does; rounding their sum can lose a pixel
+            // and force a fitted two-line title down to one line with an ellipsis.
+            (finalMeasure.size.height + MailHeaderSpacing.SUBJECT_TOP.dp.roundToPx() +
+                MailHeaderSpacing.SUBJECT_BOTTOM.dp.roundToPx()).toDp()
+        }.coerceAtLeast(48.dp)
+        // Keep the date on the first row's trailing edge. The attachment target lives beside
+        // the two address lines; reserve that row's height even before MIME metadata arrives.
+        val senderContentHeight = maxOf(MailHeaderSpacing.NAME_ROW.toFloat(), 20f * fontScale) +
+            MailHeaderSpacing.DETAILS_GAP +
+            maxOf(MailHeaderSpacing.ATTACHMENT_TARGET.toFloat(), 32f * fontScale + 1f)
+        val senderBlockHeight = senderContentHeight.dp +
+            (MailHeaderSpacing.SENDER_TOP + MailHeaderSpacing.SENDER_BOTTOM).dp
 
         MailHeaderLayout(
             subjectFontSize = chosen.fontSize,
@@ -2143,10 +2146,9 @@ private fun MailStableHeaderOverlay(
                         -contentScrollYpx.value.coerceAtLeast(0),
                     )
                 }
-                // Paint the native subject/sender surface edge-to-edge. The child rows already
-                // own their readable horizontal insets; applying padding before background made
-                // fixed-width newsletters look as if the sender header were shifted to one side.
-                .background(MaterialTheme.bondSurfaces.content)
+                // Cover the hidden HTML header with the page tone around the rounded card,
+                // including the explicit gap before the message body.
+                .background(MaterialTheme.bondSurfaces.page)
                 .padding(top = topContentInset)
                 // WebView reports physical pixels and the offset above consumes physical pixels,
                 // so there is deliberately no density conversion. Its outer position also moves
@@ -2176,12 +2178,7 @@ private fun MailStableHeaderOverlay(
                     },
                 ),
         ) {
-            MailSubjectHeader(
-                header = header,
-                headerLayout = headerLayout,
-                contentVisible = true,
-            )
-            MailSenderHeaderContent(
+            MailInformationHeader(
                 header = header,
                 headerLayout = headerLayout,
                 contentVisible = true,
@@ -2228,16 +2225,15 @@ private fun MailDocumentPlaceholder(
             // than continuing underneath the controls. The final WebView may still scroll behind it.
             val bottomDockReserve = 104.dp
             val availableCardHeight = (
-                maxHeight - topContentInset - headerLayout.subjectBlockHeight - bottomDockReserve
+                maxHeight - topContentInset - headerLayout.subjectBlockHeight -
+                    headerLayout.senderBlockHeight - MailHeaderSpacing.BODY_GAP.dp - bottomDockReserve
             ).coerceAtLeast(220.dp)
             val previewHeight = if (preview.isBlank()) {
                 8.dp
             } else {
                 (previewLineCount * 21 + 34).dp
             }
-            val compactCardHeight = (
-                headerLayout.senderBlockHeight + previewHeight
-            ).coerceIn(220.dp, availableCardHeight)
+            val compactCardHeight = previewHeight.coerceIn(220.dp, availableCardHeight)
             val targetCardHeight = if (expandedBody) availableCardHeight else compactCardHeight
 
             Column(
@@ -2249,26 +2245,21 @@ private fun MailDocumentPlaceholder(
                         end = horizontalContentInset,
                     ),
             ) {
-                MailSubjectHeader(
+                MailInformationHeader(
                     header = header,
                     headerLayout = headerLayout,
                     contentVisible = headerContentVisible,
+                    onAttachmentsClick = onAttachmentsClick,
                 )
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(targetCardHeight),
-                    color = Color.Transparent,
+                    color = MaterialTheme.bondSurfaces.content,
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
                 ) {
                     Column(Modifier.fillMaxSize()) {
-                        MailSenderHeaderContent(
-                            header = header,
-                            headerLayout = headerLayout,
-                            contentVisible = headerContentVisible,
-                            onAttachmentsClick = onAttachmentsClick,
-                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2418,6 +2409,27 @@ private fun MailLoadingSkeleton(
 }
 
 @Composable
+internal fun MailInformationHeader(
+    header: MailWebHeader,
+    headerLayout: MailHeaderLayout,
+    contentVisible: Boolean = true,
+    onAttachmentsClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(MailHeaderSpacing.CORNER.dp))
+                .background(MaterialTheme.bondSurfaces.content),
+        ) {
+            MailSubjectHeader(header, headerLayout, contentVisible)
+            MailSenderHeaderContent(header, headerLayout, contentVisible, onAttachmentsClick)
+        }
+        Spacer(Modifier.height(MailHeaderSpacing.BODY_GAP.dp))
+    }
+}
+
+@Composable
 private fun MailSubjectHeader(
     header: MailWebHeader,
     headerLayout: MailHeaderLayout,
@@ -2429,13 +2441,14 @@ private fun MailSubjectHeader(
         modifier = modifier
             .fillMaxWidth()
             .height(headerLayout.subjectBlockHeight)
-            .padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 12.dp)
+            .padding(
+                start = MailHeaderSpacing.INSET.dp, end = MailHeaderSpacing.INSET.dp,
+                top = MailHeaderSpacing.SUBJECT_TOP.dp, bottom = MailHeaderSpacing.SUBJECT_BOTTOM.dp,
+            )
             .mailHeaderContentVisibility(contentVisible),
         color = MaterialTheme.colorScheme.onSurface,
-        fontSize = headerLayout.subjectFontSize,
-        lineHeight = headerLayout.subjectLineHeight,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.sp,
+        // Use the measured style directly, without inheriting paragraph metrics from a theme.
+        style = mailSubjectTextStyle(headerLayout.subjectFontSize, headerLayout.subjectLineHeight),
         maxLines = 6,
         overflow = TextOverflow.Ellipsis,
     )
@@ -2453,7 +2466,10 @@ private fun MailSenderHeaderContent(
         modifier = modifier
             .fillMaxWidth()
             .height(headerLayout.senderBlockHeight)
-            .padding(start = 14.dp, end = 14.dp, top = 13.dp, bottom = 11.dp)
+            .padding(
+                start = MailHeaderSpacing.INSET.dp, end = MailHeaderSpacing.INSET.dp,
+                top = MailHeaderSpacing.SENDER_TOP.dp, bottom = MailHeaderSpacing.SENDER_BOTTOM.dp,
+            )
             .mailHeaderContentVisibility(contentVisible),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(11.dp),
@@ -2468,10 +2484,10 @@ private fun MailSenderHeaderContent(
         )
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(1.dp),
+            verticalArrangement = Arrangement.spacedBy(MailHeaderSpacing.DETAILS_GAP.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = MailHeaderSpacing.NAME_ROW.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
             ) {
@@ -2496,49 +2512,48 @@ private fun MailSenderHeaderContent(
                     letterSpacing = 0.sp,
                     maxLines = 1,
                 )
-                // Reserve the attachment slot even before the MIME body arrives. The icon may
-                // become known later, but sender/date text must never reflow when it appears.
-                Box(
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = MailHeaderSpacing.ATTACHMENT_TARGET.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        text = header.senderAddress,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        letterSpacing = 0.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = header.recipient,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        letterSpacing = 0.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                // Keep attachments below the date so late MIME metadata cannot move its edge.
+                if (header.attachments.isNotEmpty()) Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(MailHeaderSpacing.ATTACHMENT_TARGET.dp)
                         .clip(CircleShape)
-                        .then(
-                            if (header.attachments.isNotEmpty()) {
-                                Modifier.clickable(onClick = onAttachmentsClick)
-                            } else {
-                                Modifier
-                            },
-                        ),
+                        .clickable(onClick = onAttachmentsClick),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (header.attachments.isNotEmpty()) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = tr("attachments"),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(19.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.AttachFile,
+                        contentDescription = tr("attachments"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(19.dp),
+                    )
                 }
             }
-            Text(
-                text = header.senderAddress,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = header.recipient,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

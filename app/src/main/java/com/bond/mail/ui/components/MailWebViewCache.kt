@@ -475,7 +475,7 @@ internal object MailWebViewCache {
         // Chromium replaces the preview body underneath the stable native header.
         val safeTopInsetCssPx = topContentInsetCssPx.coerceIn(0, 200)
         val safeSubjectBlockHeightCssPx = subjectBlockHeightCssPx.coerceIn(48, 520)
-        val safeSenderBlockHeightCssPx = senderBlockHeightCssPx.coerceIn(64, 180)
+        val safeSenderBlockHeightCssPx = senderBlockHeightCssPx.coerceIn(64, 320)
         // The adaptive title size is selected by Compose before the document is prepared. WebView
         // must use that exact size as well: keeping the old hard-coded 22/28 px typography while
         // reserving a block measured at 18/24 sp made the final line appear underneath the sender.
@@ -696,6 +696,7 @@ internal object MailWebViewCache {
                 max-height:${safeSubjectBlockHeightCssPx}px!important;
                 margin:0!important;padding:0!important;overflow:hidden!important;
                 box-sizing:border-box!important;background:$headerSurfaceCss!important;
+                border-radius:${MailHeaderSpacing.CORNER}px ${MailHeaderSpacing.CORNER}px 0 0!important;
                 color:$foregroundCss!important;
                 font-family:sans-serif!important
               }
@@ -706,7 +707,7 @@ internal object MailWebViewCache {
               #bondmail-message-subject .bondmail-subject-text{
                 display:-webkit-box!important;-webkit-box-orient:vertical!important;
                 -webkit-line-clamp:6!important;overflow:hidden!important;
-                margin:0!important;padding:16px 14px 12px!important;
+                margin:0!important;padding:${MailHeaderSpacing.SUBJECT_TOP}px ${MailHeaderSpacing.INSET}px ${MailHeaderSpacing.SUBJECT_BOTTOM}px!important;
                 box-sizing:border-box!important;
                 max-width:100%!important;font-size:${subjectFontSizeCssPx}px!important;line-height:${subjectLineHeightCssPx}px!important;
                 font-weight:600!important;letter-spacing:0!important;color:$foregroundCss!important;
@@ -730,7 +731,9 @@ internal object MailWebViewCache {
                 min-height:${safeSenderBlockHeightCssPx}px!important;
                 height:${safeSenderBlockHeightCssPx}px!important;
                 max-height:${safeSenderBlockHeightCssPx}px!important;
-                padding:13px 14px 11px!important;margin:0!important;
+                padding:${MailHeaderSpacing.SENDER_TOP}px ${MailHeaderSpacing.INSET}px ${MailHeaderSpacing.SENDER_BOTTOM}px!important;
+                margin:0 0 ${MailHeaderSpacing.BODY_GAP}px!important;
+                border-radius:0 0 ${MailHeaderSpacing.CORNER}px ${MailHeaderSpacing.CORNER}px!important;
                 box-sizing:border-box!important;border:0!important;
                 background:$headerSurfaceCss!important;color:$foregroundCss!important;
                 overflow:hidden!important;
@@ -783,11 +786,12 @@ internal object MailWebViewCache {
               }
               #bondmail-message-header .bondmail-meta{
                 min-width:0!important;max-width:calc(100% - 57px)!important;flex:1!important;
-                display:flex!important;flex-direction:column!important;gap:2px!important;padding-top:0!important;
+                display:flex!important;flex-direction:column!important;gap:${MailHeaderSpacing.DETAILS_GAP}px!important;padding-top:0!important;
 
               }
               #bondmail-message-header .bondmail-name-row{
-                display:flex!important;align-items:center!important;gap:8px!important;
+                display:flex!important;align-items:center!important;gap:7px!important;
+                min-height:${MailHeaderSpacing.NAME_ROW}px!important;
                 width:100%!important;min-width:0!important;max-width:100%!important
               }
               #bondmail-message-header .bondmail-name{
@@ -802,8 +806,18 @@ internal object MailWebViewCache {
                 font-size:${dateFontSizeCssPx}px!important;line-height:${dateLineHeightCssPx}px!important;font-weight:400!important;
                 color:$mutedCss!important;-webkit-text-fill-color:$mutedCss!important
               }
+              #bondmail-message-header .bondmail-details-row{
+                display:flex!important;align-items:flex-start!important;gap:8px!important;
+                min-height:${MailHeaderSpacing.ATTACHMENT_TARGET}px!important;min-width:0!important;width:100%!important
+              }
+              #bondmail-message-header .bondmail-addresses{
+                display:flex!important;flex-direction:column!important;gap:1px!important;
+                flex:1!important;min-width:0!important
+              }
               #bondmail-message-header .bondmail-header-paperclip{
-                display:block!important;flex:0 0 16px!important;width:16px!important;
+                display:flex!important;align-items:center!important;justify-content:center!important;
+                flex:0 0 ${MailHeaderSpacing.ATTACHMENT_TARGET}px!important;
+                width:${MailHeaderSpacing.ATTACHMENT_TARGET}px!important;height:${MailHeaderSpacing.ATTACHMENT_TARGET}px!important;
                 font-size:${paperclipFontSizeCssPx}px!important;
                 line-height:${paperclipLineHeightCssPx}px!important;color:$mutedCss!important;white-space:nowrap!important
               }
@@ -815,12 +829,11 @@ internal object MailWebViewCache {
                 overflow-wrap:normal!important;word-break:normal!important
               }
               #bondmail-message-header .bondmail-muted{
-                display:-webkit-box!important;max-width:100%!important;
+                display:block!important;max-width:100%!important;
                 font-size:${recipientFontSizeCssPx}px!important;line-height:${recipientLineHeightCssPx}px!important;font-weight:400!important;
                 color:$mutedCss!important;-webkit-text-fill-color:$mutedCss!important;
-                white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;
-                -webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;
-                overflow-wrap:anywhere!important;word-break:break-word!important
+                white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+                overflow-wrap:normal!important;word-break:normal!important
               }
               #bondmail-attachments{
                 display:flex!important;flex-direction:column!important;gap:8px!important;
@@ -2317,7 +2330,14 @@ internal object MailWebViewCache {
             .addClass("bondmail-name-row")
             .appendChild(Element("div").addClass("bondmail-name").text(header.senderName))
             .appendChild(Element("div").addClass("bondmail-date").text(header.dateLabel))
-        nameRow.appendChild(
+        val detailsRow = Element("div")
+            .addClass("bondmail-details-row")
+            .appendChild(
+                Element("div").addClass("bondmail-addresses")
+                    .appendChild(Element("div").addClass("bondmail-address").text(header.senderAddress))
+                    .appendChild(Element("div").addClass("bondmail-muted").text(header.recipient)),
+            )
+        if (header.attachments.isNotEmpty()) detailsRow.appendChild(
             Element("span")
                 .addClass("bondmail-header-paperclip")
                 .attr("aria-label", if (header.attachments.isNotEmpty()) "attachment" else "")
@@ -2337,8 +2357,7 @@ internal object MailWebViewCache {
                 Element("div")
                     .addClass("bondmail-meta")
                     .appendChild(nameRow)
-                    .appendChild(Element("div").addClass("bondmail-address").text(header.senderAddress))
-                    .appendChild(Element("div").addClass("bondmail-muted").text(header.recipient)),
+                    .appendChild(detailsRow),
             )
     }
 
