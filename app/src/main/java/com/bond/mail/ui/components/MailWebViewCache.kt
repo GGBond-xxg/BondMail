@@ -744,7 +744,7 @@ internal object MailWebViewCache {
                 min-width:0!important;max-width:100%!important;margin:0!important;
                 padding:0!important;box-sizing:border-box!important;
                 background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "transparent!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
-                overflow:visible!important;border-radius:0!important;
+                overflow:hidden!important;border-radius:${MailHeaderSpacing.CORNER}px!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
               }

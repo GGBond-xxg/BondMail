@@ -2253,6 +2253,7 @@ private fun MailDocumentPlaceholder(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(targetCardHeight),
+                    shape = RoundedCornerShape(MailHeaderSpacing.CORNER.dp),
                     color = MaterialTheme.bondSurfaces.content,
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
