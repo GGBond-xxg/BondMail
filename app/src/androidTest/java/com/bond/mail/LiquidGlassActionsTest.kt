@@ -126,8 +126,24 @@ class LiquidGlassActionsTest {
                             val web = checkNotNull(findWebView(activity.window.decorView))
                             assertEquals(android.view.View.LAYER_TYPE_HARDWARE, web.layerType)
                             assertFalse("Mail must not enable document scripts", web.settings.javaScriptEnabled)
+                            val location = IntArray(2)
+                            web.getLocationInWindow(location)
+                            assertEquals("Reader must scroll underneath the top chrome", 0, location[1])
                         }
                         shot("glass-actions-${mode.name.lowercase()}")
+                        device.swipe(device.displayWidth / 2, device.displayHeight * 3 / 4,
+                            device.displayWidth / 2, device.displayHeight / 3, 30)
+                        assertTrue("Top bar must hide while reading forward",
+                            device.wait(Until.gone(By.desc("Back")), 5000))
+                        assertTrue("Bottom dock must follow the same scroll state",
+                            device.wait(Until.gone(By.desc("Reply")), 5000))
+                        shot("glass-reader-hidden-${mode.name.lowercase()}")
+                        device.swipe(device.displayWidth / 2, device.displayHeight / 2,
+                            device.displayWidth / 2, device.displayHeight * 2 / 3, 30)
+                        assertTrue("Top bar must return on reverse scrolling",
+                            device.wait(Until.hasObject(By.desc("Back")), 5000))
+                        assertTrue(device.wait(Until.hasObject(By.desc("Reply")), 5000))
+                        shot("glass-reader-revealed-${mode.name.lowercase()}")
                         checkNotNull(device.findObject(By.descStartsWith("Translation language:"))).click()
                         assertTrue(device.wait(Until.hasObject(By.text("English")), 10_000))
                         shot("glass-language-menu-${mode.name.lowercase()}")

@@ -95,6 +95,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -1481,8 +1482,14 @@ private fun MainTabs(
                     currentFolder = currentFolder,
                     onChooseMailbox = ::chooseMailbox,
                     onAddAccount = {
-                        scope.launch { drawerState.close() }
-                        onAddAccount()
+                        scope.launch {
+                            drawerState.close()
+                            // Capture the closed inbox for predictive back, after its next draw.
+                            // Capturing during close preserved the open drawer in the snapshot.
+                            withFrameNanos { }
+                            withFrameNanos { }
+                            onAddAccount()
+                        }
                     },
                     onSaveAccountSettings = { id, name, email, avatar, secret, onFinished ->
                         settingsVm.saveAccountSettings(id, name, email, avatar, secret) { failure ->
@@ -1530,10 +1537,6 @@ private fun MainTabs(
                         settingsVm.deleteAccount(accountId)
                     },
                     onReorderAccounts = { ids -> settingsVm.reorderAccounts(ids) },
-                    onOpenSettings = {
-                        scope.launch { drawerState.close() }
-                        selectTab(2)
-                    },
                 )
             }
         },
@@ -1789,7 +1792,6 @@ private fun MailDrawerContent(
     ) -> Unit,
     onDeleteAccount: (String) -> Unit,
     onReorderAccounts: (List<String>) -> Unit,
-    onOpenSettings: () -> Unit,
 ) {
     var accountsExpanded by rememberSaveable { mutableStateOf(false) }
     val drawerMotionEnabled = bondMotionEnabled()
@@ -1984,14 +1986,6 @@ private fun MailDrawerContent(
             )
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
-        NavigationDrawerItem(
-            label = { Text(tr("settings")) },
-            selected = false,
-            onClick = onOpenSettings,
-            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
-            modifier = Modifier.padding(horizontal = 12.dp),
-        )
     }
 
     editTarget?.let { account ->

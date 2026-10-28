@@ -256,9 +256,8 @@ fun DetailScreen(
         }
         reportFirstContentReady()
     }
-    // Keep only the top app bar fixed. The bottom action dock still follows scroll direction so it
-    // gets out of the way while reading and returns when the user scrolls back.
-    var bottomChromeVisible by remember(messageId) { mutableStateOf(true) }
+    // Match the inbox: both bars leave while reading forward and return on reverse scrolling.
+    var chromeVisible by remember(messageId) { mutableStateOf(true) }
     var confirmDelete by remember(messageId) { mutableStateOf(false) }
     val attachmentDownloadStore = remember(context) { AttachmentDownloadStore(context.applicationContext) }
     var attachmentListOpen by remember(messageId) { mutableStateOf(false) }
@@ -588,16 +587,16 @@ fun DetailScreen(
     }
 
     val topChromeOffset = animateChromeOffset(
-        visible = true,
+        visible = chromeVisible,
         hiddenOffset = -detailTopBarHeight,
         label = "detail-top-chrome-slide",
     )
     val bottomChromeOffset = animateChromeOffset(
-        visible = bottomChromeVisible,
+        visible = chromeVisible,
         hiddenOffset = 124.dp,
         label = "detail-bottom-chrome-slide",
     )
-    val translationBottom = com.bond.mail.ui.motion.floatingActionBottomPadding(bottomChromeVisible)
+    val translationBottom = com.bond.mail.ui.motion.floatingActionBottomPadding(chromeVisible)
 
     val glassEnabled = LocalGlassEffects.current
     val glassBackdrop = rememberLayerBackdrop()
@@ -690,9 +689,9 @@ fun DetailScreen(
                     header = mailHeader,
                     headerLayout = headerLayout,
                     loadImages = loadImages,
-                    // The fixed app bar owns its own viewport area. Keeping Chromium below it
-                    // prevents a naturally scrolling sender row from being clipped behind chrome.
-                    topContentInset = 0.dp,
+                    // This inset scrolls with the document, leaving the full viewport available
+                    // after the bar hides and content beneath the returning Glass controls.
+                    topContentInset = messageContentTopInset,
                     onTopPullDelta = updateTopPull,
                     onTopPullRelease = releaseTopPull,
                     onWebViewChanged = { webView ->
@@ -702,7 +701,7 @@ fun DetailScreen(
                     onRemoteImagesChanged = { hasRemoteImages = it },
                     onExternalLink = { externalUrl = it },
                     onAttachmentClick = ::requestAttachment,
-                    onChromeVisibilityChanged = { visible -> bottomChromeVisible = visible },
+                    onChromeVisibilityChanged = { visible -> chromeVisible = visible },
                     onContentScrollChanged = { scrollY ->
                         mailContentScrollY.intValue = scrollY.coerceAtLeast(0)
                     },
@@ -725,7 +724,6 @@ fun DetailScreen(
                         .fillMaxSize()
                         .padding(
                             start = 12.dp,
-                            top = messageContentTopInset,
                             end = 12.dp,
                         ),
                 )
@@ -736,7 +734,7 @@ fun DetailScreen(
                 MailStableHeaderOverlay(
                     header = mailHeader,
                     headerLayout = headerLayout,
-                    topContentInset = 0.dp,
+                    topContentInset = messageContentTopInset,
                     contentScrollYpx = mailContentScrollY,
                     topPullOffsetPx = 0f,
                     onTopPullDelta = updateTopPull,
@@ -747,7 +745,6 @@ fun DetailScreen(
                         .fillMaxSize()
                         .padding(
                             start = 12.dp,
-                            top = messageContentTopInset,
                             end = 12.dp,
                         ),
                 )
@@ -869,8 +866,9 @@ fun DetailScreen(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .onSizeChanged { measuredTopBarHeight = it.height }
-                    .graphicsLayer { translationY = topChromeOffset.toPx() },
-                color = MaterialTheme.bondSurfaces.page,
+                    .graphicsLayer { translationY = topChromeOffset.toPx() }
+                    .glassSurface(glassBackdrop.takeIf { glassEnabled }, RoundedCornerShape(0.dp), chrome = true),
+                color = if (glassEnabled) Color.Transparent else MaterialTheme.bondSurfaces.chrome,
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
             ) {
