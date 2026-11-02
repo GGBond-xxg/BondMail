@@ -1809,8 +1809,8 @@ private fun NotificationPermissionCard(
                 tr("notification_permission_desc"),
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            com.bond.mail.ui.theme.BondAdaptiveActionRow(
+                horizontalSpacing = 8.dp,
                 modifier = Modifier.align(Alignment.End),
             ) {
                 BondTextAction(
@@ -1818,7 +1818,7 @@ private fun NotificationPermissionCard(
                     onClick = onReject,
                 )
                 BondPrimaryButton(onClick = onAllow) {
-                    Text(tr("notification_permission_allow"), maxLines = 1)
+                    Text(tr("notification_permission_allow"))
                 }
             }
         }

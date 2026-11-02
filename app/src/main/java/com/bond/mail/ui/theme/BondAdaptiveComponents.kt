@@ -315,19 +315,28 @@ private fun BondThreeActionLayout(
     horizontalSpacing: Dp,
     verticalSpacing: Dp,
 ) {
-    Layout(
-        modifier = Modifier.fillMaxWidth(),
-        content = {
-            Box(contentAlignment = Alignment.Center) { first() }
-            Box(contentAlignment = Alignment.Center) { second() }
-            Box(contentAlignment = Alignment.Center) { third() }
-        },
-    ) { measurables, constraints ->
+    BondAdaptiveActionRow(horizontalSpacing = horizontalSpacing, verticalSpacing = verticalSpacing) {
+        Box(contentAlignment = Alignment.Center) { first() }
+        Box(contentAlignment = Alignment.Center) { second() }
+        Box(contentAlignment = Alignment.Center) { third() }
+    }
+}
+
+/** Keep actions on equal-width slots only while every complete label fits. */
+@Composable
+internal fun BondAdaptiveActionRow(
+    modifier: Modifier = Modifier,
+    horizontalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = 8.dp,
+    content: @Composable () -> Unit,
+) {
+    Layout(modifier = modifier.fillMaxWidth(), content = content) { measurables, constraints ->
         val horizontalGap = horizontalSpacing.roundToPx()
         val verticalGap = verticalSpacing.roundToPx()
         val availableWidth = constraints.maxWidth
-        val rowContentWidth = (availableWidth - horizontalGap * 2).coerceAtLeast(0)
-        val slotWidth = rowContentWidth / 3
+        val count = measurables.size.coerceAtLeast(1)
+        val rowContentWidth = (availableWidth - horizontalGap * (count - 1)).coerceAtLeast(0)
+        val slotWidth = rowContentWidth / count
         val naturalWidths = measurables.map { measurable ->
             measurable.maxIntrinsicWidth(Constraints.Infinity)
         }
@@ -393,7 +402,8 @@ fun BondTextAction(
         UiStyle.LIQUID_GLASS -> GlassButton(
             onClick, if (LocalGlassDialogAction.current) modifier.fillMaxWidth() else modifier,
             enabled, primary = primary, destructive = destructive,
-        ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+        ) { Text(text, style = MaterialTheme.typography.labelLarge,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
         UiStyle.MATERIAL3 -> TextButton(
             onClick = onClick,
             modifier = modifier,
@@ -402,6 +412,7 @@ fun BondTextAction(
             Text(
                 text = text,
                 color = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
 

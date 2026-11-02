@@ -49,6 +49,15 @@ internal fun GlassButton(
     val accent = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
     val foreground = if (contentColor != Color.Unspecified) contentColor else if (primary) Color.White else if (destructive) accent else MaterialTheme.colorScheme.onSurface
     val surface = MaterialTheme.colorScheme.surface
+    val buttonPadding = PaddingValues(
+        horizontal = if (iconOnly) 0.dp else 18.dp,
+        vertical = if (iconOnly) 0.dp else 12.dp,
+    )
+    val centeredContent: @Composable RowScope.() -> Unit = {
+        ProvideTextStyle(LocalTextStyle.current.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center)) {
+            content()
+        }
+    }
     if (!enabled) {
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) {
             Row(
@@ -56,10 +65,10 @@ internal fun GlassButton(
                     .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                     .border(1.dp, glassControlBorderColor(enabled = false), RoundedCornerShape(50))
                     .clickable(enabled = false, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
-                    .height(48.dp).padding(horizontal = if (iconOnly) 0.dp else 18.dp),
+                    .heightIn(min = 48.dp).padding(buttonPadding),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
-                content = content,
+                content = centeredContent,
             )
         }
         return
@@ -70,8 +79,8 @@ internal fun GlassButton(
             modifier = modifier.alpha(if (enabled) 1f else 0.38f), enabled = enabled,
             tint = if (primary) accent else Color.Unspecified,
             surfaceColor = if (primary) Color.Unspecified else surface.copy(alpha = if (LocalGlassEffects.current) 0.38f else 1f),
-            contentPadding = PaddingValues(horizontal = if (iconOnly) 0.dp else 18.dp),
-            content = content,
+            contentPadding = buttonPadding,
+            content = centeredContent,
         )
     }
 }
@@ -127,7 +136,10 @@ internal fun <T> GlassSettingDropdown(
             BondMenuEntry(label, { expanded = false; if (value != selected) pending = value to center }, selected = value == selected)
         }) {
             GlassButton({ expanded = true }, Modifier.widthIn(max = 180.dp).onGloballyPositioned { center = it.boundsInWindow().center }) {
-                Text(options.firstOrNull { it.first == selected }?.second.orEmpty(), maxLines = 1, color = MaterialTheme.colorScheme.primary)
+                Text(options.firstOrNull { it.first == selected }?.second.orEmpty(),
+                    modifier = Modifier.weight(1f, fill = false), maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.primary)
                 Icon(
                     if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                     contentDescription = null,

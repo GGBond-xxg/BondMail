@@ -112,7 +112,7 @@ internal fun BodyTranslationDialog(html: String?, plain: String, subject: String
                 if (translated != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("translation_tab_result", "translation_tab_compare", "translation_tab_original").forEachIndexed { index, label ->
                         FilterChip(mode == index, { mode = index }, modifier = Modifier.weight(1f), label = {
-                            Text(tr(label), style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                            Text(tr(label), style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         })
                     }
                 }

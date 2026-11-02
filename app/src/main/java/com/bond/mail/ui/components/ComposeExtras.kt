@@ -21,15 +21,15 @@ internal fun ComposeExtras(accountId: String, onInsert: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var configure by remember { mutableStateOf(false) }
     if (configure) MailToolsDialog(initialTab = "tools_accounts") { configure = false }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(modifier = Modifier.weight(1f), onClick = { val signature = store.get(accountId, "signature"); if (signature.isBlank()) configure = true else onInsert(signature) }) {
+    com.bond.mail.ui.theme.BondAdaptiveActionRow {
+        TextButton(modifier = Modifier.fillMaxWidth(), onClick = { val signature = store.get(accountId, "signature"); if (signature.isBlank()) configure = true else onInsert(signature) }) {
             Text(tr("insert_signature"))
         }
-        Box(Modifier.weight(1f)) {
+        Box(Modifier.fillMaxWidth()) {
             TextButton(modifier = Modifier.fillMaxWidth(), onClick = { expanded = true }) { Text(tr("response_templates")) }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 store.get(accountId, "templates").split("\n---\n").filter { it.isNotBlank() }.forEach { text ->
-                    DropdownMenuItem(text = { Text(text.take(60)) }, onClick = { onInsert(text); expanded = false })
+                    DropdownMenuItem(text = { Text(text, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }, onClick = { onInsert(text); expanded = false })
                 }
                 DropdownMenuItem(text = { Text(tr("manage")) }, onClick = { configure = true; expanded = false })
             }

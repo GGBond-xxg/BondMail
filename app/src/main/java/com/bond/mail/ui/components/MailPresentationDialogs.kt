@@ -69,8 +69,10 @@ fun MailDisplayModeDialog(sender: String, mode: MailDisplayMode, onSelect: (Mail
                     Checkbox(checked = rememberSender, onCheckedChange = { rememberSender = it })
                     Text(tr("mail_display_remember"), Modifier.weight(1f))
                 }
-                Text(sender, style = MaterialTheme.typography.bodySmall)
-                BondTextAction(text = tr("mail_display_reset"), onClick = {
+                Text(sender, style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Spacer(Modifier.height(12.dp))
+                BondTextAction(text = tr("mail_display_reset"), modifier = Modifier.fillMaxWidth(), onClick = {
                     store.set("display", sender, false, null)
                     onSelect(MailDisplayMode.AUTO)
                     onDismiss()

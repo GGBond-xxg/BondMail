@@ -1628,7 +1628,11 @@ internal object MailWebViewCache {
     ): Int? {
         val body = document.body()
         val totalTextLength = body.text().trim().length.coerceAtLeast(1)
-        val totalImageCount = body.select("img").size.coerceAtLeast(1)
+        // A logo in a narrow header cell is not a phone-sized message canvas. Counting that
+        // single image as 100% of the content misclassified fixed-width itineraries as fluid,
+        // then expanded both sibling cells to 100% and squeezed ticket details into one column.
+        val contentImages = body.select("img").filterNot(::isSmallLayoutImage).toSet()
+        val totalImageCount = contentImages.size.coerceAtLeast(1)
 
         data class CompactCandidate(
             val width: Int,
@@ -1658,7 +1662,7 @@ internal object MailWebViewCache {
             val depth = depthOf(element)
             if (depth > MAX_COMPACT_CONTENT_DEPTH) return
             val textLength = element.text().trim().length
-            val imageCount = element.select("img").size
+            val imageCount = element.select("img").count { it in contentImages }
             if (textLength < (if (preferTransactionalCard) 16 else 32) && imageCount == 0) return
 
             val textCoverage = textLength.toFloat() / totalTextLength.toFloat()
@@ -1714,6 +1718,14 @@ internal object MailWebViewCache {
                 (it.textCoverage * 100f + it.imageCoverage * 28f + it.depth.coerceAtMost(10)).toInt()
             }.thenBy { -kotlin.math.abs(it.width - 320) },
         )?.width
+    }
+
+    private fun isSmallLayoutImage(image: Element): Boolean {
+        val width = parsePixelDimension(image.attr("width"))
+            ?: STYLE_WIDTH_DECLARATION.find(image.attr("style"))?.groupValues?.get(1)?.let(::parsePixelDimension)
+        val height = parsePixelDimension(image.attr("height"))
+            ?: STYLE_HEIGHT_DECLARATION.find(image.attr("style"))?.groupValues?.get(1)?.let(::parsePixelDimension)
+        return width != null && height != null && width in 1..160 && height in 1..160
     }
 
     /**

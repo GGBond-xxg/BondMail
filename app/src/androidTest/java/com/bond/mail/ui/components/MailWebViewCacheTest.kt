@@ -8,6 +8,38 @@ import org.junit.Test
 
 class MailWebViewCacheTest {
     @Test
+    fun smallHeaderLogoDoesNotOverrideFixedItineraryColumns() = runBlocking {
+        // Anonymized structure from an 800px itinerary: its only image is in a 314px logo cell.
+        val prepared = prepare("notice@example.com", """
+            <html><body>
+            <table width="800"><tr><td width="20"></td><td width="314">
+              <img src="https://example.invalid/logo.png" width="90" height="70">
+            </td><td width="436">Electronic ticket itinerary</td></tr></table>
+            <table width="800"><tr><td width="20"></td>
+              <td width="390">Passenger name / NAME: TEST PERSON</td>
+              <td width="390">电子票号 / ETKT NO: 000-1234567890</td></tr>
+              <tr><td width="20"></td><td width="390">AIRLINE PNR: ABCDEF</td>
+              <td width="390">ISSUED: 2026-01-01</td></tr></table>
+            </body></html>
+        """.trimIndent())
+        assertEquals(MailDocumentLayout.DESKTOP_SCALED, prepared.layout)
+        assertEquals(800, prepared.desktopCanvasWidthPx)
+        val document = org.jsoup.Jsoup.parse(prepared.html)
+        assertEquals(4, document.select("#bondmail-desktop-canvas td[width=390]").size)
+        assertFalse(document.select("#bondmail-desktop-canvas .bondmail-wide-layout").isNotEmpty())
+    }
+
+    @Test
+    fun actualCompactImageMessageStaysFluid() = runBlocking {
+        val prepared = prepare("notice@example.com", """
+            <html><body><table width="800"><tr><td><table width="320"><tr><td>
+              <img src="https://example.invalid/poster.png" width="320" height="480">
+            </td></tr></table></td></tr></table><p>Message footer</p></body></html>
+        """.trimIndent())
+        assertEquals(MailDocumentLayout.FLUID, prepared.layout)
+    }
+
+    @Test
     fun renderedHeaderKeepsDateAtRightAndBodyGapOutsideCard() = runBlocking {
         val prepared = prepare("notice@example.com", "<html><body><p>Newsletter body</p></body></html>")
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()

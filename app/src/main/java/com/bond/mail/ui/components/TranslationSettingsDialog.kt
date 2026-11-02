@@ -106,7 +106,7 @@ internal fun TranslationProviderPicker(provider: TranslationProvider, modifier: 
             { onSelect(option); expanded = false }, selected = provider == option) }, modifier) {
         BondSecondaryButton(onClick = { expanded = true }, enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-            Text(tr(provider.labelKey) + " ▾", maxLines = 2)
+            Text(tr(provider.labelKey) + " ▾", maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }

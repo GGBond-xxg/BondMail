@@ -729,28 +729,27 @@ private fun <T> MailOptionSelector(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        com.bond.mail.ui.theme.BondAdaptiveActionRow(
+            horizontalSpacing = 7.dp,
         ) {
             options.forEach { option ->
                 if (option == selected) {
                     BondPrimaryButton(
                         onClick = { onSelected(option) },
                         enabled = enabled,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 7.dp, vertical = 9.dp),
                     ) {
-                        Text(optionLabel(option), maxLines = 1, fontSize = 12.sp)
+                        Text(optionLabel(option), fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 } else {
                     BondSecondaryButton(
                         onClick = { onSelected(option) },
                         enabled = enabled,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(horizontal = 7.dp, vertical = 9.dp),
                     ) {
-                        Text(optionLabel(option), maxLines = 1, fontSize = 12.sp)
+                        Text(optionLabel(option), fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }

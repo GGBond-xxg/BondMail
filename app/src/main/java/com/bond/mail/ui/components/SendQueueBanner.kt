@@ -31,9 +31,10 @@ fun SendUndoNotice() {
     if (undone || (task != null && task.sendAfter > now)) {
         androidx.compose.ui.window.Popup(alignment = androidx.compose.ui.Alignment.BottomCenter) {
             BondServiceSurface(Modifier.padding(horizontal = 16.dp, vertical = 100.dp).widthIn(max = 600.dp).fillMaxWidth()) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text(if (undone) tr("send_undone") else task!!.subject.ifBlank { tr("no_subject") }, Modifier.weight(1f), maxLines = 2)
+                SendStatusContent(
+                    subject = if (undone) tr("send_undone") else task!!.subject.ifBlank { tr("no_subject") },
+                    modifier = Modifier.padding(12.dp),
+                ) {
                     if (!undone && task != null) TextButton(onClick = { scope.launch { undone = container.repository.undoSend(task.id) } }) {
                         Text(tr("send_undo") + " (${((task.sendAfter - now + 999) / 1000).coerceAtLeast(0)})")
                     }
@@ -57,8 +58,7 @@ fun SendQueueBanner(modifier: Modifier = Modifier) {
     if (tasks.isEmpty() && !notice) return
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tasks.take(3).forEach { task ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Text(task.subject.ifBlank { tr("no_subject") }, Modifier.weight(1f), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            SendStatusContent(subject = task.subject.ifBlank { tr("no_subject") }) {
                 if (task.state == "QUEUED" && task.sendAfter > now) {
                     TextButton(onClick = { scope.launch { notice = container.repository.undoSend(task.id) } }) {
                         Text(tr("send_undo") + " (${((task.sendAfter - now + 999) / 1000).coerceAtLeast(0)})")
@@ -67,5 +67,15 @@ fun SendQueueBanner(modifier: Modifier = Modifier) {
             }
         }
         if (notice) TextButton(onClick = { notice = false }) { Text(tr("send_undone")) }
+    }
+}
+
+/** Give the subject and the time-sensitive action independent space, including at large font sizes. */
+@Composable
+internal fun SendStatusContent(subject: String, modifier: Modifier = Modifier, action: @Composable () -> Unit) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(subject, Modifier.fillMaxWidth(), maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Box(Modifier.align(androidx.compose.ui.Alignment.End)) { action() }
     }
 }
