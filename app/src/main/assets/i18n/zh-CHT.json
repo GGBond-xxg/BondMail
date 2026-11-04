@@ -633,5 +633,8 @@
   "verification_rule_test": "測試此規則",
   "verification_rule_match": "識別結果：%s",
   "verification_rule_no_match": "沒有唯一匹配。請檢查固定文字、長度和類型，或排除多個不同驗證碼。",
-  "verification_rule_local_note": "測試只在本機執行，範例文字不會儲存或傳送。只儲存規則範本，請勿在範本中填寫真實驗證碼。"
+  "verification_rule_local_note": "測試只在本機執行，範例文字不會儲存或傳送。只儲存規則範本，請勿在範本中填寫真實驗證碼。",
+  "forward_original_html": "原郵件 · 保留排版",
+  "forward_original_hint": "寄送時保留原郵件排版和圖片，點擊摘要可展開。",
+  "forward_remove_original": "移除原郵件"
 }

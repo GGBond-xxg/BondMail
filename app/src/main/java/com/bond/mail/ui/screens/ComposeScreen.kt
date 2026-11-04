@@ -1,5 +1,6 @@
 package com.bond.mail.ui.screens
 
+import com.bond.mail.data.mail.ForwardBody
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -131,6 +132,7 @@ fun ComposeScreen(
     initialBcc: String = "",
     initialSubject: String,
     initialBody: String,
+    initialBodyHtml: String? = null,
     initialAttachmentUris: List<String> = emptyList(),
     draftTaskId: String? = null,
     sourceMessageId: String? = null,
@@ -151,7 +153,12 @@ fun ComposeScreen(
     var cc by rememberSaveable { mutableStateOf(initialCc) }
     var bcc by rememberSaveable { mutableStateOf(initialBcc) }
     var subject by rememberSaveable { mutableStateOf(initialSubject) }
-    var body by rememberSaveable { mutableStateOf(initialBody) }
+    var body by rememberSaveable { mutableStateOf(ForwardBody.note(initialBodyHtml, initialBody)) }
+    var includeOriginal by rememberSaveable(initialBodyHtml) { mutableStateOf(true) }
+    val originalHtml = initialBodyHtml.takeIf { includeOriginal }
+    var initializedSeed by rememberSaveable { mutableStateOf<Int?>(null) }
+    var quoteExpanded by remember { mutableStateOf(false) }
+    val quotedText = remember(originalHtml) { originalHtml?.let(ForwardBody::quoteText).orEmpty() }
     var recipientExtrasExpanded by rememberSaveable { mutableStateOf(false) }
     var recipientFocused by remember { mutableStateOf(false) }
     var queuedClose by remember { mutableStateOf(false) }
@@ -169,16 +176,22 @@ fun ComposeScreen(
         initialBcc,
         initialSubject,
         initialBody,
+        initialBodyHtml,
         initialAttachmentUris,
         draftTaskId,
         sourceMessageId,
     ) {
+        val seed = listOf(initialAccountId, initialTo, initialCc, initialBcc, initialSubject,
+            initialBody, initialBodyHtml, initialAttachmentUris, draftTaskId, sourceMessageId).hashCode()
+        if (initializedSeed == seed) return@LaunchedEffect
+        initializedSeed = seed
         accountId = initialAccountId
         to = initialTo
         cc = initialCc
         bcc = initialBcc
         subject = initialSubject
-        body = initialBody
+        body = ForwardBody.note(initialBodyHtml, initialBody)
+        includeOriginal = true
         recipientExtrasExpanded = false
         recipientFocused = false
         attachments.clear()
@@ -219,7 +232,7 @@ fun ComposeScreen(
     val glassBackdrop = rememberLayerBackdrop()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hasMeaningfulDraft = to.isNotBlank() || cc.isNotBlank() || bcc.isNotBlank() ||
-            subject.isNotBlank() || body.isNotBlank() || attachments.isNotEmpty()
+            subject.isNotBlank() || body.isNotBlank() || originalHtml != null || attachments.isNotEmpty()
         val currentHasMeaningfulDraft = rememberUpdatedState(hasMeaningfulDraft)
         val sheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.Hidden,
@@ -259,7 +272,8 @@ fun ComposeScreen(
                 cc = cc,
                 bcc = bcc,
                 subject = subject,
-                body = body,
+                body = ForwardBody.text(body, originalHtml),
+                bodyHtml = ForwardBody.html(body, originalHtml),
                 attachmentUris = attachments.map { it.uri.toString() },
                 draftTaskId = draftTaskId,
                 sourceMessageId = sourceMessageId,
@@ -631,6 +645,21 @@ fun ComposeScreen(
                                 // internally while keeping its complete outline visible.
                                 .heightIn(min = 140.dp, max = 220.dp),
                         )
+                        if (originalHtml != null) {
+                            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(tr("forward_original_html"), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                                        BondIconButton(onClick = { includeOriginal = false }) {
+                                            Icon(Icons.Default.Close, contentDescription = tr("forward_remove_original"))
+                                        }
+                                    }
+                                    Text(quotedText, maxLines = if (quoteExpanded) Int.MAX_VALUE else 3, overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.clickable { quoteExpanded = !quoteExpanded }, style = MaterialTheme.typography.bodySmall)
+                                    Text(tr("forward_original_hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                         error?.let {
                             Text(
                                 tr(it.key, *it.args.toTypedArray()),
@@ -761,11 +790,12 @@ fun ComposeScreen(
                                 cc = cc,
                                 bcc = bcc,
                                 subject = subject,
-                                body = body,
+                                body = ForwardBody.text(body, originalHtml),
+                                bodyHtml = ForwardBody.html(body, originalHtml),
                                 attachmentUris = attachments.map { it.uri.toString() },
                                 existingTaskId = draftTaskId,
                                 sourceMessageId = sourceMessageId,
-                replyMessageId = replyMessageId,
+                                replyMessageId = replyMessageId,
                             ) {
                                 showDraftDecision = false
                                 resolvedClose = true

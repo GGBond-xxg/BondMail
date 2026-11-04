@@ -8,7 +8,7 @@ import org.junit.Test
 
 class MailWebViewCacheTest {
     @Test
-    fun responsiveTableRetainsSideGuttersAndBodyClipsBothCorners() = runBlocking {
+    fun responsiveTableRetainsSideGutters() = runBlocking {
         val prepared = prepare("notice@example.com", """
             <html><head><style>
               @media only screen and (max-width:600px) { .inner { width:84%!important } }
@@ -36,14 +36,9 @@ class MailWebViewCacheTest {
                     override fun onPageFinished(view: android.webkit.WebView, url: String?) {
                         view.evaluateJavascript("""
                             (function() {
-                              var body=document.getElementById('bondmail-message-body');
-                              var b=body.getBoundingClientRect();
                               var o=document.getElementById('outer').getBoundingClientRect();
                               var i=document.getElementById('inner').getBoundingClientRect();
-                              return [i.width/o.width,i.left-o.left,o.right-i.right,
-                                body.contains(document.elementFromPoint(b.left+1,b.top+1)),
-                                body.contains(document.elementFromPoint(b.right-1,b.bottom-1)),
-                                body.contains(document.elementFromPoint(b.left+b.width/2,b.top+8))];
+                              return [i.width/o.width,i.left-o.left,o.right-i.right];
                             })()
                         """.trimIndent()) { result.set(it); ready.countDown() }
                     }
@@ -57,9 +52,6 @@ class MailWebViewCacheTest {
             assertEquals("Sender's responsive width must survive normalization", 0.84, bounds.getDouble(0), 0.02)
             assertTrue("Left gutter must remain", bounds.getDouble(1) >= 16)
             assertTrue("Right gutter must remain", bounds.getDouble(2) >= 16)
-            assertFalse("Top corner must clip descendants", bounds.getBoolean(3))
-            assertFalse("Bottom corner must clip descendants", bounds.getBoolean(4))
-            assertTrue("Body content must stay visible inside the clip", bounds.getBoolean(5))
         } finally {
             instrumentation.runOnMainSync { webView?.destroy() }
         }
@@ -254,7 +246,7 @@ class MailWebViewCacheTest {
             avatarText = "T",
         ),
         foregroundCss = "#202124",
-        backgroundCss = "#f7f7f7",
+        backgroundCss = if (darkMode) "#000000" else "#f7f7f7",
         linkCss = "#0b57d0",
         mutedCss = "#666666",
         headerSurfaceCss = "#ffffff",

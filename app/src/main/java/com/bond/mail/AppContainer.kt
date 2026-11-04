@@ -146,6 +146,7 @@ class AppContainer(context: Context) {
             migration9To10,
             migration10To11,
             com.bond.mail.data.db.PRODUCTIVITY_MIGRATION,
+            com.bond.mail.data.db.HTML_OUTBOX_MIGRATION,
         )
         .build()
     val settings = SettingsStore(context)

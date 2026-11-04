@@ -633,5 +633,8 @@
   "verification_rule_test": "Test this rule",
   "verification_rule_match": "Detected: %s",
   "verification_rule_no_match": "No unique match. Check fixed text, length and type, or remove conflicting codes.",
-  "verification_rule_local_note": "Tests run locally. Sample text is not saved or sent. Only the template is saved; do not include a real code in it."
+  "verification_rule_local_note": "Tests run locally. Sample text is not saved or sent. Only the template is saved; do not include a real code in it.",
+  "forward_original_html": "Original email · formatting preserved",
+  "forward_original_hint": "The original layout and images will be included. Tap the excerpt to expand.",
+  "forward_remove_original": "Remove original email"
 }

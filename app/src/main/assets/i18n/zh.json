@@ -633,5 +633,8 @@
   "verification_rule_test": "测试此规则",
   "verification_rule_match": "识别结果：%s",
   "verification_rule_no_match": "没有唯一匹配。请检查固定文字、长度和类型，或排除多个不同验证码。",
-  "verification_rule_local_note": "测试只在本机运行，示例文字不会保存或发送。只保存规则模板，请勿在模板中填写真实验证码。"
+  "verification_rule_local_note": "测试只在本机运行，示例文字不会保存或发送。只保存规则模板，请勿在模板中填写真实验证码。",
+  "forward_original_html": "原邮件 · 保留排版",
+  "forward_original_hint": "发送时保留原邮件排版和图片，点击摘要可展开。",
+  "forward_remove_original": "移除原邮件"
 }

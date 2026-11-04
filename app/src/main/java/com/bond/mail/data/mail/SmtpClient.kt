@@ -131,12 +131,12 @@ class SmtpClient(context: Context) {
             sentDate = Date(task.updatedAt.coerceAtLeast(task.createdAt))
 
             if (attachmentUris.isEmpty()) {
-                setText(task.bodyText, Charsets.UTF_8.name())
+                OutgoingMimeBody.applyTo(this, task.bodyText, task.bodyHtml)
             } else {
                 val multipart = MimeMultipart("mixed")
                 multipart.addBodyPart(
                     MimeBodyPart().apply {
-                        setText(task.bodyText, Charsets.UTF_8.name())
+                        OutgoingMimeBody.applyTo(this, task.bodyText, task.bodyHtml)
                     },
                 )
                 attachmentUris.forEachIndexed { index, uri ->

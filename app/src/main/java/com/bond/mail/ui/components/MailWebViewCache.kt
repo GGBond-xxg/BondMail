@@ -744,16 +744,29 @@ internal object MailWebViewCache {
                 min-width:0!important;max-width:100%!important;margin:0!important;
                 padding:0!important;box-sizing:border-box!important;
                 background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "transparent!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
-                overflow:hidden!important;border-radius:${MailHeaderSpacing.CORNER}px!important;
+                overflow:hidden!important;border-radius:0!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
               }
-              /* Clip the complete painted body once, including contrasting backgrounds and top
-                 borders. Separate background/descendant rounded clips can leave a fringe. */
-              @supports (clip-path:inset(0 round 1px)){
-                #bondmail-message-body{
+              /* Rasterize sender backgrounds/images together before applying the rounded mask.
+                 Clipping on the painted white body itself can anti-alias each dark child twice. */
+              #bondmail-body-clip{
+                display:block!important;width:100%!important;margin:0!important;padding:0!important;
+                border:0!important;background:transparent!important;box-shadow:none!important;
+                border-radius:${MailHeaderSpacing.CORNER}px!important;overflow:hidden!important;
+                isolation:isolate!important;transform:translateZ(0)!important
+              }
+              @supports (mask-image:linear-gradient(#000,#000)){
+                #bondmail-body-clip{
                   border-radius:0!important;
-                  clip-path:inset(0 round ${MailHeaderSpacing.CORNER}px)!important
+                  --mail-r:${MailHeaderSpacing.CORNER}px;
+                  mask:
+                    radial-gradient(circle at bottom right,#000 calc(var(--mail-r) - .5px),transparent var(--mail-r)) top left/var(--mail-r) var(--mail-r) no-repeat,
+                    radial-gradient(circle at bottom left,#000 calc(var(--mail-r) - .5px),transparent var(--mail-r)) top right/var(--mail-r) var(--mail-r) no-repeat,
+                    radial-gradient(circle at top right,#000 calc(var(--mail-r) - .5px),transparent var(--mail-r)) bottom left/var(--mail-r) var(--mail-r) no-repeat,
+                    radial-gradient(circle at top left,#000 calc(var(--mail-r) - .5px),transparent var(--mail-r)) bottom right/var(--mail-r) var(--mail-r) no-repeat,
+                    linear-gradient(#000,#000) center/calc(100% - 2 * var(--mail-r)) 100% no-repeat,
+                    linear-gradient(#000,#000) center/100% calc(100% - 2 * var(--mail-r)) no-repeat!important
                 }
               }
               #bondmail-message-body > .bondmail-original-first{
@@ -2339,7 +2352,7 @@ internal object MailWebViewCache {
         val card = Element("section")
             .attr("id", "bondmail-message-card")
             .appendChild(createHeader(header))
-        card.appendChild(messageBody)
+        card.appendChild(Element("div").attr("id", "bondmail-body-clip").appendChild(messageBody))
 
         body.appendChild(createSubject(header))
         body.appendChild(card)

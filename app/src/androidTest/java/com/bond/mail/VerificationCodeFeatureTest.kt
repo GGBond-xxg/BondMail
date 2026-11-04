@@ -125,7 +125,7 @@ class VerificationCodeFeatureTest {
                             GlassMainDock(0, {}, {}, Modifier.align(androidx.compose.ui.Alignment.BottomCenter))
                         } else DetailScreen(container, fixture.id, fixture, false, settings.value,
                             onMessageSnapshot = {}, onBack = {}, onDelete = {}, onMoveSenderToSpam = {},
-                            onRestoreSenderFromSpam = {}, onReply = { _, _, _ -> }, onForward = { _, _ -> })
+                            onRestoreSenderFromSpam = {}, onReply = { _, _, _ -> }, onForward = { _, _, _ -> })
                     } }
                 } }
                 for (style in UiStyle.entries) for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {

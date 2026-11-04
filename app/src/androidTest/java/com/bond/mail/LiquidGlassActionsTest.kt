@@ -99,7 +99,7 @@ class LiquidGlassActionsTest {
                                             onMessageSnapshot = {}, onBack = requestBack, onDelete = { deletes.incrementAndGet() },
                                             onMoveSenderToSpam = {}, onRestoreSenderFromSpam = {},
                                             onReply = { _, _, _ -> replies.incrementAndGet() },
-                                            onForward = { _, _ -> forwards.incrementAndGet() },
+                                            onForward = { _, _, _ -> forwards.incrementAndGet() },
                                         )
                                     }
                                 }

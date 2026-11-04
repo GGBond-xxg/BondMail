@@ -209,7 +209,7 @@ fun DetailScreen(
     onMoveSenderToSpam: (MessageEntity) -> Unit,
     onRestoreSenderFromSpam: (MessageEntity) -> Unit,
     onReply: (String, String, String) -> Unit,
-    onForward: (String, String) -> Unit,
+    onForward: (String, String, String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val storedMessage by container.repository.message(messageId).collectAsState(initial = initialMessage)
@@ -554,6 +554,7 @@ fun DetailScreen(
         onForward(
             if (item.subject.startsWith("Fwd:", true)) item.subject else "Fwd: ${item.subject}",
             "\n\n--- Forwarded message ---\nFrom: ${item.senderAddress}\nSubject: ${item.subject}\n\n${item.bestForwardText()}",
+            com.bond.mail.data.mail.ForwardBody.original(item.bodyHtml, item.senderAddress, item.subject),
         )
     }
 

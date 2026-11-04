@@ -303,6 +303,7 @@ fun MailApp(
     var composeBcc by rememberSaveable { mutableStateOf("") }
     var composeSubject by rememberSaveable { mutableStateOf("") }
     var composeBody by rememberSaveable { mutableStateOf("") }
+    var composeBodyHtml by com.bond.mail.ui.components.rememberDraftHtml()
     var composeAccountId by rememberSaveable { mutableStateOf("") }
     var composeAttachmentUris by remember { mutableStateOf<List<String>>(emptyList()) }
     var composeDraftTaskId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -421,11 +422,13 @@ fun MailApp(
         composeDraftTaskId = null
         composeSourceMessageId = null
         composeReplyMessageId = null
+        composeBodyHtml = null
         composeVisible = true
     }
 
     fun openDraft(message: MessageListRow) {
         composeReplyMessageId = null
+        composeBodyHtml = null
         appScope.launch {
             val localTask = message.localTaskId?.let { container.repository.draftNow(it) }
             if (localTask != null) {
@@ -435,6 +438,7 @@ fun MailApp(
                 composeBcc = localTask.bcc
                 composeSubject = localTask.subject
                 composeBody = localTask.bodyText
+                composeBodyHtml = localTask.bodyHtml
                 composeAttachmentUris = parseStringArray(localTask.attachmentsJson)
                 composeDraftTaskId = localTask.id
                 composeSourceMessageId = localTask.sourceMessageId
@@ -464,6 +468,7 @@ fun MailApp(
                 composeBcc = ""
                 composeSubject = remote.subject
                 composeBody = remote.bodyText
+                composeBodyHtml = remote.bodyHtml
                 composeAttachmentUris = emptyList()
                 composeDraftTaskId = null
                 composeSourceMessageId = remote.id
@@ -488,6 +493,7 @@ fun MailApp(
         composeDraftTaskId = null
         composeSourceMessageId = null
         composeReplyMessageId = message.id
+        composeBodyHtml = null
         composeVisible = true
         appScope.launch {
             val loaded = container.repository.ensureBodyLoaded(
@@ -509,34 +515,16 @@ fun MailApp(
     }
 
     fun forwardFromList(message: MessageListRow) {
-        val forwardSubject = if (message.subject.startsWith("Fwd:", true)) {
-            message.subject
-        } else {
-            "Fwd: ${message.subject}"
-        }
-        val initialBody = "\n\n--- Forwarded message ---\nFrom: ${message.senderAddress}\n" +
-            "Subject: ${message.subject}\n\n${message.preview}"
-        composeAccountId = message.accountId
-        composeTo = ""
-        composeCc = ""
-        composeBcc = ""
-        composeSubject = forwardSubject
-        composeBody = initialBody
-        composeAttachmentUris = emptyList()
-        composeDraftTaskId = null
-        composeSourceMessageId = null
-        composeReplyMessageId = null
-        composeVisible = true
         appScope.launch {
             val loaded = container.repository.ensureBodyLoaded(
-                messageId = message.id,
-                markSeen = false,
-                priority = true,
+                messageId = message.id, markSeen = false, priority = true,
             ) ?: return@launch
-            if (composeVisible && composeSubject == forwardSubject && composeBody == initialBody) {
-                composeBody = "\n\n--- Forwarded message ---\nFrom: ${loaded.senderAddress}\n" +
-                    "Subject: ${loaded.subject}\n\n${loaded.bestForwardText()}"
-            }
+            if (composeVisible) return@launch
+            prepareCompose()
+            composeAccountId = loaded.accountId
+            composeSubject = if (loaded.subject.startsWith("Fwd:", true)) loaded.subject else "Fwd: ${loaded.subject}"
+            composeBody = "\n\n--- Forwarded message ---\nFrom: ${loaded.senderAddress}\nSubject: ${loaded.subject}\n\n${loaded.bestForwardText()}"
+            composeBodyHtml = com.bond.mail.data.mail.ForwardBody.original(loaded.bodyHtml, loaded.senderAddress, loaded.subject)
         }
     }
 
@@ -713,6 +701,7 @@ fun MailApp(
                 composeTo = ""; composeCc = ""; composeBcc = ""; composeSubject = ""; composeBody = ""
                 composeAttachmentUris = emptyList()
                 composeDraftTaskId = null; composeSourceMessageId = null; composeReplyMessageId = null
+                composeBodyHtml = null
                 composeVisible = true
             }
         }
@@ -740,6 +729,7 @@ fun MailApp(
         composeDraftTaskId = null
         composeSourceMessageId = null
         composeReplyMessageId = null
+        composeBodyHtml = null
         composeVisible = true
         onExternalComposeRequestConsumed(request.requestId)
     }
@@ -1299,10 +1289,11 @@ fun MailApp(
                                         composeAttachmentUris = emptyList()
                                         composeDraftTaskId = null
                                         composeSourceMessageId = null
-        composeReplyMessageId = messageId
+                                        composeReplyMessageId = messageId
+                                        composeBodyHtml = null
                                         composeVisible = true
                                     },
-                                    onForward = { subject, body ->
+                                    onForward = { subject, body, html ->
                                         composeAccountId = detailInitialSnapshots[messageId]?.accountId
                                             ?: selectedMessage
                                                 ?.takeIf { it.id == messageId }
@@ -1316,7 +1307,8 @@ fun MailApp(
                                         composeAttachmentUris = emptyList()
                                         composeDraftTaskId = null
                                         composeSourceMessageId = null
-        composeReplyMessageId = null
+                                        composeReplyMessageId = null
+                                        composeBodyHtml = html
                                         composeVisible = true
                                     },
                                 )
@@ -1334,6 +1326,7 @@ fun MailApp(
                         initialBcc = composeBcc,
                         initialSubject = composeSubject,
                         initialBody = composeBody,
+                        initialBodyHtml = composeBodyHtml,
                         initialAttachmentUris = composeAttachmentUris,
                         draftTaskId = composeDraftTaskId,
                         sourceMessageId = composeSourceMessageId,

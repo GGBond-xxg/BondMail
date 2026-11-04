@@ -135,6 +135,7 @@ data class OutboxEntity(
     val bcc: String = "",
     val subject: String,
     val bodyText: String,
+    val bodyHtml: String? = null,
     @ColumnInfo(defaultValue = "'[]'") val attachmentsJson: String = "[]",
     @ColumnInfo(defaultValue = "''") val internetMessageId: String = "",
     val state: String = "QUEUED",
