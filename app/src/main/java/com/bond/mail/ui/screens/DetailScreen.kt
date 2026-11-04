@@ -282,7 +282,7 @@ fun DetailScreen(
     }
     val latestItem by rememberUpdatedState(item)
     val verificationCode = rememberVerificationCode(item)
-    val messageContentTopInset = detailTopBarHeight
+    val messageContentTopInset = detailTopBarHeight + MailHeaderSpacing.TOP_GAP.dp
     val attachmentFallbackLabel = tr("attachment")
     val attachmentDownloadedMessage = tr("downloaded")
     val attachmentDownloadFailedMessage = tr("attachment_download_failed")

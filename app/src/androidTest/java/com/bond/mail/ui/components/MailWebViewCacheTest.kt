@@ -8,6 +8,64 @@ import org.junit.Test
 
 class MailWebViewCacheTest {
     @Test
+    fun responsiveTableRetainsSideGuttersAndBodyClipsBothCorners() = runBlocking {
+        val prepared = prepare("notice@example.com", """
+            <html><head><style>
+              @media only screen and (max-width:600px) { .inner { width:84%!important } }
+            </style></head><body>
+              <table width="100%" cellpadding="0" cellspacing="0"><tr><td>
+                <table id="outer" width="600" style="width:600px" cellpadding="0" cellspacing="0"><tr>
+                  <td style="border-top:4px solid #eb1000;background:#fff">
+                    <table id="inner" class="inner" width="500" style="width:500px" align="center"><tr>
+                      <td style="height:120px">A welcome message with readable side margins.</td>
+                    </tr></table>
+                  </td></tr></table>
+              </td></tr></table>
+            </body></html>
+        """.trimIndent(), darkMode = true)
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val result = java.util.concurrent.atomic.AtomicReference<String>()
+        var webView: android.webkit.WebView? = null
+        instrumentation.runOnMainSync {
+            webView = android.webkit.WebView(instrumentation.targetContext).apply {
+                settings.javaScriptEnabled = true
+                settings.useWideViewPort = true
+                layout(0, 0, 720, 1600)
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView, url: String?) {
+                        view.evaluateJavascript("""
+                            (function() {
+                              var body=document.getElementById('bondmail-message-body');
+                              var b=body.getBoundingClientRect();
+                              var o=document.getElementById('outer').getBoundingClientRect();
+                              var i=document.getElementById('inner').getBoundingClientRect();
+                              return [i.width/o.width,i.left-o.left,o.right-i.right,
+                                body.contains(document.elementFromPoint(b.left+1,b.top+1)),
+                                body.contains(document.elementFromPoint(b.right-1,b.bottom-1)),
+                                body.contains(document.elementFromPoint(b.left+b.width/2,b.top+8))];
+                            })()
+                        """.trimIndent()) { result.set(it); ready.countDown() }
+                    }
+                }
+                loadDataWithBaseURL("https://example.invalid", prepared.html, "text/html", "UTF-8", null)
+            }
+        }
+        try {
+            assertTrue(ready.await(15, java.util.concurrent.TimeUnit.SECONDS))
+            val bounds = org.json.JSONArray(result.get())
+            assertEquals("Sender's responsive width must survive normalization", 0.84, bounds.getDouble(0), 0.02)
+            assertTrue("Left gutter must remain", bounds.getDouble(1) >= 16)
+            assertTrue("Right gutter must remain", bounds.getDouble(2) >= 16)
+            assertFalse("Top corner must clip descendants", bounds.getBoolean(3))
+            assertFalse("Bottom corner must clip descendants", bounds.getBoolean(4))
+            assertTrue("Body content must stay visible inside the clip", bounds.getBoolean(5))
+        } finally {
+            instrumentation.runOnMainSync { webView?.destroy() }
+        }
+    }
+
+    @Test
     fun smallHeaderLogoDoesNotOverrideFixedItineraryColumns() = runBlocking {
         // Anonymized structure from an 800px itinerary: its only image is in a 314px logo cell.
         val prepared = prepare("notice@example.com", """

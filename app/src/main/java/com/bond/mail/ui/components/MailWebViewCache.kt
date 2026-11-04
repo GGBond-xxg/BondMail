@@ -506,7 +506,7 @@ internal object MailWebViewCache {
                 width:100%!important;min-width:0!important;max-width:100%!important
               }
               .bondmail-wide-layout{
-                width:100%!important;min-width:0!important;max-width:100%!important;
+                width:100%;min-width:0!important;max-width:100%!important;
                 box-sizing:border-box!important;overflow-x:visible!important
               }
               .bondmail-compact-primary{
@@ -547,7 +547,7 @@ internal object MailWebViewCache {
               }
               #bondmail-message-body > .bondmail-root-content table.bondmail-wide-layout,
               #bondmail-message-body > .bondmail-root-content .bondmail-wide-layout table{
-                width:100%!important;table-layout:auto!important
+                width:100%;table-layout:auto!important
               }
               #bondmail-message-body > .bondmail-root-content p,
               #bondmail-message-body > .bondmail-root-content span,
@@ -747,6 +747,14 @@ internal object MailWebViewCache {
                 overflow:hidden!important;border-radius:${MailHeaderSpacing.CORNER}px!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
+              }
+              /* Clip the complete painted body once, including contrasting backgrounds and top
+                 borders. Separate background/descendant rounded clips can leave a fringe. */
+              @supports (clip-path:inset(0 round 1px)){
+                #bondmail-message-body{
+                  border-radius:0!important;
+                  clip-path:inset(0 round ${MailHeaderSpacing.CORNER}px)!important
+                }
               }
               #bondmail-message-body > .bondmail-original-first{
                 top:auto!important;margin-top:0!important

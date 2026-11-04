@@ -4,6 +4,7 @@ package com.bond.mail.ui.components
 internal object MailHeaderSpacing {
     const val INSET = 16
     const val CORNER = 20
+    const val TOP_GAP = 12
     const val BODY_GAP = 12
     const val SUBJECT_TOP = 16
     const val SUBJECT_BOTTOM = 8

@@ -22,8 +22,8 @@ android {
         applicationId = "com.bond.mail"
         minSdk = 26
         targetSdk = 36
-        versionCode = 199
-        versionName = "1.6.1.7"
+        versionCode = 200
+        versionName = "1.6.1.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
