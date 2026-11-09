@@ -280,6 +280,32 @@ class MailWebViewCacheTest {
         assertEquals(0.0, result.getDouble(4), 0.5)
     }
 
+    @Test
+    fun senderResetsCannotMoveBodyBehindTheNativeHeader() = runBlocking {
+        for (mode in com.bond.mail.data.settings.MailDisplayMode.entries) {
+            val prepared = prepare("offers@example.com", """
+                <html style="padding:9px!important;margin:7px!important">
+                <head><style>body.sender-page{padding:0!important;margin:20px!important}</style></head>
+                <body class="sender-page" style="padding:0!important;margin:4px!important">
+                <div><style>body{padding:0!important}</style></div>
+                <div id="first-visible">The beginning of this newsletter must remain visible.</div>
+                </body></html>
+            """.trimIndent(), displayMode = mode)
+            val result = renderedGeometry(prepared, """
+                var s=document.getElementById('bondmail-message-subject').getBoundingClientRect();
+                var h=document.getElementById('bondmail-message-header').getBoundingClientRect();
+                var c=document.getElementById('bondmail-body-clip').getBoundingClientRect();
+                return [s.top,s.left,h.top,c.top,c.top-h.bottom,parseFloat(getComputedStyle(document.body).paddingTop)];
+            """.trimIndent())
+            assertEquals("Subject must retain the chrome inset ($mode)", 64.0, result.getDouble(0), 0.5)
+            assertEquals("Sender page margin must not shift the app shell", 0.0, result.getDouble(1), 0.5)
+            assertEquals(148.0, result.getDouble(2), 0.5)
+            assertEquals("Body corners must be below the native header ($mode)", 272.0, result.getDouble(3), 0.5)
+            assertEquals(12.0, result.getDouble(4), 0.5)
+            assertEquals(64.0, result.getDouble(5), 0.5)
+        }
+    }
+
     private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val ready = java.util.concurrent.CountDownLatch(1)

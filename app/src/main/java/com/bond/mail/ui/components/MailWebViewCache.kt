@@ -480,6 +480,12 @@ internal object MailWebViewCache {
         // the current Android font scale. This keeps line wrapping and card geometry identical while
         // Chromium replaces the preview body underneath the stable native header.
         val safeTopInsetCssPx = topContentInsetCssPx.coerceIn(0, 200)
+        // Sender selectors and late <style> blocks can reset body padding after our head CSS.
+        // These spacers belong to the native chrome: losing them hides the body top behind it.
+        document.selectFirst("html")!!.let { page ->
+            page.attr("style", page.attr("style") + ";margin:0!important;padding:0!important;")
+        }
+        body.attr("style", body.attr("style") + ";margin:0!important;padding:${safeTopInsetCssPx}px 0 0!important;")
         val safeSubjectBlockHeightCssPx = subjectBlockHeightCssPx.coerceIn(48, 520)
         val safeSenderBlockHeightCssPx = senderBlockHeightCssPx.coerceIn(64, 320)
         // The adaptive title size is selected by Compose before the document is prepared. WebView
@@ -2316,7 +2322,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v54|")
+        append("layout-v55|")
         append(key)
         append("|display=").append(header.displayMode)
         append("|subject=").append(header.subject.hashCode())
