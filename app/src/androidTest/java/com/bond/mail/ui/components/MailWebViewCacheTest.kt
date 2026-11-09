@@ -38,7 +38,8 @@ class MailWebViewCacheTest {
                             (function() {
                               var o=document.getElementById('outer').getBoundingClientRect();
                               var i=document.getElementById('inner').getBoundingClientRect();
-                              return [i.width/o.width,i.left-o.left,o.right-i.right];
+                              var b=document.getElementById('bondmail-message-body').getBoundingClientRect();
+                              return [i.width/o.width,i.left-b.left,b.right-i.right];
                             })()
                         """.trimIndent()) { result.set(it); ready.countDown() }
                     }
@@ -230,14 +231,92 @@ class MailWebViewCacheTest {
         assertTrue(prepared.html.contains("body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer"))
     }
 
+    @Test
+    fun senderPageBackgroundCannotFillRoundedCornersAndContentHasSafeInsets() = runBlocking {
+        for (dark in listOf(false, true)) {
+            for (mode in com.bond.mail.data.settings.MailDisplayMode.entries) {
+                val prepared = prepare("notice@example.com", """
+                    <html style="background:white!important"><body style="background:white!important;padding:0!important">
+                    <div id="edge-content" style="margin:0;background:white">Text starts at the authored edge.</div>
+                    </body></html>
+                """.trimIndent(), dark, mode)
+                val result = renderedGeometry(prepared, """
+                    var b=document.getElementById('bondmail-message-body'), r=b.getBoundingClientRect();
+                    var c=(document.getElementById('edge-content') || b.firstElementChild).getBoundingClientRect();
+                    return [getComputedStyle(document.body).backgroundColor,
+                        getComputedStyle(document.documentElement).backgroundColor,
+                        c.left-r.left,r.right-c.right,c.top-r.top,r.bottom-c.bottom,
+                        getComputedStyle(b).backgroundColor];
+                """.trimIndent())
+                val page = if (dark) "rgb(0, 0, 0)" else "rgb(247, 247, 247)"
+                assertEquals(page, result.getString(0))
+                assertEquals(page, result.getString(1))
+                for (index in 2..5) assertEquals("All content edges need safe space", 16.0, result.getDouble(index), 0.5)
+                assertFalse("Transparent mail needs a visible reading surface", result.getString(6) == "rgba(0, 0, 0, 0)")
+            }
+        }
+    }
+
+    @Test
+    fun fixedCanvasFitsInsideNewBodyInsetsWithoutLosingColumns() = runBlocking {
+        val prepared = prepare("updates@cloudflare.com", """
+            <html><body><table id="fixed-table" width="600" style="width:600px" cellpadding="0" cellspacing="0"><tr>
+            <td id="left-column" width="300">Passenger / NAME: EXAMPLE TRAVELLER</td>
+            <td id="right-column" width="300">Ticket / NUMBER: 000-1234567890</td>
+            </tr></table></body></html>
+        """.trimIndent())
+        assertEquals(MailDocumentLayout.DESKTOP_SCALED, prepared.layout)
+        val result = renderedGeometry(prepared, """
+            var b=document.getElementById('bondmail-message-body').getBoundingClientRect();
+            var t=document.getElementById('fixed-table').getBoundingClientRect();
+            var l=document.getElementById('left-column').getBoundingClientRect();
+            var r=document.getElementById('right-column').getBoundingClientRect();
+            return [t.left-b.left,b.right-t.right,l.width,r.width,r.left-l.right];
+        """.trimIndent())
+        assertTrue(result.getDouble(0) >= 15.5)
+        assertTrue(result.getDouble(1) >= 15.5)
+        assertTrue("Left column remains readable", result.getDouble(2) > 100)
+        assertTrue("Right column remains readable", result.getDouble(3) > 100)
+        assertEquals(0.0, result.getDouble(4), 0.5)
+    }
+
+    private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val ready = java.util.concurrent.CountDownLatch(1)
+        val result = java.util.concurrent.atomic.AtomicReference<String>()
+        var webView: android.webkit.WebView? = null
+        instrumentation.runOnMainSync {
+            webView = android.webkit.WebView(instrumentation.targetContext).apply {
+                settings.javaScriptEnabled = true
+                settings.useWideViewPort = true
+                val density = resources.displayMetrics.density
+                layout(0, 0, (360 * density).toInt(), (900 * density).toInt())
+                webViewClient = object : android.webkit.WebViewClient() {
+                    override fun onPageFinished(view: android.webkit.WebView, url: String?) {
+                        view.evaluateJavascript("(function(){$script})()") { result.set(it); ready.countDown() }
+                    }
+                }
+                loadDataWithBaseURL("https://example.invalid", prepared.html, "text/html", "UTF-8", null)
+            }
+        }
+        try {
+            assertTrue("WebView should render the fixture", ready.await(15, java.util.concurrent.TimeUnit.SECONDS))
+            return org.json.JSONArray(result.get())
+        } finally {
+            instrumentation.runOnMainSync { webView?.destroy() }
+        }
+    }
+
     private suspend fun prepare(
         senderAddress: String,
         html: String,
         darkMode: Boolean = false,
+        displayMode: com.bond.mail.data.settings.MailDisplayMode = com.bond.mail.data.settings.MailDisplayMode.AUTO,
     ): PreparedMailDocument = MailWebViewCache.preparedDocument(
         key = "instrumentation-${System.nanoTime()}",
         html = html,
         header = MailWebHeader(
+            displayMode = displayMode,
             subject = "Test message",
             senderName = "Test sender",
             senderAddress = senderAddress,

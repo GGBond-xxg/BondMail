@@ -508,6 +508,7 @@
   "sender_scope_domain": "此域名下的所有邮箱",
   "sender_icon_priority": "邮箱规则优先于域名规则。恢复自动会移除当前范围的设置；已有的域名规则仍会生效。",
   "sender_icon_auto": "恢复自动识别",
+  "sender_icon_government": "政府 / 出入境",
   "sender_icon_bank": "银行",
   "sender_icon_simcard": "运营商 / SIM",
   "sender_icon_exchange": "交易所",

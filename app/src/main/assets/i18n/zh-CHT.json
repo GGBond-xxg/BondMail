@@ -508,6 +508,7 @@
   "sender_scope_domain": "此網域下的所有郵箱",
   "sender_icon_priority": "郵箱規則優先於網域規則。恢復自動會移除目前範圍的設定；已有的網域規則仍會生效。",
   "sender_icon_auto": "恢復自動識別",
+  "sender_icon_government": "政府 / 出入境",
   "sender_icon_bank": "銀行",
   "sender_icon_simcard": "電信商 / SIM",
   "sender_icon_exchange": "交易所",

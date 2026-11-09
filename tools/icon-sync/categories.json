@@ -448,5 +448,15 @@
     "sources": [
       "https://bitunix.com/"
     ]
+  },
+  {
+    "category": "government",
+    "brand": "Government / immigration",
+    "domains": [
+      "imi.gov.my"
+    ],
+    "names": [],
+    "exactNames": [],
+    "sources": []
   }
 ]

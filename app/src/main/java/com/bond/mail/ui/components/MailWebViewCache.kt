@@ -55,6 +55,7 @@ private data class DesktopCanvasCandidate(
 
 /** Caches the sanitized local HTML document. Message bodies themselves are persisted in Room. */
 internal object MailWebViewCache {
+    private const val BODY_CONTENT_INSET = 16
     private val documents = LruCache<String, PreparedMailDocument>(64)
     @Synchronized fun clear() { documents.evictAll() }
 
@@ -460,6 +461,11 @@ internal object MailWebViewCache {
         // layouts structurally identical also removes the visible font-weight jump on first open.
         if (header.displayMode == MailDisplayMode.LIGHT) applyLightMailCanvas(document)
         wrapMessageCard(body, header)
+        // Sender inline !important backgrounds otherwise paint underneath the rounded body,
+        // filling its transparent corners. The outer page belongs to the app in every mode.
+        listOf(document.selectFirst("html")!!, body).forEach { page ->
+            page.attr("style", page.attr("style") + ";background:$backgroundCss!important;")
+        }
         val contentHeightHint = estimateContentHeightHint(
             document = document,
             layout = documentLayout,
@@ -594,7 +600,7 @@ internal object MailWebViewCache {
 
             MailDocumentLayout.DESKTOP_SCALED -> {
                 val width = desktopCanvasWidthPx!!
-                val availableWidth = (viewportWidthCssPx - 24).coerceAtLeast(240)
+                val availableWidth = (viewportWidthCssPx - 24 - 2 * BODY_CONTENT_INSET).coerceAtLeast(1)
                 val desktopScale = (availableWidth.toFloat() / width.toFloat()).coerceIn(0.20f, 1f)
                 val scaledWidth = kotlin.math.ceil(width * desktopScale).toInt().coerceAtMost(availableWidth)
                 val zoomPercent = formatCssNumber(desktopScale * 100f)
@@ -742,8 +748,8 @@ internal object MailWebViewCache {
               #bondmail-message-body{
                 position:relative!important;z-index:1!important;display:block!important;width:100%!important;
                 min-width:0!important;max-width:100%!important;margin:0!important;
-                padding:0!important;box-sizing:border-box!important;
-                background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "transparent!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
+                padding:${BODY_CONTENT_INSET}px!important;box-sizing:border-box!important;
+                background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "$headerSurfaceCss!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
                 overflow:hidden!important;border-radius:0!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
@@ -979,7 +985,7 @@ internal object MailWebViewCache {
                 white-space:pre-wrap!important;word-break:break-word!important;
                 font-family:sans-serif!important;
                 font-size:16px!important;line-height:1.55!important;margin:0!important;
-                padding:4px 18px 22px!important;box-sizing:border-box!important
+                padding:0!important;box-sizing:border-box!important
               }
               #bondmail-scroll-tail{
                 display:block!important;width:1px!important;min-width:1px!important;
@@ -2310,7 +2316,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v53|")
+        append("layout-v54|")
         append(key)
         append("|display=").append(header.displayMode)
         append("|subject=").append(header.subject.hashCode())
@@ -2344,6 +2350,8 @@ internal object MailWebViewCache {
             MailDisplayMode.ORIGINAL -> messageBody.attr("style", "background:#fff;color:#202124;" + body.attr("style"))
             else -> Unit
         }
+        // Original mode can carry sender inline padding:0!important; keep the reader's safe inset.
+        messageBody.attr("style", messageBody.attr("style") + ";padding:${BODY_CONTENT_INSET}px!important;")
         originalNodes.forEach { node ->
             node.remove()
             messageBody.appendChild(node)

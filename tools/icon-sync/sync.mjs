@@ -36,7 +36,7 @@ for (const filename of locals.filter(n => n.endsWith('.svg'))) {
 }
 // One checked registry feeds both the avatar domain aliases and the pure Kotlin matcher.
 const categories = JSON.parse(await readFile(path.join(here, 'categories.json'), 'utf8'));
-const categoryKeys = new Set(['bank', 'simcard', 'sports', 'clothes', 'exchange']);
+const categoryKeys = new Set(['bank', 'simcard', 'sports', 'clothes', 'exchange', 'government']);
 const categoryDomains = new Map();
 for (const entry of categories) {
   if (!categoryKeys.has(entry.category)) throw new Error(`Invalid category: ${entry.category}`);
@@ -74,6 +74,7 @@ ${categories.map(e => `        Entry(${kotlinString(e.category)}, ${kotlinList(e
         "simcard" -> "SIM"
         "sports" -> "SPORT"
         "clothes" -> "WEAR"
+        "government" -> "GOV"
         else -> "EX"
     })
 }

@@ -32,6 +32,7 @@ internal object GenericSenderCategories {
         Entry("clothes", listOf("mango.com"), listOf("mango fashion"), listOf("mango")),
         Entry("exchange", listOf("bitpanda.com"), listOf("bitpanda"), listOf()),
         Entry("exchange", listOf("bitunix.com"), listOf("bitunix"), listOf()),
+        Entry("government", listOf("imi.gov.my"), listOf(), listOf()),
     )
     private val patterns = entries.map { entry ->
         entry to entry.names.map { name ->
@@ -49,6 +50,7 @@ internal object GenericSenderCategories {
         "simcard" -> "SIM"
         "sports" -> "SPORT"
         "clothes" -> "WEAR"
+        "government" -> "GOV"
         else -> "EX"
     })
 }

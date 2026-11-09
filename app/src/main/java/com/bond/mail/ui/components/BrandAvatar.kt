@@ -880,6 +880,7 @@ private fun fixedBrandColor(key: String): Color? = when (key) {
     "coolapk" -> Color(0xFF11A668)
     "eastwestbank" -> Color(0xFFDA291C)
     "logitech" -> Color(0xFF00B8FC)
+    "government" -> Color(0xFF455A64)
     "bank", "hang seng" -> Color(0xFF315C9B)
     "innolight" -> Color(0xFF0075C1)
     "chinalife" -> Color(0xFF00A86D)
