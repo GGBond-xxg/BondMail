@@ -154,7 +154,6 @@ import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.components.ContactAvatar
 import com.bond.mail.ui.components.brandAvatarPalette
 import com.bond.mail.ui.components.contactAvatarText
-import com.bond.mail.ui.components.MailContentHeightHint
 import com.bond.mail.ui.components.MailWebHeader
 import com.bond.mail.ui.components.MailHeaderSpacing
 import com.bond.mail.ui.components.contactLogoSvgMarkup
@@ -623,7 +622,6 @@ fun DetailScreen(
                 // when it only lasts a few frames.
                 MailDocumentPlaceholder(
                     showProgress = true,
-                    expandedBody = true,
                     header = mailHeader,
                     headerLayout = headerLayout,
                     previewText = "",
@@ -640,7 +638,6 @@ fun DetailScreen(
                     // error should not replace the opened mail with an unrelated blank page.
                     MailDocumentPlaceholder(
                         showProgress = false,
-                        expandedBody = true,
                         header = mailHeader,
                         headerLayout = headerLayout,
                         previewText = previewText,
@@ -1928,7 +1925,6 @@ private fun MailHtmlView(
         if (placeholderAlpha > 0.001f) {
             MailDocumentPlaceholder(
                 showProgress = true,
-                expandedBody = document?.contentHeightHint != MailContentHeightHint.SHORT,
                 header = header,
                 headerLayout = headerLayout,
                 previewText = "",
@@ -2190,7 +2186,6 @@ private fun MailStableHeaderOverlay(
 @Composable
 private fun MailDocumentPlaceholder(
     showProgress: Boolean,
-    expandedBody: Boolean,
     header: MailWebHeader,
     headerLayout: MailHeaderLayout,
     previewText: String,
@@ -2207,109 +2202,52 @@ private fun MailDocumentPlaceholder(
             .trim()
             .take(420)
     }
-    val previewLineCount = remember(preview) {
-        if (preview.isBlank()) {
-            5
-        } else {
-            ((preview.length + 39) / 40).coerceIn(2, 7)
-        }
-    }
-
     Surface(
         modifier = modifier,
         color = MaterialTheme.bondSurfaces.page,
     ) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            // Reserve the floating action dock so the loading sheet fills the readable body rather
-            // than continuing underneath the controls. The final WebView may still scroll behind it.
-            val bottomDockReserve = 104.dp
-            val availableCardHeight = (
-                maxHeight - topContentInset - headerLayout.subjectBlockHeight -
-                    headerLayout.senderBlockHeight - MailHeaderSpacing.BODY_GAP.dp - bottomDockReserve
-            ).coerceAtLeast(220.dp)
-            val previewHeight = if (preview.isBlank()) {
-                8.dp
-            } else {
-                (previewLineCount * 21 + 34).dp
-            }
-            val compactCardHeight = previewHeight.coerceIn(220.dp, availableCardHeight)
-            val targetCardHeight = if (expandedBody) availableCardHeight else compactCardHeight
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = horizontalContentInset,
-                        top = topContentInset,
-                        end = horizontalContentInset,
-                    ),
-            ) {
-                MailInformationHeader(
-                    header = header,
-                    headerLayout = headerLayout,
-                    contentVisible = headerContentVisible,
-                    onAttachmentsClick = onAttachmentsClick,
-                )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = horizontalContentInset,
+                    top = topContentInset,
+                    end = horizontalContentInset,
+                ),
+        ) {
+            MailInformationHeader(
+                header = header,
+                headerLayout = headerLayout,
+                contentVisible = headerContentVisible,
+                onAttachmentsClick = onAttachmentsClick,
+            )
+            // Size the placeholder to its content, rather than drawing a mostly empty full-height sheet.
+            if (preview.isNotBlank() || showProgress) {
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(targetCardHeight),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(MailHeaderSpacing.CORNER.dp),
                     color = MaterialTheme.bondSurfaces.content,
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
                 ) {
-                    Column(Modifier.fillMaxSize()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                        ) {
-                            Column(
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+                    ) {
+                        if (preview.isNotBlank()) {
+                            Text(
+                                text = preview,
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                if (preview.isNotBlank()) {
-                                    Text(
-                                        text = preview,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(
-                                                start = 16.dp,
-                                                end = 16.dp,
-                                                top = 4.dp,
-                                                bottom = 16.dp,
-                                            ),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 14.sp,
-                                        lineHeight = 21.sp,
-                                        maxLines = 7,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                } else if (showProgress) {
-                                    MailLoadingSkeleton(
-                                        lineFractions = listOf(
-                                            0.92f,
-                                            0.86f,
-                                            0.78f,
-                                            0.68f,
-                                            0.82f,
-                                            0.64f,
-                                            0.46f,
-                                        ),
-                                        color = skeleton,
-                                        modifier = Modifier.padding(
-                                            start = 16.dp,
-                                            end = 16.dp,
-                                            top = 6.dp,
-                                            bottom = 18.dp,
-                                        ),
-                                    )
-                                }
-                            }
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                lineHeight = 21.sp,
+                                maxLines = 7,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        } else {
+                            MailLoadingSkeleton(color = skeleton)
                         }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
             }
         }
     }
@@ -2375,7 +2313,6 @@ private fun MailPlaceholderAttachments(attachments: List<MailAttachmentInfo>) {
 
 @Composable
 private fun MailLoadingSkeleton(
-    lineFractions: List<Float>,
     color: Color,
     modifier: Modifier = Modifier,
 ) {
@@ -2394,13 +2331,14 @@ private fun MailLoadingSkeleton(
     )
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
-        lineFractions.forEach { fraction ->
+        // Two short paragraphs keep the loading state quiet and compact.
+        listOf(0.96f, 0.88f, 0.60f, 0.92f, 0.82f, 0.46f).forEachIndexed { index, fraction ->
+            if (index > 0) Spacer(Modifier.height(if (index == 3) 24.dp else 10.dp))
             Surface(
                 modifier = Modifier
                     .fillMaxWidth(fraction)
-                    .height(11.dp),
+                    .height(10.dp),
                 shape = RoundedCornerShape(5.dp),
                 color = color.copy(alpha = if (motionEnabled) pulse else 0.68f),
             ) {}
