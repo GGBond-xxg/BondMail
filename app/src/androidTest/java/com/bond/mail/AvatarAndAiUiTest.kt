@@ -146,35 +146,41 @@ class AvatarAndAiUiTest {
         }
     }
 
-    @Test fun allMailboxesHeaderKeepsSelectionAndChevronIndependent() {
+    @Test fun allMailboxesLabelAndChevronShareOneToggleAction() {
         val selected = mutableStateOf(true)
         val expanded = mutableStateOf(false)
-        var selections = 0
-        stage("launch")
+        val expandable = mutableStateOf(true)
+        var toggles = 0
         launchScenario().use { scenario ->
-            stage("activity-started")
             waitForContent(scenario)
             scenario.onActivity { activity -> activity.setContent {
                 BondMailTheme(AppSettings()) { JsonStringsProvider("en") {
                     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-                        DrawerAllMailboxesRow(selected.value, expanded.value, true,
-                            onSelect = { selections++; selected.value = true }, onToggleExpanded = { expanded.value = !expanded.value })
+                        DrawerAllMailboxesRow(selected.value, expanded.value, expandable.value,
+                            onToggleExpanded = { toggles++; expanded.value = !expanded.value })
                     }
                 } }
             } }
             assertTrue(device.wait(Until.hasObject(By.text("All Mailboxes")), 7000))
             click("All Mailboxes")
-            instrumentation.waitForIdleSync()
-            assertEquals(0, selections)
-            click("Show all mailboxes", description = true)
-            instrumentation.waitForIdleSync()
             assertTrue(expanded.value)
+            assertEquals(1, toggles)
+            // The chevron belongs to the same clickable row, without a second button/ripple.
+            assertEquals(1, nodes().count { it.isClickable && it.isEnabled })
+            click("Collapse mailbox list", description = true)
+            assertFalse(expanded.value)
+            assertEquals(2, toggles)
             scenario.onActivity { selected.value = false }
             settle()
             click("All Mailboxes")
-            instrumentation.waitForIdleSync()
-            assertEquals(1, selections)
             assertTrue(expanded.value)
+            assertEquals(3, toggles)
+            assertFalse(selected.value)
+            screenshot("drawer-header-expanded")
+            scenario.onActivity { expandable.value = false }
+            settle()
+            assertFalse(nodes().any { it.isClickable && it.isEnabled })
+            assertEquals(3, toggles)
         }
     }
 

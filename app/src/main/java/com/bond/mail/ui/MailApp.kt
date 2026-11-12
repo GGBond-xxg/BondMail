@@ -1474,7 +1474,6 @@ private fun MainTabs(
                     selectedAccountId = selectedAccountId,
                     currentFolder = currentFolder,
                     onChooseMailbox = ::chooseMailbox,
-                    onSelectAllMailboxes = { homeVm.selectMailbox(null, "INBOX") },
                     onAddAccount = {
                         scope.launch {
                             drawerState.close()
@@ -1768,7 +1767,6 @@ private fun MailDrawerContent(
     selectedAccountId: String?,
     currentFolder: String,
     onChooseMailbox: (String?, String) -> Unit,
-    onSelectAllMailboxes: () -> Unit,
     onAddAccount: () -> Unit,
     onSaveAccountSettings: (String, String, String, String, String, (UiFailure?) -> Unit) -> Unit,
     onStartOAuthReauthorization: (
@@ -1859,7 +1857,6 @@ private fun MailDrawerContent(
             selected = selectedAccountId == null && currentFolder == "INBOX",
             expanded = accountsExpanded,
             showExpand = orderedAccounts.size > COLLAPSED_ACCOUNT_LIMIT,
-            onSelect = onSelectAllMailboxes,
             onToggleExpanded = { accountsExpanded = !accountsExpanded },
         )
 
@@ -2217,7 +2214,6 @@ internal fun DrawerAllMailboxesRow(
     selected: Boolean,
     expanded: Boolean,
     showExpand: Boolean,
-    onSelect: () -> Unit,
     onToggleExpanded: () -> Unit,
 ) {
     val motionEnabled = bondMotionEnabled()
@@ -2234,8 +2230,9 @@ internal fun DrawerAllMailboxesRow(
         label = "drawer-mailbox-chevron",
     )
     Surface(
-        // Selecting the current aggregate is a no-op; this header never dismisses the drawer.
-        onClick = { if (!selected) onSelect() },
+        // One click target and ripple across the label and chevron; never select a mailbox or dismiss.
+        onClick = onToggleExpanded,
+        enabled = showExpand,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
@@ -2259,7 +2256,7 @@ internal fun DrawerAllMailboxesRow(
                     .padding(start = 16.dp),
             )
             if (showExpand) {
-                IconButton(onClick = onToggleExpanded) {
+                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.ExpandMore,
                         contentDescription = if (expanded) tr("collapse_accounts") else tr("expand_accounts"),
