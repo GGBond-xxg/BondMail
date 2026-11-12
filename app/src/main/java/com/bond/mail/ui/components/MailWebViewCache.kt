@@ -222,6 +222,7 @@ internal object MailWebViewCache {
         // entered night mode. BondMail applies its own complete dark transformation below.
         if (header.displayMode != MailDisplayMode.ORIGINAL) disableSenderDarkMode(document)
         repairDitoBodyReadability(document, header.senderAddress, darkMode && header.displayMode == MailDisplayMode.AUTO)
+        if (header.displayMode == MailDisplayMode.AUTO) repairNearInvisibleNewsletterText(document)
         trimTrailingNonVisualSections(document)
 
         val senderDomain = header.senderAddress.substringAfterLast('@', "").lowercase()
@@ -424,6 +425,7 @@ internal object MailWebViewCache {
             normalizeOversizedTypography(document)
             normalizeLongNoWrapText(document)
             normalizeHorizontalSpacing(document)
+            normalizeNewsletterColumns(document)
         }
 
         document.select("img").forEach { image ->
@@ -455,6 +457,7 @@ internal object MailWebViewCache {
         document.select("svg").forEach { svg ->
             svg.attr("style", svg.attr("style") + ";max-width:100%!important")
         }
+        if (documentLayout == MailDocumentLayout.FLUID) preserveNewsletterSizeLimits(document)
 
         // Build one Gmail-style content card: subject on the page background, then the sender
         // row and original message body on a raised content surface. Keeping both loading and final
@@ -2322,7 +2325,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v55|")
+        append("layout-v56|")
         append(key)
         append("|display=").append(header.displayMode)
         append("|subject=").append(header.subject.hashCode())

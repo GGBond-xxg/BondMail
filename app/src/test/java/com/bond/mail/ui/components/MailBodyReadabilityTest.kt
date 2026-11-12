@@ -5,6 +5,31 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MailBodyReadabilityTest {
+    @Test fun repairsNearInvisibleNewsletterCopyWithoutRevealingHiddenText() {
+        val document = Jsoup.parse("""<body style="background:#fdf5f1">
+            <p><span id="faint" style="color:#fcede1">Visible newsletter introduction</span></p>
+            <p id="muted" style="color:#777">Muted footer</p>
+            <div style="background:#111"><span id="dark" style="color:white">Dark panel</span></div>
+            <div style="background-image:url(https://example.invalid/banner.png)"><span id="image" style="color:white">On image</span></div>
+            <div style="display:none"><span id="hidden" style="color:white">Preheader</span></div>
+            <p id="zero" style="max-height:0;overflow:hidden;color:white">Hidden preview</p>
+            <button id="button" style="background:#7132f5;color:#fff">Action</button>
+            <img id="qr" src="cid:qr" width="96" height="96">
+            </body>""")
+        val unchanged = listOf("muted", "dark", "image", "hidden", "zero", "button", "qr")
+            .associateWith { document.getElementById(it)!!.outerHtml() }
+        repairNearInvisibleNewsletterText(document)
+        assertTrue(document.getElementById("faint")!!.attr("style").contains("color:#555555!important"))
+        unchanged.forEach { (id, html) -> assertEquals(id, html, document.getElementById(id)!!.outerHtml()) }
+    }
+
+    @Test fun unknownCanvasDoesNotTriggerAColourGuess() {
+        val document = Jsoup.parse("<p style='color:#fff'>Text over an unknown canvas</p>")
+        val before = document.outerHtml()
+        repairNearInvisibleNewsletterText(document)
+        assertEquals(before, document.outerHtml())
+    }
+
     @Test fun repairsDitoTextButKeepsQrLinksAndHiddenLayout() {
         val document = Jsoup.parse("""<body style="background:white">
             <table><tr><td id="step" style="color:white!important;background:white">Install your SIM</td></tr></table>

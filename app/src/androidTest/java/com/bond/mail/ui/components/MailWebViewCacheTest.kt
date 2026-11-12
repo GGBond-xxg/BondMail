@@ -306,6 +306,99 @@ class MailWebViewCacheTest {
         }
     }
 
+    @Test
+    fun fixedMobileNewsletterTablesFitInsideCardGutters() = runBlocking {
+        val prepared = prepare("googleplay-noreply@google.com", """
+            <html><head><style>table,td{border-collapse:collapse}td{padding:0}@media(max-width:600px){
+              .table-main-gmail{width:360px!important}.table-body-gmail{width:300px!important}
+            }</style></head><body><table width="100%"><tr><td style="padding:10px">
+              <table class="table-main-gmail" width="600"><tr><td>
+                <table id="copy" class="table-body-gmail" width="520" align="center"><tr><td>
+                  我们将更新服务条款。这是一段需要在手机正文卡片内完整显示的说明文字，不能裁掉右侧内容。
+                </td></tr></table>
+              </td></tr></table>
+            </td></tr></table></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            var b=document.getElementById('bondmail-message-body').getBoundingClientRect();
+            var c=document.getElementById('copy').getBoundingClientRect();
+            var t=document.querySelector('.table-main-gmail').getBoundingClientRect();
+            return [b.right-t.right,c.width,t.width-c.width,c.left-b.left];
+        """.trimIndent())
+        assertTrue("Fixed mobile canvas must not overflow", geometry.getDouble(0) >= 16)
+        assertTrue("Copy must remain readable", geometry.getDouble(1) > 200)
+        assertEquals(40.0, geometry.getDouble(2), 1.0)
+        assertTrue(geometry.getDouble(3) >= 16)
+    }
+
+    @Test
+    fun smallImageLimitsAndHeightOnlyLogosSurviveFluidRules() = runBlocking {
+        val icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3C/svg%3E"
+        val logo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='198' height='44'%3E%3C/svg%3E"
+        val prepared = prepare("newsletter@example.com", """
+            <html><meta name="viewport" content="width=device-width"><body><table width="100%"><tr><td>
+              <div style="max-width:51.6px"><img id="icon" width="51.6" height="auto" src="$icon" style="width:100%"></div>
+              <img id="logo" width="auto" height="32" src="$logo" style="width:auto;height:32px">
+              <div style="width:80px"><img id="qr" width="96" height="96" src="$icon"></div>
+              <img id="hero" width="516" src="$icon" style="width:100%">
+              <p>Original image limits must survive the mobile card's generic constraints.</p>
+            </td></tr></table></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            var r=id=>document.getElementById(id).getBoundingClientRect();
+            return [r('icon').width,r('icon').height,r('logo').height,r('qr').width,r('qr').height,r('hero').width];
+        """.trimIndent())
+        assertEquals(51.6, geometry.getDouble(0), 0.5)
+        assertEquals(51.6, geometry.getDouble(1), 0.5)
+        assertEquals(32.0, geometry.getDouble(2), 0.5)
+        assertEquals(80.0, geometry.getDouble(3), 0.5)
+        assertEquals(80.0, geometry.getDouble(4), 0.5)
+        assertTrue("Hero images should still fill their column", geometry.getDouble(5) > 250)
+    }
+
+    @Test
+    fun pairedCodeCaptionsStackWithoutSquashingTextOrCodes() = runBlocking {
+        val code = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3C/svg%3E"
+        fun group(id: String, width: Int) = """
+            <td id="$id" width="$width"><table width="100%"><tr>
+              <td width="96"><img src="$code" width="96" height="96"></td><td width="10"></td>
+              <td id="${id}-copy">关注微信公众号<br>重要消息不错过</td>
+            </tr></table></td>
+        """.trimIndent()
+        val prepared = prepare("notice@example.com", """
+            <html><body><table width="100%"><tr><td style="padding:20px">
+              <table width="525"><tr>${group("first", 204)}<td width="51"></td>${group("second", 270)}</tr></table>
+            </td></tr></table></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            var r=id=>document.getElementById(id).getBoundingClientRect();
+            var i=document.querySelector('#first img').getBoundingClientRect();
+            return [r('first-copy').width,r('second-copy').width,r('second').top-r('first').bottom,i.width/i.height];
+        """.trimIndent())
+        assertTrue(geometry.getDouble(0) >= 100)
+        assertTrue(geometry.getDouble(1) >= 100)
+        assertTrue("Each code-caption group gets its own line", geometry.getDouble(2) >= 15)
+        assertEquals("Codes must stay square", 1.0, geometry.getDouble(3), 0.01)
+    }
+
+    @Test
+    fun componentNewsletterDoesNotAccumulateOuterTextGutters() = runBlocking {
+        val prepared = prepare("notice@example.com", """
+            <html><body><table width="100%"><tr><td id="wrapper" class="text__row" style="padding:0 45px">
+              <table class="header" width="100%"><tr><td>Brand</td></tr></table>
+              <table class="hero-component" width="100%"><tr><td id="copy" style="padding:0 22px">
+                A complete component newsletter already provides its own text gutters.
+              </td></tr></table>
+            </td></tr></table></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            return [parseFloat(getComputedStyle(document.getElementById('wrapper')).paddingLeft),
+              parseFloat(getComputedStyle(document.getElementById('copy')).paddingLeft)];
+        """.trimIndent())
+        assertEquals(0.0, geometry.getDouble(0), 0.1)
+        assertEquals(22.0, geometry.getDouble(1), 0.1)
+    }
+
     private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val ready = java.util.concurrent.CountDownLatch(1)
