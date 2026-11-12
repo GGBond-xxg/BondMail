@@ -92,20 +92,18 @@ private fun AiSettingsContent(credentialStore: CredentialStore?, onSaved: () -> 
     val skillsPressResetter = rememberBondPressResetter()
     AiSettingsPage(tr("ai_settings"), onBack, dialog = false, footer = {
         key(skillsPressResetter.epoch) {
-            BondSecondaryButton(modifier = Modifier.weight(1f),
-                onClick = { skillsPressResetter.resetThen(onOpenReplySkills) }) { Text(tr("ai_skills_title")) }
+            BondSecondaryButton(modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 52.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                onClick = { skillsPressResetter.resetThen(onOpenReplySkills) }) { AiActionLabel(tr("ai_skills_title")) }
         }
         Spacer(Modifier.width(12.dp))
-        com.bond.mail.ui.theme.BondPrimaryButton(modifier = Modifier.weight(1f), enabled = !loadError,
-            onClick = { editing = null; editorOpen = true }) { Text(tr("ai_add_profile")) }
+        com.bond.mail.ui.theme.BondPrimaryButton(modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 52.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp), enabled = !loadError,
+            onClick = { editing = null; editorOpen = true }) { AiActionLabel(tr("ai_add_profile")) }
     }) {
         Text(tr("ai_profiles_note"), style = MaterialTheme.typography.bodySmall)
         if (loadError) Text(tr("ai_profiles_load_error"), color = MaterialTheme.colorScheme.error)
         if (profiles.entries.isEmpty() && !loadError) Text(tr("ai_not_configured"))
         profiles.entries.forEach { profile ->
-            Card(Modifier.fillMaxWidth(), colors = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS)
-                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                else CardDefaults.cardColors()) {
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.bondSurfaces.content)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(profile.name, style = MaterialTheme.typography.titleMedium)
                     Text(profile.config.model, style = MaterialTheme.typography.bodyMedium)
@@ -132,6 +130,12 @@ private fun AiSettingsContent(credentialStore: CredentialStore?, onSaved: () -> 
 }
 
 @Composable
+private fun AiActionLabel(label: String) {
+    Text(label, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+}
+
+@Composable
 private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean = true,
     footer: @Composable RowScope.() -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val page: @Composable () -> Unit = {
@@ -140,7 +144,8 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean
                 .glassSurface(LocalGlassWindowBackdrop.current, MaterialTheme.shapes.extraLarge, prominent = true)
                 else Modifier.fillMaxSize(),
             shape = if (dialog) MaterialTheme.shapes.extraLarge else androidx.compose.ui.graphics.RectangleShape,
-            color = if (dialog && LocalUiStyle.current == UiStyle.LIQUID_GLASS) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.background,
+            color = if (dialog && LocalUiStyle.current == UiStyle.LIQUID_GLASS) androidx.compose.ui.graphics.Color.Transparent
+                else if (dialog) MaterialTheme.bondSurfaces.popup else MaterialTheme.bondSurfaces.page,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Column(if (dialog) Modifier else Modifier.systemBarsPadding()) {
@@ -154,7 +159,8 @@ private fun AiSettingsPage(title: String, onDismiss: () -> Unit, dialog: Boolean
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) { content(); Spacer(Modifier.height(12.dp)) }
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.End, content = footer)
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End, content = footer)
             }
         }
     }
@@ -235,12 +241,12 @@ private fun AiProfileEditor(initial: AiProfile?, onSave: (AiProfile) -> Unit, on
         } else Text("generativelanguage.googleapis.com", style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(secret, { secret = it; status = null }, label = { Text("API Key") }, enabled = !busy,
             visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BondSecondaryButton(onClick = { picker = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.weight(1f)) { Text(tr("ai_select_model")) }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BondSecondaryButton(onClick = { picker = true }, enabled = !busy && models.isNotEmpty(), modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp), contentPadding = PaddingValues(12.dp)) { AiActionLabel(tr("ai_select_model")) }
             BondSecondaryButton(onClick = {
                 val snapshot = config()
                 runAction { models = fetchAiModels(snapshot); if (selectableAiModels(models).isEmpty()) "ai_models_empty" else "ai_models_loaded" }
-            }, enabled = !busy && secret.isNotBlank(), modifier = Modifier.weight(1f)) { Text(tr("ai_fetch_models")) }
+            }, enabled = !busy && secret.isNotBlank(), modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 48.dp), contentPadding = PaddingValues(12.dp)) { AiActionLabel(tr("ai_fetch_models")) }
         }
         OutlinedTextField(model, { model = it; status = null }, label = { Text(tr("ai_model_manual")) },
             enabled = !busy, singleLine = true, modifier = Modifier.fillMaxWidth())

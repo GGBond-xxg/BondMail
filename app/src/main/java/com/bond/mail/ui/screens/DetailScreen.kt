@@ -380,10 +380,11 @@ fun DetailScreen(
             contact.email.equals(item.senderAddress.trim(), ignoreCase = true)
         }
     }
-    val customContactAvatar = savedContact?.takeIf { manualSenderIcon == null }?.avatarText?.trim().takeUnless { it.isNullOrBlank() }
-    val avatarSvg = remember(senderName, item.senderAddress, customContactAvatar, manualSenderIcon) {
+    val selectedAvatar = manualSenderIcon ?: savedContact?.avatarText
+    val customContactAvatar = com.bond.mail.data.settings.AvatarChoice.glyph(selectedAvatar)
+    val avatarSvg = remember(senderName, item.senderAddress, customContactAvatar, selectedAvatar) {
         if (customContactAvatar == null) {
-            contactLogoSvgMarkup(context, senderName, item.senderAddress)
+            contactLogoSvgMarkup(context, senderName, item.senderAddress, selectedAvatar)
         } else {
             null
         }

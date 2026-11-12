@@ -15,7 +15,6 @@ import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.theme.BondAlertDialog
 import com.bond.mail.ui.theme.BondTextAction
 
-internal val manualIconCategories = listOf("aidef", "bank", "simcard", "exchange", "sports", "clothes", "shopping", "hotel", "expressdelivery", "airplane", "wallet", "social", "gaming", "entertainment", "education", "food", "transport", "health", "jobs", "developer", "government")
 
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
@@ -43,13 +42,10 @@ fun SenderIconDialog(sender: String, onDismiss: () -> Unit) {
                 Text(target, style = MaterialTheme.typography.bodySmall)
                 Text(tr("sender_icon_priority"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
                 HorizontalDivider()
-                Choice(tr("sender_icon_auto"), selected == null) { selected = null }
-                manualIconCategories.forEach { category ->
-                    Choice(tr("sender_icon_$category"), selected == category) { selected = category }
-                }
+                AvatarChoiceOptions(selected) { selected = it }
             }
         },
-        confirmButton = { BondTextAction(text = tr("save"), onClick = { store.set("icon", sender, domainScope, selected); onDismiss() }) },
+        confirmButton = { BondTextAction(text = tr("save"), enabled = AvatarChoice.isValid(selected), onClick = { store.set("icon", sender, domainScope, selected?.trim()?.ifBlank { null }); onDismiss() }) },
         dismissButton = { BondTextAction(text = tr("cancel"), onClick = onDismiss) })
 }
 

@@ -111,6 +111,7 @@ fun ContactsScreen(
     chromeControllerEnabled: Boolean = true,
     staggeredEntranceEnabled: Boolean = false,
 ) {
+    val containerContext = androidx.compose.ui.platform.LocalContext.current
     val contacts by container.repository.contacts.collectAsState(
         initial = container.repository.startupContactsSnapshot(),
     )
@@ -118,6 +119,7 @@ fun ContactsScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var showAddContact by rememberSaveable { mutableStateOf(false) }
     var editingContactId by rememberSaveable { mutableStateOf<String?>(null) }
+    var editingExistingContact by rememberSaveable { mutableStateOf(false) }
     var contactName by rememberSaveable { mutableStateOf("") }
     var contactEmail by rememberSaveable { mutableStateOf("") }
     var contactAvatar by rememberSaveable { mutableStateOf("") }
@@ -249,10 +251,11 @@ fun ContactsScreen(
                         },
                         onCompose = onCompose,
                         onEdit = {
+                            editingExistingContact = true
                             editingContactId = contact.id
                             contactName = contact.name
                             contactEmail = contact.email
-                            contactAvatar = contact.avatarText.orEmpty()
+                            contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contact.email) ?: contact.avatarText.orEmpty()
                             contactError = null
                             showAddContact = true
                         },
@@ -313,6 +316,15 @@ fun ContactsScreen(
                             MaterialTheme.shapes.large
                         },
                         onCompose = onCompose,
+                        onEdit = {
+                            editingExistingContact = true
+                            editingContactId = null
+                            contactName = contact.senderName.ifBlank { contact.senderAddress.substringBefore('@') }
+                            contactEmail = contact.senderAddress
+                            contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contactEmail).orEmpty()
+                            contactError = null
+                            showAddContact = true
+                        },
                     )
                 }
             }
@@ -367,6 +379,7 @@ fun ContactsScreen(
                             BondIconButton(
                                 onClick = {
                                     editingContactId = null
+                                    editingExistingContact = false
                                     contactName = ""
                                     contactEmail = ""
                                     contactAvatar = ""
@@ -431,7 +444,7 @@ fun ContactsScreen(
                 onDismissRequest = { showAddContact = false },
                 title = {
                     Text(
-                        if (editingContactId == null) tr("add_contact") else tr("edit_contact"),
+                        if (editingExistingContact) tr("edit_contact") else tr("add_contact"),
                     )
                 },
                 text = {
@@ -439,53 +452,11 @@ fun ContactsScreen(
                         modifier = Modifier.verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            ContactAvatar(
-                                name = contactName,
-                                email = contactEmail,
-                                customText = contactAvatar,
-                                size = 52.dp,
-                                monet = settings.monetBrandIcons,
-                            )
-                            BondTextField(
-                                value = contactAvatar,
-                                onValueChange = {
-                                    contactAvatar = it.take(32)
-                                    contactError = null
-                                },
-                                modifier = Modifier.weight(1f),
-                                label = tr("contact_avatar"),
-                                placeholder = tr("avatar_placeholder"),
-                                supportingText = tr("contact_avatar_hint"),
-                                singleLine = true,
-                            )
-                        }
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            BondTextAction(
-                                text = tr("avatar_auto"),
-                                onClick = {
-                                    contactAvatar = ""
-                                    contactError = null
-                                },
-                            )
-                            listOf("😀", "📮", "✉️", "⭐").forEach { emoji ->
-                                BondTextAction(
-                                    text = emoji,
-                                    onClick = {
-                                        contactAvatar = emoji
-                                        contactError = null
-                                    },
-                                )
-                            }
-                        }
+                        com.bond.mail.ui.components.AvatarChoiceField(
+                            value = contactAvatar.ifBlank { null },
+                            onChange = { contactAvatar = it.orEmpty(); contactError = null },
+                            name = contactName, email = contactEmail, monet = settings.monetBrandIcons,
+                        )
                         BondTextField(
                             value = contactName,
                             onValueChange = {
@@ -530,6 +501,8 @@ fun ContactsScreen(
                                         contactId = editingContactId,
                                     )
                                 }.onSuccess {
+                                    com.bond.mail.data.settings.MailPresentationStore.get(containerContext)
+                                        .set("icon", contactEmail, false, contactAvatar.trim().ifBlank { null })
                                     showAddContact = false
                                 }.onFailure { error ->
                                     contactError = if (
@@ -599,6 +572,12 @@ fun ContactsScreen(
                                 runCatching {
                                     container.repository.deleteSavedContact(contact.id)
                                 }.onSuccess {
+                                    val presentation = com.bond.mail.data.settings.MailPresentationStore.get(containerContext)
+                                    val key = "icon:email:${com.bond.mail.data.settings.SenderPresentationRules.address(contact.email)}"
+                                    // Remove only the avatar saved with this contact; preserve a later sender override.
+                                    if (contact.avatarText != null && presentation.values.value[key] == contact.avatarText) {
+                                        presentation.set("icon", contact.email, false, null)
+                                    }
                                     deleteContactTarget = null
                                     editingContactId = null
                                 }.onFailure {
@@ -622,7 +601,7 @@ fun ContactsScreen(
 }
 
 @Composable
-private fun ContactItem(
+internal fun ContactItem(
     modifier: Modifier = Modifier,
     name: String,
     email: String,
@@ -649,8 +628,10 @@ private fun ContactItem(
                 name = name,
                 email = email,
                 customText = customAvatarText,
-                size = 46.dp,
+                size = 48.dp,
                 monet = settings.monetBrandIcons,
+                onAvatarClick = { onCompose(email) },
+                onAvatarLongClick = onEdit,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {

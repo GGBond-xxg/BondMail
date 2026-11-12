@@ -1474,6 +1474,7 @@ private fun MainTabs(
                     selectedAccountId = selectedAccountId,
                     currentFolder = currentFolder,
                     onChooseMailbox = ::chooseMailbox,
+                    onSelectAllMailboxes = { homeVm.selectMailbox(null, "INBOX") },
                     onAddAccount = {
                         scope.launch {
                             drawerState.close()
@@ -1767,6 +1768,7 @@ private fun MailDrawerContent(
     selectedAccountId: String?,
     currentFolder: String,
     onChooseMailbox: (String?, String) -> Unit,
+    onSelectAllMailboxes: () -> Unit,
     onAddAccount: () -> Unit,
     onSaveAccountSettings: (String, String, String, String, String, (UiFailure?) -> Unit) -> Unit,
     onStartOAuthReauthorization: (
@@ -1857,7 +1859,7 @@ private fun MailDrawerContent(
             selected = selectedAccountId == null && currentFolder == "INBOX",
             expanded = accountsExpanded,
             showExpand = orderedAccounts.size > COLLAPSED_ACCOUNT_LIMIT,
-            onSelect = { onChooseMailbox(null, "INBOX") },
+            onSelect = onSelectAllMailboxes,
             onToggleExpanded = { accountsExpanded = !accountsExpanded },
         )
 
@@ -2211,7 +2213,7 @@ private fun MailDrawerContent(
 }
 
 @Composable
-private fun DrawerAllMailboxesRow(
+internal fun DrawerAllMailboxesRow(
     selected: Boolean,
     expanded: Boolean,
     showExpand: Boolean,
@@ -2232,7 +2234,8 @@ private fun DrawerAllMailboxesRow(
         label = "drawer-mailbox-chevron",
     )
     Surface(
-        onClick = onSelect,
+        // Selecting the current aggregate is a no-op; this header never dismisses the drawer.
+        onClick = { if (!selected) onSelect() },
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),

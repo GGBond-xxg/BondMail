@@ -253,7 +253,7 @@ class MailRepository(
             "Valid contact email is required"
         }
         val cleanAvatar = avatarText.trim().take(32).ifBlank { null }
-        require(cleanAvatar == null || cleanAvatar.isSingleVisibleGrapheme()) {
+        require(com.bond.mail.data.settings.AvatarChoice.isValid(cleanAvatar)) {
             "Contact avatar must contain one character or emoji"
         }
         val now = System.currentTimeMillis()

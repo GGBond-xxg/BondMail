@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.*
 import com.bond.mail.data.settings.MailPresentationStore
+import com.bond.mail.data.settings.AvatarChoice
 import com.bond.mail.data.settings.SenderPresentationRules
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -106,18 +107,22 @@ fun BrandAvatar(
     monet: Boolean = true,
     messageSubject: String = "",
     onAvatarClick: (() -> Unit)? = null,
+    onAvatarLongClick: (() -> Unit)? = null,
+    avatarChoice: String? = null,
+    useStoredOverride: Boolean = true,
 ) {
     val context = LocalContext.current
     val store = remember(context) { MailPresentationStore.get(context) }
     val overrides by store.values.collectAsState()
-    val manual = SenderPresentationRules.resolve(overrides, "icon", senderAddress)
+    val manual = (if (useStoredOverride) SenderPresentationRules.resolve(overrides, "icon", senderAddress) else null) ?: avatarChoice
+    val glyph = AvatarChoice.glyph(manual)
     var categoryOpen by remember(senderAddress) { mutableStateOf(false) }
     if (categoryOpen) SenderIconDialog(senderAddress) { categoryOpen = false }
     val brand = remember(senderName, senderAddress, messageSubject, manual) {
-        manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress, messageSubject)
+        AvatarChoice.category(manual)?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress, messageSubject)
     }
     val logo = remember(brand.key, senderAddress, manual) {
-        ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "")
+        if (glyph != null) null else ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "")
     }
     val scheme = MaterialTheme.colorScheme
     val palette = brandAvatarPalette(senderName, senderAddress, monet, messageSubject)
@@ -130,10 +135,16 @@ fun BrandAvatar(
             .clip(CircleShape)
             .background(background)
             .border(1.dp, scheme.outlineVariant, CircleShape)
-            .then(if (onAvatarClick != null) Modifier.combinedClickable(onClick = onAvatarClick, onLongClick = { categoryOpen = true }) else Modifier),
+            .then(if (onAvatarClick != null || onAvatarLongClick != null) Modifier.combinedClickable(
+                onClick = onAvatarClick ?: {}, onLongClick = onAvatarLongClick ?: { categoryOpen = true },
+                onLongClickLabel = com.bond.mail.ui.i18n.tr(if (onAvatarLongClick != null) "edit_contact" else "sender_icon_title"),
+            ) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        if (logo?.raster != null && monet) {
+        if (glyph != null) {
+            Text(glyph, color = foreground, fontSize = (size.value * 0.40f).sp,
+                maxLines = 1, textAlign = TextAlign.Center)
+        } else if (logo?.raster != null && monet) {
             // Embedded JPEG/PNG logos include their own opaque brand background and cannot be
             // recolored without becoming a solid disk. Use the brand label so these contacts (OSL
             // in particular) participate in the active Material You palette like vector logos.
@@ -171,7 +182,6 @@ fun BrandAvatar(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ContactAvatar(
     name: String,
@@ -181,49 +191,12 @@ fun ContactAvatar(
     monet: Boolean = true,
     messageSubject: String = "",
     onAvatarClick: (() -> Unit)? = null,
+    onAvatarLongClick: (() -> Unit)? = null,
+    useStoredOverride: Boolean = true,
 ) {
-    var categoryOpen by remember(email) { mutableStateOf(false) }
-    if (categoryOpen) SenderIconDialog(email) { categoryOpen = false }
-    val iconOverrides by MailPresentationStore.get(LocalContext.current).values.collectAsState()
-    val manualIcon = SenderPresentationRules.resolve(iconOverrides, "icon", email)
-    val glyph = customText?.takeIf { manualIcon == null }?.trim().takeUnless { it.isNullOrBlank() }
-    if (glyph == null) {
-        BrandAvatar(
-            senderName = name,
-            senderAddress = email,
-            size = size,
-            monet = monet,
-            messageSubject = messageSubject,
-            onAvatarClick = onAvatarClick,
-        )
-        return
-    }
-
-    val palette = brandAvatarPalette(name, email, monet, messageSubject)
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(palette.background)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-            .then(if (onAvatarClick != null) Modifier.combinedClickable(onClick = onAvatarClick, onLongClick = { categoryOpen = true }) else Modifier),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = glyph,
-            color = palette.foreground,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-            fontSize = (size.value * 0.40f).sp,
-            lineHeight = (size.value * 0.46f).sp,
-            fontWeight = FontWeight.Bold,
-            style = TextStyle(
-                platformStyle = PlatformTextStyle(includeFontPadding = false),
-            ),
-        )
-    }
+    BrandAvatar(name, email, size, monet, messageSubject, onAvatarClick,
+        onAvatarLongClick, avatarChoice = customText, useStoredOverride = useStoredOverride)
 }
-
 @Composable
 private fun BrandSvg(
     logo: ContactLogo,
@@ -318,7 +291,13 @@ private data class ContactLogo(
 /** Reuse bundled contact artwork in launcher RemoteViews without loading a network image. */
 fun contactLogoBitmap(context: Context, senderName: String, senderAddress: String, tint: Int, size: Int): android.graphics.Bitmap? {
     val manual = MailPresentationStore.get(context).icon(senderAddress)
-    val brand = manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
+    AvatarChoice.glyph(manual)?.let { glyph ->
+        return android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888).apply {
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint; textSize = size * 0.65f; textAlign = Paint.Align.CENTER }
+            android.graphics.Canvas(this).drawText(glyph, size / 2f, size / 2f - (paint.ascent() + paint.descent()) / 2, paint)
+        }
+    }
+    val brand = AvatarChoice.category(manual)?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
     val logo = ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "") ?: return null
     if (logo.contentWidth <= 0 || logo.contentHeight <= 0) return null
     return android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888).apply {
@@ -339,9 +318,11 @@ fun contactLogoSvgMarkup(
     context: Context,
     senderName: String,
     senderAddress: String,
+    avatarChoice: String? = null,
 ): String? {
-    val manual = MailPresentationStore.get(context).icon(senderAddress)
-    val brand = manual?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
+    val manual = MailPresentationStore.get(context).icon(senderAddress) ?: avatarChoice
+    if (AvatarChoice.glyph(manual) != null) return null
+    val brand = AvatarChoice.category(manual)?.let { BrandMatcher.Brand(it, "") } ?: BrandMatcher.match(senderName, senderAddress)
     val logo = ContactLogoStore.load(context, brand.key, if (manual == null) senderAddress else "") ?: return null
     if (logo.markupElements.isEmpty()) return null
     return """<svg viewBox="${logo.contentLeft} ${logo.contentTop} ${logo.contentWidth} ${logo.contentHeight}" aria-hidden="true">${logo.markupElements.joinToString("")}</svg>"""
