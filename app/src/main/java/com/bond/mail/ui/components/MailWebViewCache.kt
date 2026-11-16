@@ -282,6 +282,7 @@ internal object MailWebViewCache {
             document = document,
             isFacebookSender = facebookSender,
         )
+        normalizeNewsletterPhotoGrids(document)
         markHorizontalIconRows(document)
         markHorizontalIconStrips(
             document = document,
@@ -296,6 +297,7 @@ internal object MailWebViewCache {
         )
 
         val body = document.body()
+        if (instagramSender) body.addClass("bondmail-instagram-mail")
         if (darkMode && header.displayMode == MailDisplayMode.AUTO) {
             body.addClass("bondmail-dark-mode")
             val nativeDarkCanvas = hasNativeDarkCanvas(document)
@@ -632,6 +634,8 @@ internal object MailWebViewCache {
                   #bondmail-desktop-canvas img,
                   #bondmail-desktop-canvas video{max-width:100%!important;height:auto!important}
                   #bondmail-desktop-canvas svg{max-width:100%!important}
+                  /* Meta's fixed digest widths already include button and photo padding. */
+                  body.bondmail-instagram-mail #bondmail-desktop-canvas *{box-sizing:border-box!important}
                 """.trimIndent()
             }
         }
@@ -1273,6 +1277,7 @@ internal object MailWebViewCache {
                     child.tagName().equals("th", ignoreCase = true)
             }
             if (cells.size !in 3..12) return@rowLoop
+            if (cells.any(::hasNewsletterBackgroundImage)) return@rowLoop
 
             val iconCells = cells.count { cell ->
                 val textLength = cell.text().trim().length
@@ -1419,6 +1424,7 @@ internal object MailWebViewCache {
         aggressive: Boolean,
     ): Boolean {
         val icons = element.select("img, svg")
+        if (hasNewsletterBackgroundImage(element)) return false
         if (icons.size !in 1..3) return false
         if (element.text().trim().length > if (aggressive) 40 else 24) return false
         if (element.select("h1, h2, h3, h4, h5, h6, p, ul, ol").isNotEmpty()) return false

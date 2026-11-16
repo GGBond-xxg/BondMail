@@ -158,7 +158,7 @@ internal class HighlightNode(
             } else {
                 null
             }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             paint.shader = with(highlight.style) {
                 createShader(
                     shape = shapeProvider.shape,

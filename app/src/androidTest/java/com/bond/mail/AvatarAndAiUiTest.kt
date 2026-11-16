@@ -22,6 +22,11 @@ import com.bond.mail.ui.components.*
 import com.bond.mail.ui.i18n.JsonStringsProvider
 import com.bond.mail.ui.screens.ContactItem
 import com.bond.mail.ui.theme.BondMailTheme
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawPlainBackdrop
+import com.kyant.backdrop.effects.lens
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,6 +37,57 @@ class AvatarAndAiUiTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
     private val device by lazy { UiDevice.getInstance(instrumentation) }
+
+    @Test fun upstreamBackdropUpdateReleasesCoordinatesAndCompilesCornerShaders() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            listOf(com.kyant.backdrop.RoundedRectRefractionShaderString,
+                com.kyant.backdrop.RoundedRectRefractionWithDispersionShaderString,
+                com.kyant.backdrop.DefaultHighlightShaderString,
+                com.kyant.backdrop.AmbientHighlightShaderString).forEach { android.graphics.RuntimeShader(it) }
+        }
+        val swapped = mutableStateOf(false)
+        var oldSource: LayerBackdrop? = null
+        var oldExport: LayerBackdrop? = null
+        var newSource: LayerBackdrop? = null
+        var newExport: LayerBackdrop? = null
+        launchScenario().use { scenario ->
+            waitForContent(scenario)
+            scenario.onActivity { activity -> activity.setContent {
+                val sourceA = rememberLayerBackdrop()
+                val sourceB = rememberLayerBackdrop()
+                val exportA = rememberLayerBackdrop()
+                val exportB = rememberLayerBackdrop()
+                SideEffect { oldSource = sourceA; oldExport = exportA; newSource = sourceB; newExport = exportB }
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.size(240.dp).layerBackdrop(if (swapped.value) sourceB else sourceA))
+                    Box(Modifier.size(160.dp).drawPlainBackdrop(
+                        backdrop = if (swapped.value) sourceB else sourceA,
+                        shape = { androidx.compose.foundation.shape.RoundedCornerShape(8.dp, 24.dp, 40.dp, 16.dp) },
+                        effects = { lens(12f, 20f) },
+                        exportedBackdrop = if (swapped.value) exportB else exportA,
+                    ))
+                }
+            } }
+            settle()
+            scenario.onActivity {
+                assertNotNull(oldSource?.layerCoordinates)
+                assertNotNull(oldExport?.layerCoordinates)
+                swapped.value = true
+            }
+            settle()
+            scenario.onActivity {
+                assertNull("Replaced recording must not retain stale coordinates", oldSource?.layerCoordinates)
+                assertNull("Replaced export must not retain stale coordinates", oldExport?.layerCoordinates)
+                // Trigger a layout after changing the background providers.
+                it.window.decorView.requestLayout()
+            }
+            settle()
+            scenario.onActivity {
+                assertNotNull(newSource)
+                assertNotNull(newExport)
+            }
+        }
+    }
 
     @Test fun avatarChoicesKeepLegacyCategoriesAndWholeEmoji() {
         listOf(null, "", "bank", "icon:government", "A", "😀", "🇲🇾", "👩🏽‍💻", "👨‍👩‍👧‍👦").forEach {

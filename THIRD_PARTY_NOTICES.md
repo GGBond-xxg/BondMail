@@ -112,6 +112,11 @@ text is included at `licenses/Apache-2.0.txt`.
 
 BondMail's Liquid Glass style uses source from [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass),
 version `1.0.6`, commit `896a94a3ade1cc1a940b92365f942a34971fecda` (Apache-2.0).
+Android rendering fixes are backported from the Backdrop `2.0.1` source at
+`eb4a0ea2e17542ea28c2e71088f7dd9acf77aad5`: centered per-corner shader coordinates,
+clearing stale coordinates when replacing recorded/exported backdrops, and the Android 13
+runtime-shader guard for highlights. This is an adapted Android source integration,
+not a binary dependency on the multiplatform 2.0.1 artifact.
 Copyright 2025 Kyant.
 The Backdrop core is under `app/src/main/java/com/kyant/backdrop`. Adapted official Catalog
 examples (LiquidButton, LiquidToggle, LiquidBottomTabs/Tab and their interaction helpers) are

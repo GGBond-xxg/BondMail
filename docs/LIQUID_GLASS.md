@@ -32,6 +32,13 @@ v1.5.9。使用 Kyant0/AndroidLiquidGlass 稳定版 **Backdrop 1.0.6** 的源码
 `896a94a3ade1cc1a940b92365f942a34971fecda`；许可与适配列表见 `THIRD_PARTY_NOTICES.md`。
 保留现有 Kotlin/Compose 工具链和最低 Android 版本。
 
+2026-11-16 同步 Backdrop 2.0.1 源码截至
+`eb4a0ea2e17542ea28c2e71088f7dd9acf77aad5` 中的 Android 渲染修复：
+折射和高光按中心坐标选择四角半径，更换背景录制/导出对象时清理旧坐标，
+高光 RuntimeShader 仅在 Android 13+ 使用。上游 Android 分支仍是 1.0.6；
+这里采用源码回移，未引入 KMP 2.0.1 二进制或更换整套 Kotlin/Compose 工具链。
+原有跨窗口坐标、单次图层录制、连续色散、手势和无障碍适配继续保留。
+
 `LiquidGlassTheme.kt` 定义配色、材质、回退与背景源；`LiquidGlassComponents.kt` 实现
 应用控件适配；`ui/glass` 保存官方示例的适配实现。各页面内容层与浮动控件分开录制，
 弹窗只读取主窗口的独立背景源，避免同一个 RenderNode 采样自身。

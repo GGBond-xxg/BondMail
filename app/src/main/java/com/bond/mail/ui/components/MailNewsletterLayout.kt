@@ -53,6 +53,14 @@ internal fun normalizeNewsletterColumns(document: Document) {
 
 /** Generic fluid constraints must not replace a sender's smaller inline image/container limit. */
 internal fun preserveNewsletterSizeLimits(document: Document) {
+    // MJML banners can retain a legacy 100px width while min-width:100% deliberately
+    // expands their image-only table. The generic min-width reset must not shrink it.
+    document.select("table").filter {
+        it.text().isBlank() && it.select("img").size == 1 &&
+            NEWSLETTER_FULL_MIN_WIDTH.containsMatchIn(it.attr("style"))
+    }.forEach { table ->
+        table.attr("style", table.attr("style") + ";width:100%!important;")
+    }
     document.select("[style]").forEach { element ->
         val maximum = NEWSLETTER_MAX_WIDTH.findAll(element.attr("style")).lastOrNull()
             ?.groupValues?.get(1)?.toFloatOrNull() ?: return@forEach
@@ -60,7 +68,9 @@ internal fun preserveNewsletterSizeLimits(document: Document) {
         element.attr("style", element.attr("style") + ";max-width:min(100%,${maximum}px)!important;")
     }
     document.select("img").forEach { image ->
-        val width = newsletterPixels(image.attr("width"))
+        // CSS width takes precedence over the legacy HTML width attribute, including percentages.
+        val cssWidth = NEWSLETTER_WIDTH.findAll(image.attr("style")).lastOrNull()?.groupValues?.get(1)
+        val width = newsletterPixels(cssWidth ?: image.attr("width"))
         val height = newsletterPixels(image.attr("height"))
         if (width != null && width in 1f..128f) {
             image.attr("style", image.attr("style") + ";max-width:min(100%,${width}px)!important;height:auto!important;")
@@ -72,7 +82,33 @@ internal fun preserveNewsletterSizeLimits(document: Document) {
     }
 }
 
+/** Background-photo grids are content, even when each photo contains a tiny reel badge. */
+internal fun normalizeNewsletterPhotoGrids(document: Document) {
+    document.select("tr").forEach { row ->
+        val cells = row.children().filter { it.normalName() == "td" }
+        if (cells.size !in 2..4) return@forEach
+        val photos = cells.map { cell ->
+            cell.select("div[style]").singleOrNull { NEWSLETTER_BACKGROUND_IMAGE.containsMatchIn(it.attr("style")) }
+        }
+        if (photos.any { it == null } || cells.any { it.text().isNotBlank() }) return@forEach
+        val table = row.closest("table") ?: return@forEach
+        table.attr("style", table.attr("style") + ";table-layout:fixed!important;")
+        photos.filterNotNull().forEach { photo ->
+            photo.attr("style", photo.attr("style") + ";width:auto!important;max-width:100%!important;box-sizing:border-box!important;")
+            photo.select("img").forEach { badge ->
+                badge.attr("style", badge.attr("style") + ";margin-left:0!important;float:right!important;")
+            }
+        }
+    }
+}
+
+internal fun hasNewsletterBackgroundImage(element: org.jsoup.nodes.Element): Boolean =
+    element.select("[style]").any { NEWSLETTER_BACKGROUND_IMAGE.containsMatchIn(it.attr("style")) }
+
 private fun newsletterPixels(raw: String): Float? =
     raw.trim().removeSuffix("px").toFloatOrNull()
 
 private val NEWSLETTER_MAX_WIDTH = Regex("(?i)(?:^|;)\\s*max-width\\s*:\\s*(\\d+(?:\\.\\d+)?)px\\s*(?:!important)?\\s*(?=;|$)")
+private val NEWSLETTER_WIDTH = Regex("(?i)(?:^|;)\\s*width\\s*:\\s*([^;!]+)")
+private val NEWSLETTER_FULL_MIN_WIDTH = Regex("(?i)(?:^|;)\\s*min-width\\s*:\\s*100%\\s*(?:!important)?\\s*(?=;|$)")
+private val NEWSLETTER_BACKGROUND_IMAGE = Regex("(?i)(?:^|;)\\s*background(?:-image)?\\s*:[^;]*url\\(")

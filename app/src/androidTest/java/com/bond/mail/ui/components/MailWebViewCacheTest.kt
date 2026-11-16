@@ -399,6 +399,59 @@ class MailWebViewCacheTest {
         assertEquals(22.0, geometry.getDouble(1), 0.1)
     }
 
+    @Test
+    fun percentageBannerOverridesLegacyWidthWithoutGrowingFooterIcons() = runBlocking {
+        val banner = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2160' height='300'%3E%3C/svg%3E"
+        val prepared = prepare("notice@example.com", """
+            <html><meta name="viewport" content="width=device-width"><body>
+            <table width="100%"><tr><td>
+              <table id="banner-table" style="min-width:100%;max-width:100%;width:100px" cellspacing="0" cellpadding="0"><tr><td>
+                <img id="banner" width="100" height="auto" src="$banner" style="display:block;min-width:100%;width:100%;max-width:100%">
+              </td></tr></table>
+              <p>A full width transactional banner.</p>
+              <img id="footer" width="20" height="20" src="$banner">
+              <img id="css-icon" width="100" src="$banner" style="width:24px">
+            </td></tr></table></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            var r=id=>document.getElementById(id).getBoundingClientRect();
+            return [r('banner').width,r('banner').width/r('banner').height,r('footer').width,r('css-icon').width];
+        """.trimIndent())
+        assertTrue("Banner must fill the card, not retain its legacy 100px limit", geometry.getDouble(0) > 280)
+        assertEquals(7.2, geometry.getDouble(1), 0.03)
+        assertEquals(20.0, geometry.getDouble(2), 0.1)
+        assertEquals(24.0, geometry.getDouble(3), 0.1)
+    }
+
+    @Test
+    fun photoDigestKeepsEqualGuttersAndDoesNotBecomeAnIconStrip() = runBlocking {
+        val badge = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3C/svg%3E"
+        val cells = (1..3).joinToString("") { index -> """
+            <td><a><div id="photo-$index" style="width:130px;padding:0 2.5px 5px;background:url('$badge') center / cover;height:162px;margin:1px">
+              <img width="32px" src="$badge" style="margin-left:98px;height:32px">
+            </div></a></td>
+        """ }
+        val prepared = prepare("digest@instagram.com", """
+            <html><body><table id="digest" cellspacing="0" cellpadding="0"><tr><td>
+              <table width="100%" cellspacing="0" cellpadding="0"><tr><td width="16"></td><td width="394">
+                <table width="100%"><tr><td style="padding:5px;width:100%">See the latest photo updates from the accounts you follow.</td></tr></table>
+                <table id="gallery" width="394" cellspacing="0" cellpadding="0"><tr>$cells</tr></table>
+              </td><td width="16"></td></tr></table>
+            </td></tr></table></body></html>
+        """.trimIndent())
+        assertEquals(MailDocumentLayout.DESKTOP_SCALED, prepared.layout)
+        assertTrue(org.jsoup.Jsoup.parse(prepared.html).select("#gallery .bondmail-icon-cell").isEmpty())
+        val geometry = renderedGeometry(prepared, """
+            var r=id=>document.getElementById(id).getBoundingClientRect();
+            var b=r('bondmail-message-body'),d=r('digest'),p=r('photo-3');
+            return [d.left-b.left,b.right-d.right,r('photo-1').width,p.width,d.right-p.right];
+        """.trimIndent())
+        assertTrue("Both gutters should remain visible", geometry.getDouble(0) >= 15 && geometry.getDouble(1) >= 15)
+        assertEquals("Outer gutters should be symmetric", geometry.getDouble(0), geometry.getDouble(1), 0.5)
+        assertEquals("All photo columns should have equal width", geometry.getDouble(2), geometry.getDouble(3), 0.5)
+        assertTrue("Last photo must stay inside the canvas", geometry.getDouble(4) > 0)
+    }
+
     private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val ready = java.util.concurrent.CountDownLatch(1)
