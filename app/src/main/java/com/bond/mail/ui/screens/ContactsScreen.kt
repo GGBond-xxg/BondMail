@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -42,12 +41,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Search
 import com.bond.mail.ui.theme.BondIcon as Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.lazy.LazyListState
+import com.bond.mail.ui.components.MainPageTopBar
+import com.bond.mail.ui.components.TopActionButton
+import com.bond.mail.ui.components.ExpandingSearchOverlay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -87,7 +91,6 @@ import com.bond.mail.ui.motion.rememberBondStaggeredEntranceState
 import com.bond.mail.ui.theme.bondSurfaces
 import com.bond.mail.ui.theme.BondAlertDialog
 import com.bond.mail.ui.theme.BondIconButton
-import com.bond.mail.ui.theme.BondSearchField
 import com.bond.mail.ui.theme.BondTextAction
 import com.bond.mail.ui.theme.BondTextField
 import androidx.compose.runtime.CompositionLocalProvider
@@ -106,6 +109,7 @@ fun ContactsScreen(
     container: AppContainer,
     settings: AppSettings,
     onCompose: (String) -> Unit,
+    onOpenDrawer: () -> Unit,
     chromeVisible: Boolean,
     onChromeVisibilityChanged: (Boolean) -> Unit,
     chromeControllerEnabled: Boolean = true,
@@ -117,6 +121,24 @@ fun ContactsScreen(
     )
     val savedContacts by container.repository.savedContacts.collectAsState(initial = emptyList())
     var query by rememberSaveable { mutableStateOf("") }
+    var showSearch by rememberSaveable { mutableStateOf(false) }
+    var searchTransformActive by remember { mutableStateOf(false) }
+    var searchSourceBounds by remember { mutableStateOf<Rect?>(null) }
+    var pendingSearchAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val searchOverlayActive = showSearch || searchTransformActive
+    var previousSearchActive by remember { mutableStateOf(false) }
+    LaunchedEffect(searchOverlayActive) {
+        if (searchOverlayActive) onChromeVisibilityChanged(false)
+        else if (previousSearchActive) onChromeVisibilityChanged(true)
+        previousSearchActive = searchOverlayActive
+    }
+    fun afterSearch(action: () -> Unit) {
+        if (searchOverlayActive) {
+            pendingSearchAction = action
+            showSearch = false
+        } else action()
+    }
+
     var showAddContact by rememberSaveable { mutableStateOf(false) }
     var editingContactId by rememberSaveable { mutableStateOf<String?>(null) }
     var editingExistingContact by rememberSaveable { mutableStateOf(false) }
@@ -131,32 +153,26 @@ fun ContactsScreen(
     val invalidContactLabel = tr("invalid_contact")
     val invalidContactAvatarLabel = tr("error_contact_avatar_single_glyph")
     val deleteContactFailureLabel = tr("error_delete_contact_failed")
-    val frequentContacts = remember(savedContacts, query) {
+    val matchingSavedContacts = remember(savedContacts, query) {
         savedContacts.filter { contact ->
             query.isBlank() ||
                 contact.name.contains(query, ignoreCase = true) ||
                 contact.email.contains(query, ignoreCase = true)
         }
     }
-    val filteredContacts = remember(contacts, savedContacts, query) {
+    val allContacts = remember(contacts, savedContacts) {
         val savedAddresses = savedContacts.mapTo(mutableSetOf()) { it.email.lowercase() }
-        contacts
-            .asSequence()
-            .filterNot { it.senderAddress.lowercase() in savedAddresses }
-            .filter { contact ->
-                query.isBlank() ||
-                    contact.senderName.contains(query, ignoreCase = true) ||
-                    contact.senderAddress.contains(query, ignoreCase = true)
-            }
-            .sortedBy { contact ->
-                contact.senderName.ifBlank { contact.senderAddress }.lowercase()
-            }
-            .toList()
+        contacts.filterNot { it.senderAddress.lowercase() in savedAddresses }
+            .sortedBy { it.senderName.ifBlank { it.senderAddress }.lowercase() }
+    }
+    val matchingContacts = remember(allContacts, query) {
+        allContacts.filter { query.isBlank() || it.senderName.contains(query, true) || it.senderAddress.contains(query, true) }
     }
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
 
 
     val listState = rememberLazyListState()
+    val searchListState = rememberLazyListState()
     val motionEnabled = bondMotionEnabled()
     val entranceState = rememberBondStaggeredEntranceState(
         enabled = motionEnabled && staggeredEntranceEnabled,
@@ -186,40 +202,31 @@ fun ContactsScreen(
         listState = listState,
         visible = chromeVisible,
         onVisibilityChanged = onChromeVisibilityChanged,
-        enabled = chromeControllerEnabled,
+        enabled = chromeControllerEnabled && !searchOverlayActive,
     )
 
     val glassEnabled = LocalGlassEffects.current
-    val glassStyle = LocalUiStyle.current == UiStyle.LIQUID_GLASS
     val contactBackdrop = rememberLayerBackdrop()
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val topChromeHeight = statusBarInset + 80.dp
+    val topChromeHeight = statusBarInset + 68.dp
     val topChromeOffset = animateChromeOffset(
-        visible = chromeVisible,
+        visible = chromeVisible || searchOverlayActive,
         hiddenOffset = -topChromeHeight,
         label = "contacts-top-chrome-slide",
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.bondSurfaces.page),
-    ) {
+    val contactList: @Composable (Modifier, PaddingValues, LazyListState, Boolean) -> Unit = { listModifier, padding, state, searching ->
+        val frequentContacts = if (searching) matchingSavedContacts else savedContacts
+        val filteredContacts = if (searching) matchingContacts else allContacts
         LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize()
-                .then(if (glassEnabled) Modifier.layerBackdrop(contactBackdrop) else Modifier),
-            contentPadding = PaddingValues(
-                start = if (miuixLayout) 12.dp else 16.dp,
-                end = if (miuixLayout) 12.dp else 16.dp,
-                top = topChromeHeight + 2.dp,
-                bottom = listBottomContentPadding,
-            ),
+            state = state,
+            modifier = listModifier,
+            contentPadding = padding,
             verticalArrangement = Arrangement.spacedBy(if (miuixLayout) 12.dp else 13.dp),
         ) {
-            item(key = "contacts-title") {
+            if (frequentContacts.isNotEmpty()) item(key = "contacts-title") {
                 Text(
-                    if (frequentContacts.isEmpty()) tr("contacts") else tr("saved_contacts"),
+                    tr("saved_contacts"),
                     modifier = Modifier
                         .padding(start = 14.dp, top = 4.dp, bottom = 2.dp)
                         .bondStaggeredEntrance(entranceState, index = 1),
@@ -249,15 +256,17 @@ fun ContactsScreen(
                         } else {
                             MaterialTheme.shapes.large
                         },
-                        onCompose = onCompose,
+                        onCompose = { address -> afterSearch { onCompose(address) } },
                         onEdit = {
-                            editingExistingContact = true
-                            editingContactId = contact.id
-                            contactName = contact.name
-                            contactEmail = contact.email
-                            contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contact.email) ?: contact.avatarText.orEmpty()
-                            contactError = null
-                            showAddContact = true
+                            afterSearch {
+                                editingExistingContact = true
+                                editingContactId = contact.id
+                                contactName = contact.name
+                                contactEmail = contact.email
+                                contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contact.email) ?: contact.avatarText.orEmpty()
+                                contactError = null
+                                showAddContact = true
+                            }
                         },
                     )
                 }
@@ -315,20 +324,35 @@ fun ContactsScreen(
                         } else {
                             MaterialTheme.shapes.large
                         },
-                        onCompose = onCompose,
+                        onCompose = { address -> afterSearch { onCompose(address) } },
                         onEdit = {
-                            editingExistingContact = true
-                            editingContactId = null
-                            contactName = contact.senderName.ifBlank { contact.senderAddress.substringBefore('@') }
-                            contactEmail = contact.senderAddress
-                            contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contactEmail).orEmpty()
-                            contactError = null
-                            showAddContact = true
+                            afterSearch {
+                                editingExistingContact = true
+                                editingContactId = null
+                                contactName = contact.senderName.ifBlank { contact.senderAddress.substringBefore('@') }
+                                contactEmail = contact.senderAddress
+                                contactAvatar = com.bond.mail.data.settings.MailPresentationStore.get(containerContext).icon(contactEmail).orEmpty()
+                                contactError = null
+                                showAddContact = true
+                            }
                         },
                     )
                 }
             }
         }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.bondSurfaces.page),
+    ) {
+        contactList(
+            Modifier.fillMaxSize().then(if (glassEnabled) Modifier.layerBackdrop(contactBackdrop) else Modifier),
+            PaddingValues(start = if (miuixLayout) 12.dp else 16.dp, end = if (miuixLayout) 12.dp else 16.dp,
+                top = topChromeHeight + 6.dp, bottom = listBottomContentPadding),
+            listState, false,
+        )
 
         CompositionLocalProvider(LocalGlassBackdrop provides contactBackdrop.takeIf { glassEnabled }) {
             Surface(
@@ -342,57 +366,25 @@ fun ContactsScreen(
                 tonalElevation = 0.dp,
                 shadowElevation = 0.dp,
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraLarge,
-                        color = if (glassStyle) Color.Transparent else MaterialTheme.bondSurfaces.input,
-                        tonalElevation = if (glassStyle) 0.dp else 1.dp,
-                        shadowElevation = if (glassStyle) 0.dp else 1.dp,
+                Box(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    MainPageTopBar(
+                        title = tr("contacts"),
+                        searchLabel = tr("search_contacts"),
+                        onOpenDrawer = onOpenDrawer,
+                        onSearch = { pendingSearchAction = null; showSearch = true },
+                        searchOverlayActive = searchOverlayActive,
+                        onSearchBoundsChanged = { searchSourceBounds = it },
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(60.dp)
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            BondSearchField(
-                                value = query,
-                                onValueChange = { query = it },
-                                modifier = Modifier.weight(1f),
-                                placeholder = tr("search_contacts"),
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(24.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                            )
-                            BondIconButton(
-                                onClick = {
-                                    editingContactId = null
-                                    editingExistingContact = false
-                                    contactName = ""
-                                    contactEmail = ""
-                                    contactAvatar = ""
-                                    contactError = null
-                                    showAddContact = true
-                                },
-                            ) {
-                                Icon(
-                                    Icons.Default.PersonAdd,
-                                    contentDescription = tr("add_contact"),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
+                        TopActionButton(onClick = {
+                            editingContactId = null
+                            editingExistingContact = false
+                            contactName = ""
+                            contactEmail = ""
+                            contactAvatar = ""
+                            contactError = null
+                            showAddContact = true
+                        }) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = tr("add_contact"))
                         }
                     }
                 }
@@ -401,7 +393,7 @@ fun ContactsScreen(
         }
 
         AnimatedVisibility(
-            visible = showScrollToTop,
+            visible = showScrollToTop && !searchOverlayActive,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
@@ -437,6 +429,25 @@ fun ContactsScreen(
                     )
                 }
             }
+        }
+
+        ExpandingSearchOverlay(
+            expanded = showSearch,
+            sourceBounds = searchSourceBounds,
+            query = query,
+            onQueryChange = { query = it; scrollScope.launch { searchListState.scrollToItem(0) } },
+            placeholder = tr("search_contacts"),
+            onDismiss = { pendingSearchAction = null; showSearch = false },
+            onClosed = {
+                query = ""
+                val action = pendingSearchAction
+                pendingSearchAction = null
+                action?.invoke()
+            },
+            onTransformActivityChanged = { searchTransformActive = it },
+        ) {
+            contactList(Modifier.fillMaxSize(), PaddingValues(
+                horizontal = if (miuixLayout) 12.dp else 16.dp, vertical = 12.dp), searchListState, true)
         }
 
         if (showAddContact) {

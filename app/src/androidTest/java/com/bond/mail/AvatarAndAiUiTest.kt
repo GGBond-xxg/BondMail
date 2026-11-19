@@ -38,6 +38,76 @@ class AvatarAndAiUiTest {
     private val context = instrumentation.targetContext
     private val device by lazy { UiDevice.getInstance(instrumentation) }
 
+    @Test fun contactsDrawerReturnsToMailAndMailSearchStillCloses() {
+        launchScenario().use { scenario ->
+            waitForContent(scenario)
+            assertTrue(device.wait(Until.hasObject(By.desc("Contacts")), 7000))
+            click("Contacts", description = true)
+            assertTrue(device.wait(Until.hasObject(By.desc("Search Contacts")), 5000))
+            screenshot("contacts-live-header")
+            click("Open navigation menu", description = true)
+            assertTrue(device.wait(Until.hasObject(By.text("All Mailboxes")), 5000))
+            click("Inbox")
+            assertTrue(device.wait(Until.hasObject(By.desc("Search mail")), 5000))
+            click("Search mail", description = true)
+            assertTrue(device.wait(Until.hasObject(By.desc("Cancel")), 5000))
+            screenshot("mail-search-inset")
+            click("Cancel", description = true)
+            assertTrue(device.wait(Until.hasObject(By.desc("Search mail")), 5000))
+        }
+    }
+
+    @Test fun contactsHeaderSearchAndCloseInsetsAcrossStyles() {
+        val container = (context.applicationContext as MailApplication).container
+        var drawerOpens = 0
+        var composeOpens = 0
+        launchScenario().use { scenario ->
+            waitForContent(scenario)
+            UiStyle.entries.forEach { style ->
+                stage("contacts-${style.name}")
+                scenario.onActivity { activity -> activity.setContent {
+                    key(style) {
+                        val settings = AppSettings(uiStyle = style, themeMode = ThemeMode.LIGHT)
+                        var chromeVisible by remember { mutableStateOf(true) }
+                        BondMailTheme(settings) { JsonStringsProvider("en") {
+                            com.bond.mail.ui.screens.ContactsScreen(
+                                container, settings, onCompose = { composeOpens++ },
+                                onOpenDrawer = { drawerOpens++ }, chromeVisible = chromeVisible,
+                                onChromeVisibilityChanged = { chromeVisible = it },
+                            )
+                        } }
+                    }
+                } }
+                settle()
+                assertTrue(device.wait(Until.hasObject(By.desc("Open navigation menu")), 7000))
+                click("Open navigation menu", description = true)
+                assertEquals(style.ordinal + 1, drawerOpens)
+                screenshot("contacts-header-${style.name}")
+                click("Add Contact", description = true)
+                assertTrue(device.wait(Until.hasObject(By.text("Contact Name")), 5000))
+                click("Cancel")
+                click("Search Contacts", description = true)
+                assertTrue(device.wait(Until.hasObject(By.desc("Cancel")), 5000))
+                val close = nodes().first { it.contentDescription?.toString() == "Cancel" }
+                val closeBounds = android.graphics.Rect().also(close::getBoundsInScreen)
+                val density = context.resources.displayMetrics.density
+                // The X glyph must stay at least 20 dp inside the search surface's right edge.
+                val surfaceRight = device.displayWidth - 12f * density
+                assertTrue("Close icon too close to rounded edge: $style", surfaceRight - closeBounds.right >= 20f * density - 2)
+                setText("no-contact-matches-this-7f92@example.invalid")
+                assertTrue(device.wait(Until.hasObject(By.text("No matching results")), 5000))
+                screenshot("contacts-search-${style.name}")
+                click("Cancel", description = true) // Clear query, keep search open.
+                assertTrue(device.hasObject(By.desc("Cancel")))
+                assertFalse(device.hasObject(By.text("No matching results")))
+                click("Cancel", description = true) // Empty query closes search.
+                assertTrue(device.wait(Until.hasObject(By.desc("Search Contacts")), 5000))
+                assertFalse(device.hasObject(By.desc("Cancel")))
+            }
+        }
+        assertEquals(0, composeOpens)
+    }
+
     @Test fun upstreamBackdropUpdateReleasesCoordinatesAndCompilesCornerShaders() {
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             listOf(com.kyant.backdrop.RoundedRectRefractionShaderString,

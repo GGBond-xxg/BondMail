@@ -1458,12 +1458,13 @@ private fun MainTabs(
 
     fun chooseMailbox(accountId: String?, folder: String) {
         homeVm.selectMailbox(accountId, folder)
+        selectTab(0)
         scope.launch { drawerState.close() }
     }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = selectedTab == 0,
+        gesturesEnabled = selectedTab == 0 || selectedTab == 1,
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.fillMaxWidth(0.86f),
@@ -1572,6 +1573,7 @@ private fun MainTabs(
                         )
 
                         1 -> ContactsScreen(
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
                             container = container,
                             settings = settings,
                             onCompose = onCompose,

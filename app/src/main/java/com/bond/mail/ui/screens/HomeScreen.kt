@@ -3,7 +3,6 @@ package com.bond.mail.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,7 +27,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -124,15 +122,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -143,6 +135,9 @@ import com.bond.mail.data.performance.UiPerformanceGate
 import com.bond.mail.data.settings.AppSettings
 import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.HomeViewModel
+import com.bond.mail.ui.components.ExpandingSearchOverlay
+import com.bond.mail.ui.components.MainPageTopBar
+import com.bond.mail.ui.components.TopActionButton
 import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.components.MessageCard
 import com.bond.mail.ui.components.FloatingCircleAction
@@ -850,93 +845,50 @@ fun HomeScreen(
                                     }
                                 }
                             } else {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                MainPageTopBar(
+                                    title = selectedAccount?.displayName ?: tr("mail"),
+                                    searchLabel = tr("search"),
+                                    onOpenDrawer = onOpenDrawer,
+                                    onSearch = { pendingSearchMessage = null; showSearch = true },
+                                    searchOverlayActive = searchOverlayActive,
+                                    onSearchBoundsChanged = { searchSourceBounds = it },
                                 ) {
-                                    TopActionButton(
-                                        onClick = onOpenDrawer,
-                                        containerColor = Color.Transparent,
-                                    ) {
+                                    TopActionButton(onClick = onAddAccount) {
                                         Icon(
-                                            Icons.Default.Menu,
-                                            contentDescription = tr("open_navigation_drawer"),
+                                            Icons.Default.Add,
+                                            contentDescription = tr("add_mailbox"),
                                         )
                                     }
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        selectedAccount?.displayName ?: tr("mail"),
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        // Keep the closed search action inside the same translated
-                                        // top-bar row as menu/more/add. The overlay only owns the
-                                        // container-transform interval, so ordinary scroll hide/show
-                                        // cannot drift onto a separate animation path.
-                                        Box(
-                                            modifier = Modifier
-                                                .size(if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 48.dp else 44.dp)
-                                                .onGloballyPositioned { coordinates ->
-                                                    searchSourceBounds = coordinates.boundsInRoot()
+                                    BondPopupMenu(
+                                        expanded = topMenu,
+                                        onDismissRequest = { topMenu = false },
+                                        entries = listOf(
+                                            BondMenuEntry(
+                                                text = tr("select_all"),
+                                                onClick = {
+                                                    selectedIds.clear()
+                                                    selectedIds.addAll(messages.map { it.id })
+                                                    topMenu = false
                                                 },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            if (!searchOverlayActive) {
-                                                TopActionButton(
-                                                    onClick = {
-                                                        pendingSearchMessage = null
-                                                        showSearch = true
-                                                    },
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Search,
-                                                        contentDescription = tr("search"),
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        TopActionButton(onClick = onAddAccount) {
-                                            Icon(
-                                                Icons.Default.Add,
-                                                contentDescription = tr("add_mailbox"),
-                                            )
-                                        }
-                                        BondPopupMenu(
-                                            expanded = topMenu,
-                                            onDismissRequest = { topMenu = false },
-                                            entries = listOf(
-                                                BondMenuEntry(
-                                                    text = tr("select_all"),
-                                                    onClick = {
-                                                        selectedIds.clear()
-                                                        selectedIds.addAll(messages.map { it.id })
-                                                        topMenu = false
-                                                    },
-                                                ),
-                                                BondMenuEntry(
-                                                    text = tr("mark_all_read"),
-                                                    onClick = {
-                                                        viewModel.markAllRead(messages)
-                                                        topMenu = false
-                                                    },
-                                                ),
                                             ),
-                                        ) {
-                                            TopActionButton(onClick = { topMenu = true }) {
-                                                Icon(
-                                                    Icons.Default.MoreVert,
-                                                    contentDescription = tr("more"),
-                                                )
-                                            }
+                                            BondMenuEntry(
+                                                text = tr("mark_all_read"),
+                                                onClick = {
+                                                    viewModel.markAllRead(messages)
+                                                    topMenu = false
+                                                },
+                                            ),
+                                        ),
+                                    ) {
+                                        TopActionButton(onClick = { topMenu = true }) {
+                                            Icon(
+                                                Icons.Default.MoreVert,
+                                                contentDescription = tr("more"),
+                                            )
                                         }
                                     }
                                 }
+
                             }
                         }
                     }
@@ -1403,47 +1355,6 @@ private fun SwipeActionBackground(
     }
 }
 
-@Composable
-private fun TopActionButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.bondSurfaces.popup,
-    content: @Composable () -> Unit,
-) {
-    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-        com.bond.mail.ui.theme.GlassIconButton(onClick, modifier, true, content)
-        return
-    }
-    val pressResetter = rememberBondPressResetter()
-    key(pressResetter.epoch) {
-        val motionEnabled = bondMotionEnabled()
-        val interactionSource = rememberBondPressInteraction()
-        val pressScale by rememberBondPressScale(
-            interactionSource = interactionSource,
-            pressedScale = 0.90f,
-            enabled = motionEnabled,
-        )
-        Surface(
-            modifier = modifier
-                .size(44.dp)
-                .bondPressTransform(pressScale),
-            shape = CircleShape,
-            color = containerColor,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            tonalElevation = 0.dp,
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().clickable(
-                    interactionSource = interactionSource,
-                    indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
-                    onClick = { pressResetter.resetThen(onClick) },
-                ),
-                contentAlignment = Alignment.Center,
-            ) { content() }
-        }
-    }
-}
-
 private data class FolderUi(
     val id: String,
     val label: String,
@@ -1548,243 +1459,64 @@ private fun SearchContainerOverlay(
     onClosed: () -> Unit,
     onTransformActivityChanged: (Boolean) -> Unit,
 ) {
-    val motionEnabled = bondMotionEnabled()
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-    val progress = remember { Animatable(if (expanded) 1f else 0f) }
-    var searchHasFocus by remember { mutableStateOf(false) }
-    var hasOpened by remember { mutableStateOf(expanded) }
-    val latestOnClosed by rememberUpdatedState(onClosed)
-    val latestOnTransformActivityChanged by rememberUpdatedState(onTransformActivityChanged)
-
-    val normalizedProgress = progress.value.coerceIn(0f, 1f)
-    val transformActive = expanded || progress.isRunning || normalizedProgress > 0.001f
-    val showCollapsedContainer = transformActive
-
-    BackHandler(enabled = transformActive) { onDismiss() }
-
-    LaunchedEffect(expanded, motionEnabled) {
-        if (expanded) {
-            hasOpened = true
-            latestOnTransformActivityChanged(true)
-            if (motionEnabled) {
-                progress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.ContainerTransform,
-                        easing = BondMotionEasing.EmphasizedDecelerate,
-                    ),
-                )
-            } else {
-                progress.snapTo(1f)
-            }
-            if (expanded && !searchHasFocus) {
-                searchHasFocus = true
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            }
-        } else {
-            // Keep the keyboard and the expanded root constraints in place until the container has
-            // returned to its source. Hiding the IME at the beginning of the reverse animation
-            // resizes the root mid-flight and causes the one-frame jump seen in the recording.
-            if (motionEnabled && progress.value > 0.001f) {
-                progress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = BondMotionDuration.SharedAxis,
-                        easing = BondMotionEasing.EmphasizedAccelerate,
-                    ),
-                )
-            } else {
-                progress.snapTo(0f)
-            }
-            if (searchHasFocus) {
-                searchHasFocus = false
-                focusManager.clearFocus(force = true)
-                keyboardController?.hide()
-            }
-            latestOnTransformActivityChanged(false)
-            if (hasOpened) {
-                hasOpened = false
-                latestOnClosed()
-            }
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            latestOnTransformActivityChanged(false)
-            if (searchHasFocus) {
-                focusManager.clearFocus(force = true)
-                keyboardController?.hide()
-            }
-        }
-    }
-
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val density = LocalDensity.current
-        val statusInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val fallbackSourceX = (maxWidth - 152.dp).coerceAtLeast(12.dp)
-        val sourceX = sourceBounds?.let { with(density) { it.left.toDp() } } ?: fallbackSourceX
-        // boundsInRoot already includes the top bar's graphics-layer translation. Adding the
-        // animated offset a second time made search travel twice as far as menu/more/add.
-        val sourceY = sourceBounds?.let { with(density) { it.top.toDp() } } ?: statusInset + 12.dp
-        val sourceWidth = sourceBounds?.let { with(density) { it.width.toDp() } } ?: 44.dp
-        val sourceHeight = sourceBounds?.let { with(density) { it.height.toDp() } } ?: 44.dp
-        val targetX = 12.dp
-        val targetY = statusInset + 8.dp
-        val targetWidth = (maxWidth - 24.dp).coerceAtLeast(56.dp)
-        val targetHeight = 56.dp
-
-        fun interpolate(start: Dp, end: Dp): Dp =
-            start + (end - start) * normalizedProgress
-
-        val searchX = interpolate(sourceX, targetX)
-        val searchY = interpolate(sourceY, targetY)
-        val searchWidth = interpolate(sourceWidth, targetWidth)
-        val searchHeight = interpolate(sourceHeight, targetHeight)
-        val cornerRadius = interpolate(sourceHeight / 2f, 28.dp)
-        val iconX = interpolate(
-            ((sourceWidth - 24.dp) / 2f).coerceAtLeast(0.dp),
-            16.dp,
-        )
-        val scrimAlpha = 0.34f * normalizedProgress
-        val fieldAlpha = ((normalizedProgress - 0.18f) / 0.42f).coerceIn(0f, 1f)
-        val panelAlpha = ((normalizedProgress - 0.28f) / 0.44f).coerceIn(0f, 1f)
-        val panelScale = 0.985f + 0.015f * panelAlpha
-
-        if (transformActive && scrimAlpha > 0.001f) {
-            val noRipple = remember { MutableInteractionSource() }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = scrimAlpha))
-                    .clickable(
-                        interactionSource = noRipple,
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
-            )
-        }
-
-        if (transformActive && normalizedProgress > 0.12f) {
-            Surface(
-                modifier = Modifier
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = statusInset + 72.dp,
-                        bottom = 12.dp,
-                    )
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = panelAlpha
-                        scaleX = panelScale
-                        scaleY = panelScale
-                    },
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.bondSurfaces.content,
-                tonalElevation = 4.dp,
-                shadowElevation = 8.dp,
-            ) {
-                when {
-                    query.isBlank() -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(tr("search_filter_help"), Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    results.isEmpty() -> {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(tr("no_search_results"))
-                        }
-                    }
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 10.dp),
-                            contentPadding = PaddingValues(
-                                start = if (miuixLayout) 12.dp else 16.dp,
-                                end = if (miuixLayout) 12.dp else 16.dp,
-                                bottom = 18.dp,
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(
-                                if (miuixLayout) 12.dp else 13.dp,
-                            ),
-                        ) {
-                            item { Text(tr("search_filter_help"), style = MaterialTheme.typography.bodySmall) }
-                            item { TextButton(onClick = onLoadMore) { Text(tr("load_more")) } }
-                            itemsIndexed(
-                                items = results,
-                                key = { _, message -> message.id },
-                            ) { index, message ->
-                                MessageCard(
-                                    message = message,
-                                    account = accountById[message.accountId],
-                                    contactAvatarText = contactAvatarByEmail[
-                                        message.contactAddressKey()
-                                    ],
-                                    density = settings.density,
-                                    monetBrandIcons = settings.monetBrandIcons,
-                                    shape = if (miuixLayout) {
-                                        MaterialTheme.shapes.medium
-                                    } else {
-                                        MaterialTheme.shapes.large
-                                    },
-                                    onOpen = { onOpenMessage(message) },
-                                    onLongClick = {},
-                                    onStar = {},
-                                )
-                            }
-                        }
-                    }
+    ExpandingSearchOverlay(
+        expanded = expanded,
+        sourceBounds = sourceBounds,
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = tr("search"),
+        onDismiss = onDismiss,
+        onClosed = onClosed,
+        onTransformActivityChanged = onTransformActivityChanged,
+    ) {
+        when {
+            query.isBlank() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(tr("search_filter_help"), Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-
-        // During the transform this Surface temporarily takes ownership from the top-bar button.
-        // Outside the transform, the real button stays in the shared top-bar row and therefore uses
-        // exactly the same scroll translation as its siblings.
-        if (showCollapsedContainer) {
-            Surface(
-                modifier = Modifier
-                    .offset(x = searchX, y = searchY)
-                    .size(width = searchWidth, height = searchHeight),
-                shape = RoundedCornerShape(cornerRadius),
-                color = MaterialTheme.bondSurfaces.popup,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                tonalElevation = 0.dp,
-                shadowElevation = 6.dp * fieldAlpha,
-            ) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = tr("search"),
-                        modifier = Modifier
-                            .offset(x = iconX)
-                            .size(24.dp),
-                    )
-                    if (transformActive && fieldAlpha > 0.001f) {
-                        BondSearchField(
-                            value = query,
-                            onValueChange = onQueryChange,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .focusRequester(focusRequester)
-                                .graphicsLayer { alpha = fieldAlpha },
-                            placeholder = tr("search"),
-                            leadingIcon = { Spacer(Modifier.size(24.dp)) },
-                            trailingIcon = {
-                                IconButton(
-                                    onClick = {
-                                        if (query.isNotEmpty()) onQueryChange("") else onDismiss()
-                                    },
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = tr("cancel"))
-                                }
+            results.isEmpty() -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(tr("no_search_results"))
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 10.dp),
+                    contentPadding = PaddingValues(
+                        start = if (miuixLayout) 12.dp else 16.dp,
+                        end = if (miuixLayout) 12.dp else 16.dp,
+                        bottom = 18.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(
+                        if (miuixLayout) 12.dp else 13.dp,
+                    ),
+                ) {
+                    item { Text(tr("search_filter_help"), style = MaterialTheme.typography.bodySmall) }
+                    item { TextButton(onClick = onLoadMore) { Text(tr("load_more")) } }
+                    itemsIndexed(
+                        items = results,
+                        key = { _, message -> message.id },
+                    ) { index, message ->
+                        MessageCard(
+                            message = message,
+                            account = accountById[message.accountId],
+                            contactAvatarText = contactAvatarByEmail[
+                                message.contactAddressKey()
+                            ],
+                            density = settings.density,
+                            monetBrandIcons = settings.monetBrandIcons,
+                            shape = if (miuixLayout) {
+                                MaterialTheme.shapes.medium
+                            } else {
+                                MaterialTheme.shapes.large
                             },
+                            onOpen = { onOpenMessage(message) },
+                            onLongClick = {},
+                            onStar = {},
                         )
                     }
                 }
