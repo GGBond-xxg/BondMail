@@ -270,8 +270,9 @@ fun DetailScreen(
     val releaseTopPull: () -> Unit = {}
     val statusBarInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     var measuredTopBarHeight by remember { mutableIntStateOf(0) }
-    val detailTopBarHeight = if (measuredTopBarHeight > 0) {
-        with(LocalDensity.current) { measuredTopBarHeight.toDp() }
+    val settledTopBarHeight = rememberSettledMailTopBarHeight(measuredTopBarHeight)
+    val detailTopBarHeight = if (settledTopBarHeight > 0) {
+        with(LocalDensity.current) { settledTopBarHeight.toDp() }
     } else statusBarInset + if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 60.dp else 64.dp
 
     val item = remember(storedMessage, immediateOpenResult) {
@@ -1354,16 +1355,19 @@ internal fun MailHtmlView(
     }
     // The exact detached WebView already contains a visually committed page. Keep it visible while
     // AndroidView reattaches the same instance; otherwise every revisit shows the preview for one frame.
-    var pageVisible by remember(requestedContentKey) {
+    // WebViewClient lives as long as this holder. Keep its state objects stable too:
+    // replacing them on a content-key change leaves callbacks writing detached state,
+    // so a fully committed document remains covered by the new loading placeholder.
+    var pageVisible by remember {
         mutableStateOf(retainedContentAvailable)
     }
     // Paint the local HTML before allowing remote image decoding. Large Samsung newsletters can
     // otherwise decode and upload several hero images on the same frames as detail navigation.
     // Enabling WebSettings after the main document commits starts those resources without reloading.
-    var mainDocumentCommitted by remember(requestedContentKey) {
+    var mainDocumentCommitted by remember {
         mutableStateOf(retainedContentAvailable)
     }
-    var placeholderVisible by remember(requestedContentKey) {
+    var placeholderVisible by remember {
         mutableStateOf(!retainedContentAvailable)
     }
     val latestOnWebViewChanged by rememberUpdatedState(onWebViewChanged)
@@ -1880,6 +1884,8 @@ internal fun MailHtmlView(
                         holder.messageKey = cacheKey
                         holder.contentKey = contentKey
                         holder.hasCommittedContent = true
+                        mainDocumentCommitted = true
+                        placeholderVisible = false
                         holder.scrollToTopOnCommit = false
                         holder.requestedChromeVisible = true
                         webView.scrollTo(0, 0)
@@ -2039,6 +2045,21 @@ private fun mailSubjectTextStyle(fontSize: TextUnit, lineHeight: TextUnit) = Tex
     letterSpacing = 0.sp,
 )
 
+/** Keep transient window-inset measurements out of the HTML document identity. */
+@Composable
+internal fun rememberSettledMailTopBarHeight(measuredHeightPx: Int): Int {
+    var settledHeight by remember { mutableIntStateOf(0) }
+    LaunchedEffect(measuredHeightPx) {
+        if (measuredHeightPx <= 0 || measuredHeightPx == settledHeight) return@LaunchedEffect
+        // Vivo briefly applies the previous app's status-bar metrics on resume (180 -> 164 ->
+        // 180 px in the captured trace). Only sustained geometry changes should reflow the mail.
+        if (settledHeight > 0) delay(250)
+        settledHeight = measuredHeightPx
+    }
+    // The first real measurement is available immediately, without delaying initial layout.
+    return settledHeight.takeIf { it > 0 } ?: measuredHeightPx.coerceAtLeast(0)
+}
+
 @Composable
 internal fun rememberMailHeaderLayout(subject: String): MailHeaderLayout {
     val density = LocalDensity.current
@@ -2132,6 +2153,7 @@ private fun MailStableHeaderOverlay(
     val latestTopPullOffsetPx by rememberUpdatedState(topPullOffsetPx)
     val latestOnTopPullDelta by rememberUpdatedState(onTopPullDelta)
     val latestOnTopPullRelease by rememberUpdatedState(onTopPullRelease)
+
     val headerDragState = rememberDraggableState { dragDeltaPx ->
         val target = latestWebView ?: return@rememberDraggableState
         if (!target.isAttachedToWindow) return@rememberDraggableState
