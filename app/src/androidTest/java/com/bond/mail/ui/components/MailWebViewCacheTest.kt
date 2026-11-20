@@ -424,6 +424,45 @@ class MailWebViewCacheTest {
     }
 
     @Test
+    fun fullWidthTextTableDoesNotCollapseToLegacyPixelWidth() = runBlocking {
+        // Anonymized Gemini structure: the unitless inline width is parsed as pixels in quirks
+        // mode, while min-width:100% is the sender's intended fluid layout constraint.
+        for (legacyWidth in listOf("100", "100px")) {
+            for (darkMode in listOf(false, true)) {
+                val prepared = prepare("notice@example.com", """
+                    <html><head><meta name="viewport" content="width=device-width">
+                    <style>@media(max-width:950px){.wrap-inner{width:100%!important;max-width:100%!important}
+                    .mob_outer_style{padding:0 16px 8px!important}}</style></head><body>
+                    <center><table id="outer" class="wrap-inner" style="width:600px;border-collapse:collapse" cellpadding="0" cellspacing="0"><tr><td>
+                      <table id="body-table" width="100%" style="width:$legacyWidth;min-width:100%" cellpadding="0" cellspacing="0"><tr><td class="mob_outer_style">
+                        <table class="wrap-inner" cellpadding="0" cellspacing="0"><tr><td id="copy">
+                          我们正在更新应用中的设置，让你能更好地控制自己的数据。后续几周将逐步推出这些变化。
+                        </td></tr><tr><td><table width="100%" cellpadding="0" cellspacing="0"><tr>
+                          <td width="13">·</td><td id="bullet">有关变化的详细说明，应正常换行并保留完整的阅读宽度。</td>
+                        </tr></table></td></tr></table>
+                      </td></tr></table>
+                      <table id="small" style="width:96px" cellpadding="0" cellspacing="0"><tr><td>Footer</td></tr></table>
+                    </td></tr></table></center></body></html>
+                """.trimIndent(), darkMode = darkMode)
+                assertEquals(MailDocumentLayout.FLUID, prepared.layout)
+                val geometry = renderedGeometry(prepared, """
+                    var r=id=>document.getElementById(id).getBoundingClientRect();
+                    return [r('body-table').width/r('outer').width,r('copy').width,
+                      r('copy').left-r('body-table').left,r('body-table').right-r('copy').right,
+                      r('bullet').width,r('small').width,document.documentElement.scrollWidth-innerWidth];
+                """.trimIndent())
+                assertEquals("Text table must fill the newsletter", 1.0, geometry.getDouble(0), 0.01)
+                assertTrue("Paragraphs must have readable width", geometry.getDouble(1) > 250)
+                assertEquals(16.0, geometry.getDouble(2), 0.5)
+                assertEquals("Keep equal text gutters", geometry.getDouble(2), geometry.getDouble(3), 0.5)
+                assertTrue("Bullet copy must not become a narrow column", geometry.getDouble(4) > 230)
+                assertEquals("Intentional small tables remain small", 96.0, geometry.getDouble(5), 0.5)
+                assertTrue("No horizontal overflow", geometry.getDouble(6) <= 1)
+            }
+        }
+    }
+
+    @Test
     fun photoDigestKeepsEqualGuttersAndDoesNotBecomeAnIconStrip() = runBlocking {
         val badge = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3C/svg%3E"
         val cells = (1..3).joinToString("") { index -> """

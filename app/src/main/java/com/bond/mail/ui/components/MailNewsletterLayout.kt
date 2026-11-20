@@ -53,11 +53,12 @@ internal fun normalizeNewsletterColumns(document: Document) {
 
 /** Generic fluid constraints must not replace a sender's smaller inline image/container limit. */
 internal fun preserveNewsletterSizeLimits(document: Document) {
-    // MJML banners can retain a legacy 100px width while min-width:100% deliberately
-    // expands their image-only table. The generic min-width reset must not shrink it.
+    // Newsletter tables can retain a legacy 100px width (including unitless width:100
+    // in quirks mode) while min-width:100% deliberately expands them. Preserve that
+    // full-width intent before the generic min-width reset, for text bodies as well
+    // as image-only banners. Otherwise all nested paragraphs collapse into a column.
     document.select("table").filter {
-        it.text().isBlank() && it.select("img").size == 1 &&
-            NEWSLETTER_FULL_MIN_WIDTH.containsMatchIn(it.attr("style"))
+        NEWSLETTER_FULL_MIN_WIDTH.containsMatchIn(it.attr("style"))
     }.forEach { table ->
         table.attr("style", table.attr("style") + ";width:100%!important;")
     }
