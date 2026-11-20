@@ -1859,6 +1859,7 @@ private fun MailDrawerContent(
             selected = selectedAccountId == null && currentFolder == "INBOX",
             expanded = accountsExpanded,
             showExpand = orderedAccounts.size > COLLAPSED_ACCOUNT_LIMIT,
+            onSelect = { onChooseMailbox(null, "INBOX") },
             onToggleExpanded = { accountsExpanded = !accountsExpanded },
         )
 
@@ -2216,6 +2217,7 @@ internal fun DrawerAllMailboxesRow(
     selected: Boolean,
     expanded: Boolean,
     showExpand: Boolean,
+    onSelect: () -> Unit,
     onToggleExpanded: () -> Unit,
 ) {
     val motionEnabled = bondMotionEnabled()
@@ -2232,9 +2234,7 @@ internal fun DrawerAllMailboxesRow(
         label = "drawer-mailbox-chevron",
     )
     Surface(
-        // One click target and ripple across the label and chevron; never select a mailbox or dismiss.
-        onClick = onToggleExpanded,
-        enabled = showExpand,
+        onClick = onSelect,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
@@ -2258,7 +2258,11 @@ internal fun DrawerAllMailboxesRow(
                     .padding(start = 16.dp),
             )
             if (showExpand) {
-                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                // The disclosure must not select a mailbox or close the drawer.
+                androidx.compose.material3.IconButton(
+                    onClick = onToggleExpanded,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         Icons.Default.ExpandMore,
                         contentDescription = if (expanded) tr("collapse_accounts") else tr("expand_accounts"),

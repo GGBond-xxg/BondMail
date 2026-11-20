@@ -272,41 +272,84 @@ class AvatarAndAiUiTest {
         }
     }
 
-    @Test fun allMailboxesLabelAndChevronShareOneToggleAction() {
-        val selected = mutableStateOf(true)
+    @Test fun allMailboxesSelectionAndExpansionAreIndependent() {
+        val selected = mutableStateOf(false)
         val expanded = mutableStateOf(false)
         val expandable = mutableStateOf(true)
         var toggles = 0
+        var selections = 0
         launchScenario().use { scenario ->
             waitForContent(scenario)
             scenario.onActivity { activity -> activity.setContent {
                 BondMailTheme(AppSettings()) { JsonStringsProvider("en") {
                     Column(Modifier.fillMaxSize().statusBarsPadding()) {
                         DrawerAllMailboxesRow(selected.value, expanded.value, expandable.value,
+                            onSelect = { selections++; selected.value = true },
                             onToggleExpanded = { toggles++; expanded.value = !expanded.value })
                     }
                 } }
             } }
             assertTrue(device.wait(Until.hasObject(By.text("All Mailboxes")), 7000))
             click("All Mailboxes")
+            assertTrue(selected.value)
+            assertFalse(expanded.value)
+            assertEquals(1, selections)
+            assertEquals(0, toggles)
+            click("Show all mailboxes", description = true)
             assertTrue(expanded.value)
             assertEquals(1, toggles)
-            // The chevron belongs to the same clickable row, without a second button/ripple.
-            assertEquals(1, nodes().count { it.isClickable && it.isEnabled })
+            assertEquals(1, selections)
             click("Collapse mailbox list", description = true)
             assertFalse(expanded.value)
             assertEquals(2, toggles)
+            assertEquals(1, selections)
             scenario.onActivity { selected.value = false }
             settle()
             click("All Mailboxes")
-            assertTrue(expanded.value)
-            assertEquals(3, toggles)
-            assertFalse(selected.value)
-            screenshot("drawer-header-expanded")
+            assertFalse(expanded.value)
+            assertEquals(2, toggles)
+            assertEquals(2, selections)
+            assertTrue(selected.value)
+            screenshot("drawer-header-independent-actions")
             scenario.onActivity { expandable.value = false }
             settle()
-            assertFalse(nodes().any { it.isClickable && it.isEnabled })
-            assertEquals(3, toggles)
+            click("All Mailboxes")
+            assertEquals(3, selections)
+            assertEquals(2, toggles)
+            assertFalse(nodes().any { it.contentDescription?.toString() == "Show all mailboxes" })
+        }
+    }
+
+    @Test fun mailErrorNoticeKeepsCloseInsetAcrossThemes() {
+        val settings = mutableStateOf(AppSettings())
+        val visible = mutableStateOf(true)
+        val message = "无法连接邮箱服务器，请稍后重试。"
+        launchScenario().use { scenario ->
+            waitForContent(scenario)
+            scenario.onActivity { activity -> activity.setContent {
+                BondMailTheme(settings.value) { JsonStringsProvider("en") {
+                    androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.background) {
+                        Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
+                            if (visible.value) MailErrorNotice(message, onDismiss = { visible.value = false })
+                        }
+                    }
+                } }
+            } }
+            for (style in UiStyle.entries) for (mode in listOf(ThemeMode.LIGHT, ThemeMode.DARK)) {
+                scenario.onActivity {
+                    settings.value = AppSettings(uiStyle = style, themeMode = mode)
+                    visible.value = true
+                }
+                assertTrue(device.wait(Until.hasObject(By.text(message)), 5000))
+                settle()
+                val close = nodes().first { it.contentDescription?.toString() == "Close" }
+                val bounds = android.graphics.Rect().also(close::getBoundsInScreen)
+                val density = context.resources.displayMetrics.density
+                assertTrue("Close icon needs a visible trailing gutter", device.displayWidth - bounds.right >= 24 * density)
+                screenshot("mail-error-${style.name}-${mode.name}")
+                click("Close", description = true)
+                assertTrue(device.wait(Until.gone(By.text(message)), 3000))
+            }
         }
     }
 

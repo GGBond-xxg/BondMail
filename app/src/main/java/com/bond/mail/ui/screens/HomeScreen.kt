@@ -137,6 +137,7 @@ import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.HomeViewModel
 import com.bond.mail.ui.components.ExpandingSearchOverlay
 import com.bond.mail.ui.components.MainPageTopBar
+import com.bond.mail.ui.components.MailErrorNotice
 import com.bond.mail.ui.components.TopActionButton
 import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.components.MessageCard
@@ -948,28 +949,11 @@ fun HomeScreen(
             enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(tween(160)),
             exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(tween(120)),
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                tonalElevation = 8.dp,
-                shadowElevation = 10.dp,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        topNotice.orEmpty(),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    IconButton(onClick = { topNotice = null }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = tr("cancel"))
-                    }
-                }
-            }
+            MailErrorNotice(
+                message = topNotice.orEmpty(),
+                onDismiss = { topNotice = null },
+                backdrop = glassBackdrop.takeIf { glassEnabled },
+            )
         }
 
         if (confirmDeleteSelection) {
