@@ -181,6 +181,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.BondTopAppBar
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -1176,7 +1177,7 @@ private fun MessageDockItem(
 }
 
 @Composable
-private fun MailHtmlView(
+internal fun MailHtmlView(
     cacheKey: String,
     html: String,
     header: MailWebHeader,
@@ -1426,6 +1427,9 @@ private fun MailHtmlView(
                 fontScale = fontScale,
             )
         }.onFailure { error ->
+            // Leaving/restarting this composition cancels preparation normally. Reporting that
+            // cancellation as a render error poisons the retained detail state on app return.
+            if (error is CancellationException) throw error
             MailLog.e(MailLog.WEB, "document prepare failed cause=${MailLog.causeSummary(error)}", error)
             latestOnRenderFailure()
         }.getOrNull()
@@ -1453,6 +1457,12 @@ private fun MailHtmlView(
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { context ->
+                    // These fields describe a specific WebView, not just the Compose holder.
+                    // Window/configuration changes can remove and recreate AndroidView while
+                    // this holder survives. A new blank instance must never inherit a loaded key.
+                    holder.contentKey = null
+                    holder.messageKey = null
+                    holder.hasCommittedContent = false
                     holder.rendererGone = false
                     MailWebViewPool.acquire(context, requestedContentKey).apply {
                         animate().cancel()
@@ -1632,6 +1642,7 @@ private fun MailHtmlView(
                         }
                         webViewClient = object : WebViewClient() {
                             override fun onPageCommitVisible(view: WebView?, url: String?) {
+                                if (holder.webView !== view) return
                                 // Commit prevents stale-document pixels, but cold Chromium may
                                 // not have submitted this document's first composed frame yet.
                                 mainDocumentCommitted = true
@@ -1639,6 +1650,7 @@ private fun MailHtmlView(
                             }
 
                             override fun onPageFinished(view: WebView?, url: String?) {
+                                if (holder.webView !== view) return
                                 holder.pageFinishedGeneration = holder.contentGeneration
                                 requestReveal(view, committedVisible = false)
                             }
@@ -1648,6 +1660,7 @@ private fun MailHtmlView(
                                 request: WebResourceRequest?,
                                 error: WebResourceError?,
                             ) {
+                                if (holder.webView !== view) return
                                 if (request?.isForMainFrame == true) {
                                     MailLog.w(
                                         MailLog.WEB,
@@ -1677,6 +1690,10 @@ private fun MailHtmlView(
                                 view: WebView,
                                 detail: RenderProcessGoneDetail,
                             ): Boolean {
+                                if (holder.webView !== view) {
+                                    MailWebViewPool.discard(view)
+                                    return true
+                                }
                                 MailLog.e(
                                     MailLog.WEB,
                                     "renderer gone crashed=${detail.didCrash()} " +
@@ -1799,6 +1816,26 @@ private fun MailHtmlView(
                         }
                         holder.webView = this
                         latestOnWebViewChanged(this)
+                    }
+                },
+                onRelease = { webView ->
+                    // Own the lease at the AndroidView boundary. It can leave composition while
+                    // a replacement document is preparing, before MailHtmlView itself disposes.
+                    if (holder.webView === webView) {
+                        latestOnWebViewChanged(null)
+                        latestOnContentScrollChanged(0)
+                        if (holder.topPullActive) {
+                            holder.topPullActive = false
+                            latestOnTopPullRelease()
+                        }
+                        holder.contentGeneration += 1L
+                        holder.visualCommitRequestedGeneration = -1L
+                        holder.contentKey = null
+                        holder.messageKey = null
+                        holder.hasCommittedContent = false
+                        holder.webView = null
+                        if (holder.rendererGone) MailWebViewPool.discard(webView)
+                        else MailWebViewPool.release(webView)
                     }
                 },
                 update = { webView ->
@@ -1942,25 +1979,6 @@ private fun MailHtmlView(
         }
     }
 
-    DisposableEffect(holder) {
-        onDispose {
-            latestOnWebViewChanged(null)
-            if (holder.topPullActive) {
-                holder.topPullActive = false
-                latestOnTopPullRelease()
-            }
-            holder.contentGeneration += 1L
-            holder.visualCommitRequestedGeneration = -1L
-            holder.webView?.let { webView ->
-                holder.webView = null
-                if (holder.rendererGone) {
-                    MailWebViewPool.discard(webView)
-                } else {
-                    MailWebViewPool.release(webView)
-                }
-            }
-        }
-    }
 }
 
 private fun WebView.hideMailDocument() {

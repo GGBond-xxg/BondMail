@@ -491,6 +491,55 @@ class MailWebViewCacheTest {
         assertTrue("Last photo must stay inside the canvas", geometry.getDouble(4) > 0)
     }
 
+    @Test
+    fun responsiveFeatureColumnsKeepMobileVisibilityAndWidth() = runBlocking {
+        val pixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        for (dark in listOf(false, true)) {
+            val prepared = prepare("notice@example.com", """
+                <html><head><style>
+                .mobile { display:none }
+                @media(max-width:950px) {
+                  .canvas { width:100%!important } .feature { width:300px!important }
+                  .mobile,.stack { display:block!important } .desktop { display:none!important }
+                }
+                </style></head><body>
+                <table id="outer" width="100%" cellspacing="0" cellpadding="0"><tr><td>
+                <table class="canvas" width="940" cellspacing="0" cellpadding="0"><tr><td>
+                <table width="100%" cellspacing="0" cellpadding="0"><tr id="feature-row">
+                  <td id="mobile-art" class="mobile" style="display:none"><table class="feature" width="288"><tr><td><img src="$pixel" width="240" height="180"></td></tr></table></td>
+                  <td class="desktop"><img src="$pixel" width="20" height="1"></td>
+                  <td id="copy" class="stack"><table class="feature" width="288"><tr><td>Keep your passes together, ready to use wherever you go. A readable paragraph beside a responsive illustration.</td></tr></table></td>
+                  <td class="desktop"><img src="$pixel" width="20" height="1"></td>
+                  <td id="desktop-art" class="desktop"><table class="feature" width="288"><tr><td><img src="$pixel" width="240" height="180"></td></tr></table></td>
+                </tr></table>
+                <table id="social" cellspacing="0" cellpadding="0"><tr>
+                  <td><img src="$pixel" width="24" height="24"></td>
+                  <td><img src="$pixel" width="24" height="24"></td>
+                  <td><img src="$pixel" width="24" height="24"></td>
+                </tr></table>
+                </td></tr></table></td></tr></table></body></html>
+            """.trimIndent(), darkMode = dark)
+            assertEquals(MailDocumentLayout.FLUID, prepared.layout)
+            val dom = org.jsoup.Jsoup.parse(prepared.html)
+            assertFalse(dom.getElementById("feature-row")!!.hasClass("bondmail-icon-row"))
+            assertEquals(1, dom.select("#social .bondmail-icon-row").size)
+            val geometry = renderedGeometry(prepared, """
+                var r=id=>document.getElementById(id).getBoundingClientRect();
+                var b=r('bondmail-message-body'),o=r('outer'),m=r('mobile-art'),c=r('copy');
+                return [o.width,b.width,o.left-b.left,b.right-o.right,
+                  r('desktop-art').width,m.width,c.width,c.top-m.bottom,document.documentElement.scrollWidth-innerWidth];
+            """.trimIndent())
+            assertTrue("Responsive canvas must fit the phone", geometry.getDouble(0) <= geometry.getDouble(1))
+            assertEquals(16.0, geometry.getDouble(2), 0.5)
+            assertEquals("Equal outer gutters", geometry.getDouble(2), geometry.getDouble(3), 0.5)
+            assertEquals("Desktop duplicate stays hidden", 0.0, geometry.getDouble(4), 0.5)
+            assertTrue("Mobile artwork is visible", geometry.getDouble(5) >= 290)
+            assertTrue("Copy retains readable width", geometry.getDouble(6) >= 290)
+            assertTrue("Copy stacks below the artwork", geometry.getDouble(7) >= -1)
+            assertTrue("No horizontal overflow", geometry.getDouble(8) <= 1)
+        }
+    }
+
     private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {
         val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
         val ready = java.util.concurrent.CountDownLatch(1)

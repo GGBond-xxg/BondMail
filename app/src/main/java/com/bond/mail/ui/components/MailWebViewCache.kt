@@ -1278,11 +1278,13 @@ internal object MailWebViewCache {
             }
             if (cells.size !in 3..12) return@rowLoop
             if (cells.any(::hasNewsletterBackgroundImage)) return@rowLoop
+            // Responsive feature rows can contain desktop/mobile copies of an illustration,
+            // spacer GIFs and a prose column. They must keep the sender's hide/stack rules;
+            // forcing every cell back into a table also reveals the hidden desktop copy.
+            if (cells.any { it.text().trim().length > 24 }) return@rowLoop
 
             val iconCells = cells.count { cell ->
-                val textLength = cell.text().trim().length
-                val imageLikeCount = cell.select("img, svg").size
-                imageLikeCount in 1..3 && textLength <= 24
+                isCompactIconUnit(cell, aggressive = false)
             }
             if (iconCells < 3 || iconCells * 2 < cells.size) return@rowLoop
 
