@@ -140,6 +140,8 @@ import com.bond.mail.ui.components.MainPageTopBar
 import com.bond.mail.ui.components.MailErrorNotice
 import com.bond.mail.ui.components.TopActionButton
 import com.bond.mail.ui.components.MailContentDefaults
+import com.bond.mail.ui.components.groupedItemModifier
+import com.bond.mail.ui.components.MailRefreshIndicator
 import com.bond.mail.ui.components.MessageCard
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.i18n.tr
@@ -207,6 +209,7 @@ fun HomeScreen(
     val contentReady by viewModel.contentReady.collectAsState()
     val failure by viewModel.error.collectAsState()
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
     val motionEnabled = bondMotionEnabled()
     val entranceState = rememberBondStaggeredEntranceState(
         enabled = motionEnabled && staggeredEntranceEnabled,
@@ -378,7 +381,7 @@ fun HomeScreen(
             .background(MaterialTheme.bondSurfaces.page),
     ) {
         val listState = rememberLazyListState()
-        val listItemSpacing = if (miuixLayout) 12.dp else 13.dp
+        val listItemSpacing = if (materialLayout) MailContentDefaults.ItemSpacing else if (miuixLayout) 12.dp else 13.dp
         val listHorizontalInset = if (miuixLayout) 12.dp else 16.dp
         val scrollScope = rememberCoroutineScope()
         val listBottomContentPadding by animateDpAsState(
@@ -453,6 +456,7 @@ fun HomeScreen(
             onRefresh = viewModel::refresh,
             enabled = !inSelectionMode,
             modifier = Modifier.fillMaxSize(),
+            indicatorTop = (topChromeHeight + topChromeOffset).coerceAtLeast(statusBarInset),
         ) {
             LazyColumn(
                     state = listState,
@@ -575,7 +579,9 @@ fun HomeScreen(
                     ) { index, message ->
                         var animateReadState by remember(message.id) { mutableStateOf(false) }
                         val messageSelected = selectedIds.contains(message.id)
-                        val itemShape = if (miuixLayout) {
+                        val itemShape = if (materialLayout) {
+                            MailContentDefaults.animatedItemShape(index, messages.size, messageSelected)
+                        } else if (miuixLayout) {
                             MaterialTheme.shapes.medium
                         } else {
                             MaterialTheme.shapes.large
@@ -589,10 +595,12 @@ fun HomeScreen(
                         }
                         ProgressiveMailRow(
                             messageId = message.id,
-                            animateArrival = animateArrival,
+                            // M3 animates a whole incoming snapshot with stable lazy keys. Do not
+                            // combine it with zero-height, staggered rows: that repeatedly reflows
+                            // existing messages and delays a large batch by its absolute index.
+                            animateArrival = animateArrival && !materialLayout,
                             staggerIndex = index.coerceAtMost(7),
-                            modifier = Modifier
-                                .animateItem()
+                            modifier = (if (materialLayout) groupedItemModifier() else Modifier.animateItem())
                                 .bondStaggeredEntrance(entranceState, index = index + 3),
                         ) {
                             RepeatableSwipeMailRow(
@@ -895,7 +903,7 @@ fun HomeScreen(
                     }
 
                     AnimatedVisibility(
-                        visible = busy,
+                        visible = busy && !materialLayout,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth(),
@@ -1081,16 +1089,18 @@ private fun ProgressiveMailRow(
 }
 
 @Composable
-private fun ElasticRefreshContainer(
+internal fun ElasticRefreshContainer(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    indicatorTop: Dp = 0.dp,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     val motionEnabled = bondMotionEnabled()
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
     val triggerPx = with(density) { 80.dp.toPx() }
     val maximumPx = with(density) { 128.dp.toPx() }
     var pullOffsetPx by remember { mutableFloatStateOf(0f) }
@@ -1173,16 +1183,32 @@ private fun ElasticRefreshContainer(
         if (!enabled) thresholdHapticSent = false
     }
 
-    // Pulling still moves the list with resistance and threshold haptics, but deliberately draws no
-    // second spinner. Once released, the existing 3dp progress line in the top chrome is the only
-    // synchronization indicator.
+    // Reserve a 10 dp stroke with 12 dp breathing room above and below it. This belongs to
+    // the list viewport, so the fixed app bar and bottom dock never jump with loading state.
+    val indicatorVisible = refreshing || pullOffsetPx > 0f
+    val refreshSpacing by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (materialLayout && indicatorVisible) 34.dp else 0.dp,
+        animationSpec = tween(if (motionEnabled) 220 else 0, easing = BondMotionEasing.Standard),
+        label = "refresh-spacing",
+    )
     Box(modifier.nestedScroll(nestedScrollConnection)) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = refreshSpacing)
                 .offset { IntOffset(0, pullOffsetPx.roundToInt()) },
         ) {
             content()
+        }
+        if (materialLayout) {
+            AnimatedVisibility(
+                visible = indicatorVisible,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = indicatorTop + 12.dp, start = 12.dp, end = 12.dp),
+                enter = fadeIn(tween(if (motionEnabled) 120 else 0)),
+                exit = fadeOut(tween(if (motionEnabled) 120 else 0)),
+            ) {
+                MailRefreshIndicator(refreshing, (pullOffsetPx / triggerPx).coerceIn(0f, 1f))
+            }
         }
     }
 }
@@ -1444,6 +1470,7 @@ private fun SearchContainerOverlay(
     onTransformActivityChanged: (Boolean) -> Unit,
 ) {
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
     ExpandingSearchOverlay(
         expanded = expanded,
         sourceBounds = sourceBounds,
@@ -1476,7 +1503,7 @@ private fun SearchContainerOverlay(
                         bottom = 18.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(
-                        if (miuixLayout) 12.dp else 13.dp,
+                        if (materialLayout) MailContentDefaults.ItemSpacing else if (miuixLayout) 12.dp else 13.dp,
                     ),
                 ) {
                     item { Text(tr("search_filter_help"), style = MaterialTheme.typography.bodySmall) }
@@ -1486,6 +1513,7 @@ private fun SearchContainerOverlay(
                         key = { _, message -> message.id },
                     ) { index, message ->
                         MessageCard(
+                            modifier = if (materialLayout) groupedItemModifier() else Modifier,
                             message = message,
                             account = accountById[message.accountId],
                             contactAvatarText = contactAvatarByEmail[
@@ -1493,7 +1521,9 @@ private fun SearchContainerOverlay(
                             ],
                             density = settings.density,
                             monetBrandIcons = settings.monetBrandIcons,
-                            shape = if (miuixLayout) {
+                            shape = if (materialLayout) {
+                                MailContentDefaults.animatedItemShape(index, results.size, selected = false)
+                            } else if (miuixLayout) {
                                 MaterialTheme.shapes.medium
                             } else {
                                 MaterialTheme.shapes.large

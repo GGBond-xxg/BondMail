@@ -65,8 +65,8 @@ class InlineTranslationLayoutTest {
                                     Row(Modifier.statusBarsPadding().align(Alignment.TopEnd)) { InlineTranslationSelectors(state) }
                                     val bottom = floatingActionBottomPadding(visible.value)
                                     val offset = animateChromeOffset(visible.value, 124.dp, "test-dock")
-                                    MessageTranslationActions(state, true, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = bottom))
-                                    MessageActionDock({}, {}, {}, {}, Modifier.align(Alignment.BottomCenter).graphicsLayer { translationY = offset.toPx() }.navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp))
+                                    MessageTranslationActions(state, true, Modifier.align(Alignment.BottomCenter).widthIn(max = com.bond.mail.ui.theme.BottomDockDefaults.MaxWidth).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = bottom))
+                                    MessageActionDock({}, {}, {}, {}, Modifier.align(Alignment.BottomCenter).offset { androidx.compose.ui.unit.IntOffset(0, offset.roundToPx()) })
                                 }
                             }
                         }

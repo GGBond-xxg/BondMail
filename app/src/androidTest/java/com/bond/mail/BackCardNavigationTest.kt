@@ -8,10 +8,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -45,13 +57,28 @@ class BackCardNavigationTest {
                 val backs = AtomicInteger()
                 val taps = AtomicInteger()
                 val active = mutableStateOf(true)
+                var dockBounds = Rect.Zero
+                val webReady = java.util.concurrent.CountDownLatch(if (reader) 1 else 0)
                 scenario.onActivity { activity -> activity.setContent {
                     BondMailTheme(AppSettings()) {
                         Box(Modifier.fillMaxSize().background(Color.Red)) {
                             if (active.value) {
                                 val committed = { backs.incrementAndGet(); active.value = false }
                                 val page: @Composable (() -> Unit) -> Unit = { back ->
-                                    Box(Modifier.fillMaxSize().background(Color.Blue).clickable { taps.incrementAndGet() }) {
+                                    Box(Modifier.fillMaxSize().background(Color.Blue)) {
+                                        if (reader) AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
+                                            WebView(context).apply {
+                                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                                                setBackgroundColor(AndroidColor.GREEN)
+                                                webViewClient = object : WebViewClient() {
+                                                    override fun onPageCommitVisible(view: WebView?, url: String?) {
+                                                        webReady.countDown()
+                                                    }
+                                                }
+                                                loadDataWithBaseURL(null, "<html><body style='margin:0;background:#0044ff;height:3000px'>Reader fixture</body></html>", "text/html", "UTF-8", null)
+                                            }
+                                        }, onRelease = { it.destroy() })
+                                        Box(Modifier.fillMaxSize().clickable { taps.incrementAndGet() })
                                         Text("Back card", Modifier.statusBarsPadding().clickable(onClick = back))
                                     }
                                 }
@@ -60,10 +87,16 @@ class BackCardNavigationTest {
                                     page(back)
                                 } else BondBackScreen(null, true, committed) { page(it) }
                             } else Text("Returned", Modifier.statusBarsPadding())
+                            // Represents the persistent sibling dock. It must never enter the frozen
+                            // reader bitmap, even though window screenshots include these pixels.
+                            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
+                                .fillMaxWidth().height(24.dp).onGloballyPositioned { dockBounds = it.boundsInWindow() }
+                                .background(Color.Magenta))
                         }
                     }
                 } }
                 assertTrue(device.wait(Until.hasObject(By.text("Back card")), 5_000))
+                assertTrue("WebView fixture committed", webReady.await(10, java.util.concurrent.TimeUnit.SECONDS))
                 android.os.SystemClock.sleep(500)
                 fun start() {
                     scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackStarted(BackEventCompat(0f, 700f, 0f, edge)) }
@@ -78,6 +111,15 @@ class BackCardNavigationTest {
                 assertTrue("Preview exposes previous page", AndroidColor.red(border) > AndroidColor.blue(border))
                 val center = screenshot.getPixel(screenshot.width / 2, screenshot.height / 2)
                 assertTrue("Current page remains visible", AndroidColor.blue(center) > AndroidColor.red(center))
+                if (reader) assertTrue("Frozen reader must contain Chromium pixels, not just its Compose background",
+                    AndroidColor.green(center) in 50..90)
+                for (y in 0 until screenshot.height step 4) for (x in 0 until screenshot.width step 4) {
+                    if (x >= dockBounds.left - 2 && x <= dockBounds.right + 2 &&
+                        y >= dockBounds.top - 2 && y <= dockBounds.bottom + 2) continue
+                    val pixel = screenshot.getPixel(x, y)
+                    assertFalse("Snapshot duplicated the persistent dock at $x,$y (reader=$reader edge=$edge)",
+                        AndroidColor.red(pixel) > 220 && AndroidColor.blue(pixel) > 220 && AndroidColor.green(pixel) < 40)
+                }
                 screenshot.recycle()
                 scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackCancelled() }
                 android.os.SystemClock.sleep(400)

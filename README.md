@@ -149,6 +149,7 @@ docs/                更新日志、OAuth 与测试说明
 - [OAuth 配置](docs/README_OAUTH.md)
 - [测试清单](docs/TEST_CHECKLIST.md)
 - [动效规范](docs/README_MOTION_SPEC.md)
+- [三种样式的底部栏规范](docs/BOTTOM_DOCK_SPEC.md)
 - [实现状态](docs/IMPLEMENTATION_STATUS.md)
 
 历史版本的详细变化保存在 `docs/CHANGELOG_*.md`，不再堆叠在项目首页。

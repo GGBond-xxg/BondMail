@@ -1,6 +1,8 @@
 package com.bond.mail.ui.glass.components
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +21,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -38,6 +42,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.bond.mail.ui.theme.glassDockSurface
+import com.bond.mail.ui.theme.BottomDockDefaults
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -66,8 +71,13 @@ fun LiquidBottomTabs(
     backdrop: Backdrop,
     tabsCount: Int,
     modifier: Modifier = Modifier,
+    selectionEnabled: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
+    val latestSelectionEnabled by rememberUpdatedState(selectionEnabled)
+    val latestOnTabSelected by rememberUpdatedState(onTabSelected)
+    val indicatorAlpha by animateFloatAsState(if (selectionEnabled) 1f else 0f,
+        tween(if (com.bond.mail.ui.motion.bondMotionEnabled()) 180 else 0), label = "glass-dock-selection-alpha")
     val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val isLightTheme = androidx.compose.material3.MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val accentColor =
@@ -110,7 +120,7 @@ fun LiquidBottomTabs(
                 valueRange = 0f..(tabsCount - 1).toFloat(),
                 visibilityThreshold = 0.001f,
                 initialScale = 1f,
-                pressedScale = 78f / 56f,
+                pressedScale = 1.08f,
                 onDragStarted = {},
                 onDragStopped = {
                     val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
@@ -149,7 +159,7 @@ fun LiquidBottomTabs(
                 .drop(1)
                 .collectLatest { index ->
                     dampedDragAnimation.animateToValue(index.toFloat())
-                    onTabSelected(index)
+                    if (latestSelectionEnabled) latestOnTabSelected(index)
                 }
         }
 
@@ -167,7 +177,7 @@ fun LiquidBottomTabs(
         }
 
         Box(
-            Modifier.glassDockGestureBoundary().then(dampedDragAnimation.modifier),
+            Modifier.glassDockGestureBoundary().then(if (selectionEnabled) dampedDragAnimation.modifier else Modifier),
             contentAlignment = Alignment.CenterStart,
         ) {
             Row(
@@ -185,9 +195,9 @@ fun LiquidBottomTabs(
                         },
                     )
                     .then(interactiveHighlight.modifier)
-                    .height(64f.dp)
+                    .height(BottomDockDefaults.Height)
                     .fillMaxWidth()
-                    .padding(4f.dp),
+                    .padding(horizontal = 4.dp, vertical = BottomDockDefaults.VerticalInset),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
             )
@@ -225,7 +235,7 @@ fun LiquidBottomTabs(
                             onDrawSurface = { drawRect(containerColor) }
                         )
                         .then(interactiveHighlight.modifier)
-                        .height(56f.dp)
+                        .height(BottomDockDefaults.ItemHeight)
                         .fillMaxWidth()
                         .padding(horizontal = 4f.dp)
                         .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
@@ -238,11 +248,13 @@ fun LiquidBottomTabs(
                 Modifier
                     .padding(horizontal = 4f.dp)
                     .graphicsLayer {
+                        alpha = indicatorAlpha
                         translationX =
                             if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
-                            else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                            else (tabsCount - 1f - dampedDragAnimation.value) * tabWidth + panelOffset
+                        translationX += BottomDockDefaults.IndicatorHorizontalInset.toPx()
                     }
-                    .then(interactiveHighlight.gestureModifier)
+                    .then(if (selectionEnabled) interactiveHighlight.gestureModifier else Modifier)
                     .drawBackdrop(
                         backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                         shape = { RoundedCornerShape(50) },
@@ -286,8 +298,8 @@ fun LiquidBottomTabs(
                             drawRect(Color.Black.copy(alpha = 0.03f * progress))
                         }
                     )
-                    .height(56f.dp)
-                    .fillMaxWidth(1f / tabsCount)
+                    .height(BottomDockDefaults.IndicatorHeight)
+                    .width(with(density) { tabWidth.toDp() } - BottomDockDefaults.IndicatorHorizontalInset * 2)
             )
         }
     }

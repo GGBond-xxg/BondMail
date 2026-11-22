@@ -1,13 +1,5 @@
 package com.bond.mail.ui.motion
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.graphics.Bitmap
-import android.os.Handler
-import android.os.Looper
-import android.view.View
-import android.view.PixelCopy
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
@@ -16,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,21 +27,18 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.resume
 
 private const val TELEGRAM_OPEN_DURATION_MS = 260
 private const val TELEGRAM_BACK_DURATION_MS = 220
@@ -60,58 +50,6 @@ private const val TELEGRAM_CANCEL_DURATION_MS = 150
  */
 private val TelegramOpenEasing = CubicBezierEasing(0.20f, 0.70f, 0.20f, 1f)
 private val TelegramBackEasing = CubicBezierEasing(0.20f, 0f, 0f, 1f)
-
-/**
- * Copies the current window asynchronously. A synchronous View.draw has to ask WebView to paint
- * its complete document on the UI thread and produced 350-400 ms return frames on the test phone.
- * PixelCopy keeps that readback in SurfaceFlinger and only resumes Compose when the bitmap is ready.
- */
-suspend fun captureMailTransitionSnapshot(view: View): ImageBitmap? {
-    if (view.width <= 0 || view.height <= 0 || !view.isAttachedToWindow) return null
-    val activity = view.context.findActivity() ?: return null
-    val softwareBitmap = withContext(Dispatchers.Default) {
-        runCatching {
-            Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        }.getOrNull()
-    } ?: return null
-    val copySucceeded = suspendCancellableCoroutine { continuation ->
-        runCatching {
-            PixelCopy.request(
-                activity.window,
-                softwareBitmap,
-                { result ->
-                    if (continuation.isActive) {
-                        continuation.resume(result == PixelCopy.SUCCESS)
-                    }
-                },
-                Handler(Looper.getMainLooper()),
-            )
-        }.onFailure {
-            if (continuation.isActive) continuation.resume(false)
-        }
-    }
-    if (!copySucceeded) {
-        softwareBitmap.recycle()
-        return null
-    }
-    return withContext(Dispatchers.Default) {
-        val hardwareBitmap = runCatching {
-            softwareBitmap.copy(Bitmap.Config.HARDWARE, false)
-        }.getOrNull()
-        if (hardwareBitmap != null) {
-            softwareBitmap.recycle()
-            hardwareBitmap.asImageBitmap()
-        } else {
-            softwareBitmap.asImageBitmap()
-        }
-    }
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
 
 /**
  * Two-layer mail reader with the same card preview as every other page.
@@ -187,7 +125,7 @@ private fun BondBackTransition(
         reportContentReady: () -> Unit,
     ) -> Unit,
 ) {
-    val hostView = LocalView.current
+    val readerLayer = rememberGraphicsLayer()
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val latestOnBackCommitted by rememberUpdatedState(onBackCommitted)
@@ -239,7 +177,16 @@ private fun BondBackTransition(
 
     suspend fun freezeReader() {
         if (freezeContentOnBack && frozenReader == null) {
-            frozenReader = captureMailTransitionSnapshot(hostView)
+            // Only this destination belongs to the moving card. A window PixelCopy also captures
+            // the persistent sibling dock, producing a second, shrinking dock during back.
+            // Read the already recorded hardware layer; never synchronously View.draw a WebView.
+            frozenReader = try {
+                readerLayer.toImageBitmap()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null // Retain the live page if the renderer cannot provide a snapshot.
+            }
         }
     }
 
@@ -367,7 +314,10 @@ private fun BondBackTransition(
                     shadowElevation = maximumCornerPx * transform.cornerFraction
                 },
         ) {
-            Box(Modifier.fillMaxSize()) { content(requestBack, reportContentReady) }
+            Box(Modifier.fillMaxSize().then(if (freezeContentOnBack) Modifier.drawWithContent {
+                readerLayer.record { this@drawWithContent.drawContent() }
+                drawLayer(readerLayer)
+            } else Modifier)) { content(requestBack, reportContentReady) }
             frozen?.let { snapshot ->
                 Image(
                     bitmap = snapshot,

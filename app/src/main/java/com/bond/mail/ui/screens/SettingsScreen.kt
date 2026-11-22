@@ -46,8 +46,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import com.bond.mail.ui.theme.BondIcon as Icon
@@ -113,6 +111,7 @@ import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.MiuixActionSetting
 import com.bond.mail.ui.theme.MiuixDropdownSetting
 import com.bond.mail.ui.theme.MiuixPermissionSetting
+import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.theme.MiuixSectionTitle
 import com.bond.mail.ui.theme.MiuixSettingsCard
 import com.bond.mail.ui.theme.MiuixSettingsDivider
@@ -235,15 +234,17 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 2) {
-                SettingsCard {
-                    DropdownSettingRow(
-                        title = tr("language"),
-                        options = SupportedLanguages.options.map { language ->
-                            language.code to tr(language.labelKey)
-                        },
-                        selected = settings.languageCode,
-                        onSelect = viewModel::language,
-                    )
+                SettingsGroup {
+                    item {
+                        DropdownSettingRow(
+                            title = tr("language"),
+                            options = SupportedLanguages.options.map { language ->
+                                language.code to tr(language.labelKey)
+                            },
+                            selected = settings.languageCode,
+                            onSelect = viewModel::language,
+                        )
+                    }
                 }
             }
         }
@@ -255,79 +256,90 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 4) {
-                SettingsCard {
-                DropdownSettingRow(
-                    title = tr("ui_style"),
-                    options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS).map { style ->
-                        style to when (style) {
-                            UiStyle.MATERIAL3 -> tr("ui_style_material3")
-                            UiStyle.MIUIX -> tr("ui_style_miuix")
-                            UiStyle.LIQUID_GLASS -> tr("ui_style_liquid_glass")
-                        }
-                    },
-                    selected = settings.uiStyle,
-                    onSelect = viewModel::uiStyle,
-                )
-                SettingsDivider()
-                DropdownSettingRow(
-                    title = tr("list_density"),
-                    options = MailDensity.entries.map { density ->
-                        density to when (density) {
-                            MailDensity.COMFORTABLE -> tr("comfortable")
-                            MailDensity.STANDARD -> tr("standard")
-                            MailDensity.COMPACT -> tr("compact")
-                        }
-                    },
-                    selected = settings.density,
-                    onSelect = viewModel::density,
-                )
-                SettingsDivider()
-                DropdownSettingRow(
-                    title = tr("theme_mode"),
-                    options = ThemeMode.entries.map { mode ->
-                        mode to when (mode) {
-                            ThemeMode.SYSTEM -> tr("follow_system")
-                            ThemeMode.LIGHT -> tr("light")
-                            ThemeMode.DARK -> tr("dark")
-                        }
-                    },
-                    selected = settings.themeMode,
-                    onSelect = viewModel::theme,
-                    onSelectAt = { mode, origin ->
-                        if (mode != settings.themeMode) {
-                            themeRevealController?.switchTo(mode, origin, motionEnabled)
-                                ?: viewModel.theme(mode)
-                        }
-                    },
-                )
-                if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
-                    SettingsDivider()
-                    SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
-                        onClick = onOpenGlassSettings)
-                }
-                SettingsDivider()
-                SettingsActionRow(Icons.Default.Settings, tr("widget_settings"), tr("widget_independent"),
-                    onClick = onOpenWidgets)
-                if (settings.uiStyle == UiStyle.MATERIAL3) {
-                    SettingsDivider()
-                    SwitchSettingRow(
-                        title = tr("dynamic_color"),
-                        subtitle = tr("dynamic_color_desc"),
-                        checked = settings.dynamicColor,
-                        onChecked = viewModel::dynamic,
-                    )
-                    if (!settings.dynamicColor) {
-                        SettingsDivider()
+                SettingsGroup {
+                    item {
                         DropdownSettingRow(
-                            title = tr("theme_color"),
-                            options = ThemeColor.entries.map { color ->
-                                color to tr("theme_color_${color.name.lowercase()}")
+                            title = tr("ui_style"),
+                            options = listOf(UiStyle.MIUIX, UiStyle.MATERIAL3, UiStyle.LIQUID_GLASS).map { style ->
+                                style to when (style) {
+                                    UiStyle.MATERIAL3 -> tr("ui_style_material3")
+                                    UiStyle.MIUIX -> tr("ui_style_miuix")
+                                    UiStyle.LIQUID_GLASS -> tr("ui_style_liquid_glass")
+                                }
                             },
-                            selected = settings.themeColor,
-                            onSelect = viewModel::themeColor,
+                            selected = settings.uiStyle,
+                            onSelect = viewModel::uiStyle,
                         )
                     }
-                }
+
+                    item {
+                        DropdownSettingRow(
+                            title = tr("list_density"),
+                            options = MailDensity.entries.map { density ->
+                                density to when (density) {
+                                    MailDensity.COMFORTABLE -> tr("comfortable")
+                                    MailDensity.STANDARD -> tr("standard")
+                                    MailDensity.COMPACT -> tr("compact")
+                                }
+                            },
+                            selected = settings.density,
+                            onSelect = viewModel::density,
+                        )
+                    }
+
+                    item {
+                        DropdownSettingRow(
+                            title = tr("theme_mode"),
+                            options = ThemeMode.entries.map { mode ->
+                                mode to when (mode) {
+                                    ThemeMode.SYSTEM -> tr("follow_system")
+                                    ThemeMode.LIGHT -> tr("light")
+                                    ThemeMode.DARK -> tr("dark")
+                                }
+                            },
+                            selected = settings.themeMode,
+                            onSelect = viewModel::theme,
+                            onSelectAt = { mode, origin ->
+                                if (mode != settings.themeMode) {
+                                    themeRevealController?.switchTo(mode, origin, motionEnabled)
+                                        ?: viewModel.theme(mode)
+                                }
+                            },
+                        )
+                    }
+                    if (settings.uiStyle == UiStyle.LIQUID_GLASS) {
+                        item {
+                            SettingsActionRow(Icons.Default.Settings, tr("glass_adjustments"), tr("glass_adjustments_summary"),
+                                onClick = onOpenGlassSettings)
+                        }
+                    }
+
+                    item {
+                        SettingsActionRow(Icons.Default.Settings, tr("widget_settings"), tr("widget_independent"),
+                            onClick = onOpenWidgets)
+                    }
+                    if (settings.uiStyle == UiStyle.MATERIAL3) {
+                        item {
+                            SwitchSettingRow(
+                                title = tr("dynamic_color"),
+                                subtitle = tr("dynamic_color_desc"),
+                                checked = settings.dynamicColor,
+                                onChecked = viewModel::dynamic,
+                            )
+                        }
+                        if (!settings.dynamicColor) {
+                            item {
+                                DropdownSettingRow(
+                                    title = tr("theme_color"),
+                                    options = ThemeColor.entries.map { color ->
+                                        color to tr("theme_color_${color.name.lowercase()}")
+                                    },
+                                    selected = settings.themeColor,
+                                    onSelect = viewModel::themeColor,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -339,56 +351,68 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 6) {
-                SettingsCard {
-                DropdownSettingRow(
-                    title = tr("sync_interval"),
-                    options = listOf(1, 5, 10, 15).map { minutes ->
-                        minutes to tr("minutes_short", minutes.toString())
-                    },
-                    selected = settings.syncMinutes,
-                    onSelect = viewModel::syncMinutes,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Default.Cloud,
-                    title = tr("push_settings_title"),
-                    subtitle = when (settings.pushAccessState) {
-                        PushAccessState.MISSING -> tr("push_access_missing_short")
-                        PushAccessState.VERIFYING -> tr("push_access_verifying")
-                        PushAccessState.VERIFIED -> tr("push_access_verified_short")
-                        PushAccessState.REJECTED -> tr("push_access_rejected_short")
-                        PushAccessState.FAILED -> tr("push_access_failed_short")
-                    },
-                    onClick = onOpenPushSettings,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Outlined.Build,
-                    title = tr("mail_tools"),
-                    subtitle = tr("mail_tools_summary"),
-                    onClick = { toolsOpen = true },
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Outlined.Build,
-                    title = tr("verification_rules"),
-                    subtitle = tr("verification_rules_summary"),
-                    onClick = onOpenVerificationRules,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Outlined.Translate,
-                    title = tr("translation_settings"),
-                    subtitle = tr("translation_settings_summary"),
-                    onClick = { translationSettingsOpen = true },
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Outlined.AutoAwesome,
-                    title = tr("ai_settings"),
-                    subtitle = tr("ai_settings_summary"),
-                    onClick = onOpenAiSettings,
-                )
+                SettingsGroup {
+                    item {
+                        DropdownSettingRow(
+                            title = tr("sync_interval"),
+                            options = listOf(1, 5, 10, 15).map { minutes ->
+                                minutes to tr("minutes_short", minutes.toString())
+                            },
+                            selected = settings.syncMinutes,
+                            onSelect = viewModel::syncMinutes,
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Default.Cloud,
+                            title = tr("push_settings_title"),
+                            subtitle = when (settings.pushAccessState) {
+                                PushAccessState.MISSING -> tr("push_access_missing_short")
+                                PushAccessState.VERIFYING -> tr("push_access_verifying")
+                                PushAccessState.VERIFIED -> tr("push_access_verified_short")
+                                PushAccessState.REJECTED -> tr("push_access_rejected_short")
+                                PushAccessState.FAILED -> tr("push_access_failed_short")
+                            },
+                            onClick = onOpenPushSettings,
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Outlined.Build,
+                            title = tr("mail_tools"),
+                            subtitle = tr("mail_tools_summary"),
+                            onClick = { toolsOpen = true },
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Outlined.Build,
+                            title = tr("verification_rules"),
+                            subtitle = tr("verification_rules_summary"),
+                            onClick = onOpenVerificationRules,
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Outlined.Translate,
+                            title = tr("translation_settings"),
+                            subtitle = tr("translation_settings_summary"),
+                            onClick = { translationSettingsOpen = true },
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Outlined.AutoAwesome,
+                            title = tr("ai_settings"),
+                            subtitle = tr("ai_settings_summary"),
+                            onClick = onOpenAiSettings,
+                        )
+                    }
                 }
             }
         }
@@ -400,21 +424,25 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 8) {
-                SettingsCard {
-                PermissionStatusRow(
-                    icon = Icons.Default.Notifications,
-                    title = tr("message_notifications"),
-                    subtitle = tr("message_notifications_desc"),
-                    granted = notificationPermissionGranted,
-                    onAuthorize = onOpenNotificationSettings,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Default.BatterySaver,
-                    title = tr("background_run_settings"),
-                    subtitle = tr("background_run_settings_note_short"),
-                    onClick = onOpenBackgroundSettings,
-                )
+                SettingsGroup {
+                    item {
+                        PermissionStatusRow(
+                            icon = Icons.Default.Notifications,
+                            title = tr("message_notifications"),
+                            subtitle = tr("message_notifications_desc"),
+                            granted = notificationPermissionGranted,
+                            onAuthorize = onOpenNotificationSettings,
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Default.BatterySaver,
+                            title = tr("background_run_settings"),
+                            subtitle = tr("background_run_settings_note_short"),
+                            onClick = onOpenBackgroundSettings,
+                        )
+                    }
                 }
             }
         }
@@ -426,27 +454,31 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 10) {
-                SettingsCard {
-                DropdownSettingRow(
-                    title = tr("remote_images"),
-                    options = RemoteImagePolicy.entries.map { policy ->
-                        policy to when (policy) {
-                            RemoteImagePolicy.ALWAYS -> tr("always_load")
-                            RemoteImagePolicy.WIFI_ONLY -> tr("wifi_only")
-                            RemoteImagePolicy.NEVER -> tr("never_load")
-                        }
-                    },
-                    selected = settings.remoteImagePolicy,
-                    onSelect = viewModel::remoteImages,
-                )
-                SettingsDivider()
-                SettingsActionRow(
-                    icon = Icons.Default.Folder,
-                    title = tr("attachment_download_folder"),
-                    subtitle = selectedDownloadFolderName
-                        ?: tr("attachment_download_folder_not_selected"),
-                    onClick = { downloadFolderPicker.launch(null) },
-                )
+                SettingsGroup {
+                    item {
+                        DropdownSettingRow(
+                            title = tr("remote_images"),
+                            options = RemoteImagePolicy.entries.map { policy ->
+                                policy to when (policy) {
+                                    RemoteImagePolicy.ALWAYS -> tr("always_load")
+                                    RemoteImagePolicy.WIFI_ONLY -> tr("wifi_only")
+                                    RemoteImagePolicy.NEVER -> tr("never_load")
+                                }
+                            },
+                            selected = settings.remoteImagePolicy,
+                            onSelect = viewModel::remoteImages,
+                        )
+                    }
+
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Default.Folder,
+                            title = tr("attachment_download_folder"),
+                            subtitle = selectedDownloadFolderName
+                                ?: tr("attachment_download_folder_not_selected"),
+                            onClick = { downloadFolderPicker.launch(null) },
+                        )
+                    }
                 }
             }
         }
@@ -458,13 +490,15 @@ fun SettingsScreen(
         }
         item {
             StaggeredSettingsItem(entranceState, index = 12) {
-                SettingsCard {
-                    SettingsActionRow(
-                        icon = Icons.Default.Info,
-                        title = tr("about_bondmail"),
-                        subtitle = tr("version_label", BuildConfig.VERSION_NAME),
-                        onClick = onOpenAbout,
-                    )
+                SettingsGroup {
+                    item {
+                        SettingsActionRow(
+                            icon = Icons.Default.Info,
+                            title = tr("about_bondmail"),
+                            subtitle = tr("version_label", BuildConfig.VERSION_NAME),
+                            onClick = onOpenAbout,
+                        )
+                    }
                 }
             }
         }
@@ -501,31 +535,45 @@ private fun SectionTitle(text: String) {
     )
 }
 
+internal class SettingsGroupScope {
+    val rows = mutableListOf<@Composable ColumnScope.() -> Unit>()
+
+    fun item(content: @Composable ColumnScope.() -> Unit) {
+        rows += content
+    }
+}
+
 @Composable
-private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
-    if (LocalUiStyle.current == UiStyle.MIUIX) {
-        MiuixSettingsCard(content)
-        return
-    }
-    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-        Surface(shape = RoundedCornerShape(26.dp), color = MaterialTheme.bondSurfaces.content) {
-            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp), content = content)
+internal fun SettingsGroup(content: SettingsGroupScope.() -> Unit) {
+    val rows = SettingsGroupScope().apply(content).rows
+    val legacyContent: @Composable ColumnScope.() -> Unit = {
+        rows.forEachIndexed { index, row ->
+            if (index > 0) SettingsDivider()
+            row()
         }
-        return
     }
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
-        ),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.bondSurfaces.content),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            content = content,
-        )
+    when (LocalUiStyle.current) {
+        UiStyle.MIUIX -> MiuixSettingsCard(legacyContent)
+        UiStyle.LIQUID_GLASS -> Surface(
+            shape = RoundedCornerShape(26.dp), color = MaterialTheme.bondSurfaces.content,
+        ) {
+            Column(Modifier.fillMaxWidth().padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp), content = legacyContent)
+        }
+        UiStyle.MATERIAL3 -> Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
+        ) {
+            rows.forEachIndexed { index, row ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MailContentDefaults.animatedItemShape(index, rows.size, selected = false),
+                    color = MaterialTheme.bondSurfaces.content,
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), content = row)
+                }
+            }
+        }
     }
 }
 

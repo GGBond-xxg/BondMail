@@ -5,6 +5,7 @@ import com.bond.mail.data.settings.SenderPresentationRules
 import com.bond.mail.data.settings.MailDisplayMode
 import com.bond.mail.ui.components.SenderIconDialog
 import com.bond.mail.ui.components.MailDisplayModeDialog
+import com.bond.mail.ui.components.MailDocumentProgressIndicator
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Category
 
@@ -177,6 +178,12 @@ import com.bond.mail.ui.theme.LocalGlassBackdrop
 import com.bond.mail.ui.theme.LocalGlassEffects
 import com.bond.mail.ui.theme.glassSurface
 import com.bond.mail.ui.theme.glassDockSurface
+import com.bond.mail.ui.theme.AppBottomDock
+import com.bond.mail.ui.theme.LocalAppDock
+import com.bond.mail.ui.theme.ReaderDockActions
+import com.bond.mail.ui.theme.bottomDockOffset
+import com.bond.mail.ui.theme.BottomDockDefaults
+import androidx.compose.foundation.layout.widthIn
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.bond.mail.ui.theme.LocalUiStyle
@@ -601,6 +608,20 @@ fun DetailScreen(
     )
     val translationBottom = com.bond.mail.ui.motion.floatingActionBottomPadding(chromeVisible)
 
+    val sharedDock = LocalAppDock.current
+    val latestReply by rememberUpdatedState(::reply)
+    val latestForward by rememberUpdatedState(::forward)
+    val latestShare by rememberUpdatedState(::share)
+    val dockActions = remember(messageId) {
+        ReaderDockActions(messageId, { latestReply() }, { latestForward() }, { latestShare() },
+            { confirmDelete = true })
+    }
+    DisposableEffect(sharedDock, dockActions) {
+        sharedDock?.reader = dockActions
+        onDispose { if (sharedDock?.reader === dockActions) sharedDock.reader = null }
+    }
+    androidx.compose.runtime.SideEffect { sharedDock?.readerVisible = chromeVisible }
+
     val glassEnabled = LocalGlassEffects.current
     val glassBackdrop = rememberLayerBackdrop()
     Box(modifier.fillMaxSize()) {
@@ -950,13 +971,13 @@ fun DetailScreen(
             // One stack follows the bottom dock together. Content-dependent actions cannot
             // collide with translation status, the copy action, or the remote-image control.
             Column(
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                Modifier.align(Alignment.BottomCenter).widthIn(max = BottomDockDefaults.MaxWidth).navigationBarsPadding()
                     .padding(start = 12.dp, end = 12.dp, bottom = translationBottom),
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (verificationCode != null) {
-                    VerificationCodeAction(item, container, Modifier.padding(end = 5.dp))
+                    VerificationCodeAction(item, container, Modifier.padding(end = 2.dp))
                 }
                 MessageTranslationActions(translation, enabled = !bodyLoading && !bodyLoadFailed,
                     extraAction = {
@@ -966,16 +987,16 @@ fun DetailScreen(
                         })
                     })
             }
-            MessageActionDock(
+            // Standalone previews/tests can render the same component. The application instead
+            // keeps its one dock above NavHost and only updates the registered actions above.
+            if (sharedDock == null) MessageActionDock(
                 onReply = ::reply,
                 onForward = ::forward,
                 onShare = ::share,
                 onDelete = { confirmDelete = true },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer { translationY = bottomChromeOffset.toPx() }
-                    .navigationBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .bottomDockOffset(bottomChromeOffset),
             )
         }
     }
@@ -1049,8 +1070,8 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
                 else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface)
         }
-        // Keep the smaller action centered over the 58dp delete button below.
-        Row(Modifier.fillMaxWidth().padding(end = 5.dp), verticalAlignment = Alignment.CenterVertically,
+        // Center the 48dp auxiliary action above the shared 52dp trailing dock button.
+        Row(Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
             extraAction?.invoke()
             if (translation.result != null) MessageFloatingIconAction(
@@ -1093,88 +1114,14 @@ internal fun MessageActionDock(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val glassStyle = LocalUiStyle.current == UiStyle.LIQUID_GLASS
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        MessageDockSurface(Modifier.weight(1f)) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = if (glassStyle) 4.dp else 8.dp, vertical = if (glassStyle) 8.dp else 6.dp),
-            ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    MessageDockItem(
-                        icon = Icons.AutoMirrored.Filled.Reply,
-                        label = tr("reply"),
-                        modifier = Modifier.weight(1f),
-                        onClick = onReply,
-                    )
-                    MessageDockItem(
-                        icon = Icons.AutoMirrored.Filled.Forward,
-                        label = tr("forward"),
-                        modifier = Modifier.weight(1f),
-                        onClick = onForward,
-                    )
-                    MessageDockItem(
-                        icon = Icons.Default.Share,
-                        label = tr("share"),
-                        modifier = Modifier.weight(1f),
-                        onClick = onShare,
-                    )
-                }
-            }
-        }
-        FloatingCircleAction(
-            onClick = onDelete,
-            modifier = Modifier.size(if (glassStyle) 60.dp else 58.dp),
-            containerColor = MaterialTheme.colorScheme.error,
-            contentColor = MaterialTheme.colorScheme.onError,
-        ) {
-            Icon(Icons.Default.Delete, contentDescription = tr("delete"))
-        }
-    }
-}
-
-@Composable
-private fun MessageDockSurface(modifier: Modifier, content: @Composable () -> Unit) {
-    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-        // Recreate only the optical layer when its palette changes; retain the mail state.
-        key(MaterialTheme.colorScheme.surface) {
-            Box(modifier.glassDockSurface()) { content() }
-        }
-    } else Surface(modifier, shape = RoundedCornerShape(30.dp),
-        color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
-        tonalElevation = 0.dp, shadowElevation = 6.dp, content = content)
-}
-
-@Composable
-private fun MessageDockItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(modifier = modifier.height(48.dp).clip(CircleShape)) {
-        Box(
-            modifier = Modifier.fillMaxSize().clickable(
-                interactionSource = interactionSource,
-                indication = if (LocalUiStyle.current == UiStyle.MIUIX) null else LocalIndication.current,
-                onClick = onClick,
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp),
-                tint = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    AppBottomDock(
+        selectedTab = 0,
+        onSelectTab = {},
+        onCompose = {},
+        readerMode = true,
+        readerActions = ReaderDockActions("standalone", onReply, onForward, onShare, onDelete),
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1199,10 +1146,11 @@ internal fun MailHtmlView(
     onRendererGone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Cache Chromium into its own hardware texture before Backdrop replays it.
+    // Cache Chromium into its own hardware texture before Backdrop or the reader-only back
+    // snapshot replays it. Both paths must sample a texture, never a raw WebView functor.
     // Replaying a raw WebView functor into several Vulkan effect targets crashes
     // on the reported Xiaomi/Android 16 stack in WebViewFunctor::drawVk.
-    val webViewLayerType = if (LocalGlassEffects.current) View.LAYER_TYPE_HARDWARE else View.LAYER_TYPE_NONE
+    val webViewLayerType = View.LAYER_TYPE_HARDWARE
     val density = androidx.compose.ui.platform.LocalDensity.current
     val fontScale = density.fontScale.coerceIn(0.75f, 2.50f)
     val windowWidthPx = LocalWindowInfo.current.containerSize.width
@@ -1449,11 +1397,13 @@ internal fun MailHtmlView(
 
     Box(modifier = modifier) {
         val document = prepared
+        val revealMotionEnabled = bondMotionEnabled()
         val placeholderAlpha by animateFloatAsState(
             targetValue = if (placeholderVisible) 1f else 0f,
-            // The outer reader transition starts only after Chromium's visual commit. A second
-            // placeholder cross-fade would become a visible content swap during that transition.
-            animationSpec = snap(),
+            // Fade the page-colored mask only after Chromium's visual-state fence. Never animate
+            // WebView alpha or document height: short and long messages share the same handoff.
+            animationSpec = if (placeholderVisible || !revealMotionEnabled) snap()
+                else tween(240, easing = BondMotionEasing.Standard),
             label = "mail-framework-fade",
         )
         if (document != null) {
@@ -2225,7 +2175,7 @@ private fun MailStableHeaderOverlay(
 }
 
 @Composable
-private fun MailDocumentPlaceholder(
+internal fun MailDocumentPlaceholder(
     showProgress: Boolean,
     header: MailWebHeader,
     headerLayout: MailHeaderLayout,
@@ -2262,15 +2212,21 @@ private fun MailDocumentPlaceholder(
                 contentVisible = headerContentVisible,
                 onAttachmentsClick = onAttachmentsClick,
             )
-            // Size the placeholder to its content, rather than drawing a mostly empty full-height sheet.
-            if (preview.isNotBlank() || showProgress) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(MailHeaderSpacing.CORNER.dp),
-                    color = MaterialTheme.bondSurfaces.content,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
+            // Do not suggest a body height or paint a card before its HTML dimensions are known.
+            // This area is continuous with the page; the actual document fades in over it.
+            if (showProgress && preview.isBlank() && LocalUiStyle.current == UiStyle.MATERIAL3) {
+                // Center within the remaining reading area, excluding the persistent action dock
+                // and system navigation inset. A fixed-height placeholder put this near the header.
+                Box(
+                    Modifier.fillMaxWidth().weight(1f)
+                        .navigationBarsPadding()
+                        .padding(bottom = BottomDockDefaults.Height + BottomDockDefaults.BottomSpacing),
+                    contentAlignment = Alignment.Center,
                 ) {
+                    MailDocumentProgressIndicator()
+                }
+            } else if (preview.isNotBlank() || showProgress) {
+                Box(Modifier.fillMaxWidth()) {
                     Column(
                         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
                     ) {

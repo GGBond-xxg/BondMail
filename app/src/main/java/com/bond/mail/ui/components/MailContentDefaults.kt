@@ -3,19 +3,21 @@ package com.bond.mail.ui.components
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bond.mail.ui.motion.BondMotionEasing
 import com.bond.mail.ui.motion.bondMotionEnabled
 
-/** Shared Gmail-style geometry for message, contact and search-result groups. */
+/** Shared geometry for message, contact, settings and search-result groups. */
 internal object MailContentDefaults {
-    val OuterCorner: Dp = 12.dp
-    val InnerCorner: Dp = 5.dp
-    val SelectedCorner: Dp = 12.dp
+    val OuterCorner: Dp = 24.dp
+    val InnerCorner: Dp = 0.dp
+    val SelectedCorner: Dp = OuterCorner
 
     val SingleItemShape: Shape = RoundedCornerShape(OuterCorner)
     val MiddleItemShape: Shape = RoundedCornerShape(InnerCorner)
@@ -83,4 +85,17 @@ internal object MailContentDefaults {
             bottomEnd = bottomEnd,
         )
     }
+}
+
+/** One bounded transition per snapshot, regardless of how many messages arrive together.
+ * Stable lazy keys preserve both position and corner animation state of existing rows.
+ */
+@Composable
+internal fun LazyItemScope.groupedItemModifier(): Modifier {
+    val enabled = bondMotionEnabled()
+    return Modifier.animateItem(
+        fadeInSpec = if (enabled) tween(180) else null,
+        placementSpec = if (enabled) tween(280, easing = BondMotionEasing.Standard) else null,
+        fadeOutSpec = if (enabled) tween(120) else null,
+    )
 }

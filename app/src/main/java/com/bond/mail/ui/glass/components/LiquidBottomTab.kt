@@ -23,6 +23,8 @@ internal val LocalLiquidBottomTabScale =
 fun RowScope.LiquidBottomTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    role: Role = Role.Tab,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val scale = LocalLiquidBottomTabScale.current
@@ -32,7 +34,8 @@ fun RowScope.LiquidBottomTab(
             .clickable(
                 interactionSource = null,
                 indication = null,
-                role = Role.Tab,
+                role = role,
+                enabled = enabled,
                 onClick = onClick
             )
             .fillMaxHeight()

@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -124,6 +125,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import com.bond.mail.ui.theme.LocalGlassBackdrop
+import com.bond.mail.ui.theme.BottomDockDefaults
+import com.bond.mail.ui.theme.AppBottomDock
+import com.bond.mail.ui.theme.AppDockState
+import com.bond.mail.ui.theme.LocalAppDock
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.bond.mail.ui.theme.bottomDockOffset
 import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.theme.LocalGlassEffects
@@ -330,10 +337,11 @@ fun MailApp(
     var aboutChildBackBackground by remember {
         mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     }
-    // MainTabs leaves composition while the reader is open. Keep the list chrome state one level
-    // above NavHost so returning to a scrolled mailbox never draws a visible toolbar/dock for one
-    // frame before its restored LazyList state hides them again.
+    // Keep main/reader chrome states separate while both pages share one persistent dock.
     var mainChromeVisible by remember { mutableStateOf(true) }
+    val appDock = remember { AppDockState() }
+    val appDockBackdrop = rememberLayerBackdrop()
+    val dockGlassEnabled = LocalGlassEffects.current
     // A destination change is asynchronous from the click callback. Keep one synchronous gate
     // across every forward-navigation entry point so repeated taps cannot enqueue duplicate back
     // stack entries while Room updates, snapshot capture, or the first destination frame runs.
@@ -930,6 +938,7 @@ fun MailApp(
         }
     }
 
+    androidx.compose.runtime.CompositionLocalProvider(LocalAppDock provides appDock) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.bondSurfaces.page,
@@ -937,6 +946,9 @@ fun MailApp(
         Box(Modifier.fillMaxSize()) {
                 // Keep the mailbox alive below every destination. In particular, predictive back
                 // from a reader must reveal current Room/refresh state rather than an old bitmap.
+                // Record page content only. The common dock is a sibling, never part of its
+                // own backdrop, and does not enter/exit with the reader's sheet transform.
+                Box(Modifier.fillMaxSize().then(if (dockGlassEnabled) Modifier.layerBackdrop(appDockBackdrop) else Modifier)) {
                 MailboxLayer()
                 NavHost(
                     navController = nav,
@@ -1317,6 +1329,41 @@ fun MailApp(
                     }
                 }
 
+                }
+
+                val readerMode = currentRoute == DETAIL
+                val readerId = nav.currentBackStackEntry?.arguments?.getString("messageId")?.let(Uri::decode)
+                val readerActions = appDock.reader?.takeIf { it.messageId == readerId }
+                val dockAllowed = currentRoute == MAIN || currentRoute == null || readerMode
+                val dockVisible = dockAllowed && !composeVisible &&
+                    if (readerMode) (readerActions == null || appDock.readerVisible)
+                    else mainChromeVisible && !appDock.drawerOpen
+                val navigationInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
+                val sharedDockOffset = animateChromeOffset(
+                    visible = dockVisible,
+                    hiddenOffset = 112.dp + navigationInset,
+                    label = "app-bottom-dock-slide",
+                )
+                androidx.compose.runtime.CompositionLocalProvider(
+                    LocalGlassBackdrop provides appDockBackdrop.takeIf { dockGlassEnabled },
+                ) {
+                    AppBottomDock(
+                        selectedTab = selectedMainTab,
+                        onSelectTab = { target ->
+                            if (selectedMainTab != target) {
+                                onSelectedMainTabChange(target)
+                                mainChromeVisible = true
+                            }
+                        },
+                        onCompose = { prepareCompose("") },
+                        readerMode = readerMode,
+                        readerActions = readerActions,
+                        modifier = Modifier.align(Alignment.BottomCenter).bottomDockOffset(sharedDockOffset)
+                            .graphicsLayer { alpha = if (dockAllowed) 1f else 0f }
+                            .then(if (!dockAllowed) Modifier.clearAndSetSemantics { } else Modifier),
+                    )
+                }
+
                 if (composeVisible) {
                     ComposeScreen(
                         viewModel = composeVm,
@@ -1393,6 +1440,8 @@ fun MailApp(
         }
     }
 
+}
+
 @Composable
 private fun MainTabs(
     container: AppContainer,
@@ -1427,10 +1476,13 @@ private fun MainTabs(
     val selectedAccountId by homeVm.selectedAccount.collectAsState()
     val currentFolder by homeVm.folder.collectAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val sharedDock = LocalAppDock.current
+    androidx.compose.runtime.SideEffect {
+        sharedDock?.drawerOpen = drawerState.currentValue != DrawerValue.Closed ||
+            drawerState.targetValue != DrawerValue.Closed
+    }
     val scope = rememberCoroutineScope()
     val stateHolder = rememberSaveableStateHolder()
-    val glassEnabled = LocalGlassEffects.current
-    val glassBackdrop = rememberLayerBackdrop()
     LaunchedEffect(coldStartStaggerEnabled) {
         if (coldStartStaggerEnabled) onColdStartStaggerConsumed()
     }
@@ -1541,7 +1593,6 @@ private fun MainTabs(
                 .graphicsLayer { clip = false },
         ) {
             AnimatedContent(
-                modifier = if (glassEnabled) Modifier.layerBackdrop(glassBackdrop) else Modifier,
                 targetState = selectedTab,
                 transitionSpec = {
                     bondTopLevelFade(enabled = motionEnabled)
@@ -1607,158 +1658,7 @@ private fun MainTabs(
                 }
             }
 
-            // The dock applies navigationBarsPadding inside itself. A fixed translation only hides
-            // it completely in gesture mode; Xiaomi's taller three-button navigation inset leaves
-            // the rounded top edge visible. Include the live inset in the off-screen distance.
-            val density = LocalDensity.current
-            val navigationBarHeight = with(density) {
-                WindowInsets.navigationBars.getBottom(this).toDp()
-            }
-            val dockOffset = animateChromeOffset(
-                visible = mainChromeVisible,
-                hiddenOffset = 112.dp + navigationBarHeight,
-                label = "bottom-dock-slide",
-            )
-            androidx.compose.runtime.CompositionLocalProvider(
-                LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
-            ) {
-                FloatingBottomDock(
-                    selectedTab = selectedTab,
-                    onSelectTab = selectTab,
-                    onCompose = { onCompose("") },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .graphicsLayer { translationY = dockOffset.toPx() },
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun FloatingBottomDock(
-    selectedTab: Int,
-    onSelectTab: (Int) -> Unit,
-    onCompose: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-        com.bond.mail.ui.theme.GlassMainDock(selectedTab, onSelectTab, onCompose, modifier)
-        return
-    }
-    val glassBackdrop = LocalGlassBackdrop.current
-    Row(
-        modifier = modifier
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Surface(
-            modifier = Modifier.weight(1f)
-                .glassSurface(glassBackdrop, RoundedCornerShape(30.dp)),
-            shape = RoundedCornerShape(30.dp),
-            color = if (glassBackdrop != null) androidx.compose.ui.graphics.Color.Transparent
-                else MaterialTheme.bondSurfaces.dock.copy(
-                    alpha = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) 1f else 0.94f,
-                ),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
-            tonalElevation = 0.dp,
-            // The border already separates the floating dock. A large physical shadow becomes a
-            // bright rectangular band when the home screen is frozen under the mail transition.
-            shadowElevation = 0.dp,
-        ) {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-            ) {
-                val itemWidth = maxWidth / 3
-                val indicatorWidth = itemWidth - 8.dp
-                val indicatorX by animateDpAsState(
-                    targetValue = itemWidth * selectedTab.toFloat() + 4.dp,
-                    animationSpec = BondMotionSpring.NavigationIndicator,
-                    label = "bottom-dock-indicator",
-                )
-
-                Surface(
-                    modifier = Modifier
-                        .offset { IntOffset(indicatorX.roundToPx(), 0) }
-                        .width(indicatorWidth)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    tonalElevation = 1.dp,
-                    shadowElevation = 1.dp,
-                ) {}
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    BottomDockItem(
-                        selected = selectedTab == 0,
-                        icon = Icons.Default.Email,
-                        label = tr("mail"),
-                        modifier = Modifier.weight(1f),
-                    ) { onSelectTab(0) }
-                    BottomDockItem(
-                        selected = selectedTab == 1,
-                        icon = Icons.Default.Contacts,
-                        label = tr("contacts"),
-                        modifier = Modifier.weight(1f),
-                    ) { onSelectTab(1) }
-                    BottomDockItem(
-                        selected = selectedTab == 2,
-                        icon = Icons.Default.Settings,
-                        label = tr("settings"),
-                        modifier = Modifier.weight(1f),
-                    ) { onSelectTab(2) }
-                }
-            }
-        }
-        FloatingCircleAction(
-            onClick = onCompose,
-            modifier = Modifier.size(58.dp),
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-        ) {
-            Icon(Icons.Default.Create, contentDescription = tr("compose_mail"))
-        }
-    }
-}
-
-@Composable
-private fun BottomDockItem(
-    selected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val motionEnabled = bondMotionEnabled()
-    val interactionSource = rememberBondPressInteraction()
-    val pressScale by rememberBondPressScale(
-        interactionSource = interactionSource,
-        pressedScale = 0.92f,
-        enabled = motionEnabled,
-    )
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .padding(horizontal = 4.dp)
-            .height(48.dp)
-            .bondPressTransform(pressScale),
-        shape = RoundedCornerShape(24.dp),
-        color = androidx.compose.ui.graphics.Color.Transparent,
-        interactionSource = interactionSource,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp),
-                tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

@@ -79,6 +79,7 @@ import com.bond.mail.ui.components.ContactAvatar
 import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.FloatingCircleAction
 import com.bond.mail.ui.components.MailContentDefaults
+import com.bond.mail.ui.components.groupedItemModifier
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.ObserveLazyListChromeVisibility
 import com.bond.mail.ui.motion.BondMotionDuration
@@ -169,6 +170,7 @@ fun ContactsScreen(
         allContacts.filter { query.isBlank() || it.senderName.contains(query, true) || it.senderAddress.contains(query, true) }
     }
     val miuixLayout = LocalUiStyle.current == UiStyle.MIUIX
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
 
 
     val listState = rememberLazyListState()
@@ -222,7 +224,9 @@ fun ContactsScreen(
             state = state,
             modifier = listModifier,
             contentPadding = padding,
-            verticalArrangement = Arrangement.spacedBy(if (miuixLayout) 12.dp else 13.dp),
+            verticalArrangement = Arrangement.spacedBy(
+                if (materialLayout) MailContentDefaults.ItemSpacing else if (miuixLayout) 12.dp else 13.dp,
+            ),
         ) {
             if (frequentContacts.isNotEmpty()) item(key = "contacts-title") {
                 Text(
@@ -243,7 +247,7 @@ fun ContactsScreen(
                     contentType = { _, _ -> "saved-contact-card" },
                 ) { index, contact ->
                     ContactItem(
-                        modifier = Modifier.bondStaggeredEntrance(
+                        modifier = (if (materialLayout) groupedItemModifier() else Modifier).bondStaggeredEntrance(
                             entranceState,
                             index = index + 2,
                         ),
@@ -251,7 +255,9 @@ fun ContactsScreen(
                         email = contact.email,
                         customAvatarText = contact.avatarText,
                         settings = settings,
-                        shape = if (miuixLayout) {
+                        shape = if (materialLayout) {
+                            MailContentDefaults.animatedItemShape(index, frequentContacts.size, selected = false)
+                        } else if (miuixLayout) {
                             MaterialTheme.shapes.medium
                         } else {
                             MaterialTheme.shapes.large
@@ -310,7 +316,7 @@ fun ContactsScreen(
                     contentType = { _, _ -> "contact-card" },
                 ) { index, contact ->
                     ContactItem(
-                        modifier = Modifier.bondStaggeredEntrance(
+                        modifier = (if (materialLayout) groupedItemModifier() else Modifier).bondStaggeredEntrance(
                             entranceState,
                             index = index + frequentContacts.size +
                                 if (frequentContacts.isEmpty()) 2 else 3,
@@ -319,7 +325,9 @@ fun ContactsScreen(
                         email = contact.senderAddress,
                         customAvatarText = null,
                         settings = settings,
-                        shape = if (miuixLayout) {
+                        shape = if (materialLayout) {
+                            MailContentDefaults.animatedItemShape(index, filteredContacts.size, selected = false)
+                        } else if (miuixLayout) {
                             MaterialTheme.shapes.medium
                         } else {
                             MaterialTheme.shapes.large
