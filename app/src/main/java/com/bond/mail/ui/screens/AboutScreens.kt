@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.MutableTransitionState
@@ -86,6 +85,8 @@ import androidx.compose.ui.unit.dp
 import com.bond.mail.BuildConfig
 import com.bond.mail.R
 import com.bond.mail.data.settings.UiStyle
+import com.bond.mail.ui.components.GroupedContentColumn
+import com.bond.mail.ui.components.GroupedContentScope
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.rememberBondPressInteraction
 import com.bond.mail.ui.motion.rememberBondPressResetter
@@ -139,80 +140,90 @@ fun AboutScreen(
         }
 
         item {
-            AboutCard {
-                Text(
-                    text = tr("more"),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
-                AboutActionRow(
-                    icon = Icons.AutoMirrored.Filled.OpenInNew,
-                    title = tr("go_to_github"),
-                    subtitle = tr("go_to_github_desc"),
-                    external = true,
-                    onClick = {
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME_URL)))
-                        }.onFailure {
-                            Toast.makeText(context, externalLinkOpenFailed, Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.FavoriteBorder,
-                    title = tr("sponsor_title"),
-                    subtitle = tr("sponsor_subtitle"),
-                    onClick = onOpenSponsorship,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.Description,
-                    title = tr("ai_disclaimer_title"),
-                    subtitle = tr("ai_disclaimer_subtitle"),
-                    onClick = onOpenDisclaimer,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.FavoriteBorder,
-                    title = tr("acknowledgements_title"),
-                    subtitle = tr("acknowledgements_subtitle"),
-                    onClick = onOpenAcknowledgements,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.Code,
-                    title = tr("open_source_licenses"),
-                    subtitle = tr("open_source_licenses_desc"),
-                    onClick = onOpenSourceLicenses,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.Description,
-                    title = tr("app_license"),
-                    subtitle = tr("app_license_desc"),
-                    onClick = onOpenAppLicense,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.PrivacyTip,
-                    title = tr("privacy_policy"),
-                    subtitle = tr("privacy_policy_desc"),
-                    onClick = onOpenPrivacyPolicy,
-                )
-                AboutDivider()
-                AboutActionRow(
-                    icon = Icons.Default.SystemUpdate,
-                    title = tr("software_version"),
-                    subtitle = if (updateChecking) {
-                        tr("checking_for_updates")
-                    } else {
-                        "V${BuildConfig.VERSION_NAME} · ${tr("check_for_updates")}"
-                    },
-                    showDot = updateAvailable,
-                    onClick = onCheckForUpdates,
-                )
+            AboutGroup(title = tr("more"), dividers = true) {
+                item {
+                    AboutActionRow(
+                        icon = Icons.AutoMirrored.Filled.OpenInNew,
+                        title = tr("go_to_github"),
+                        subtitle = tr("go_to_github_desc"),
+                        external = true,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_HOME_URL)))
+                            }.onFailure {
+                                Toast.makeText(context, externalLinkOpenFailed, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.FavoriteBorder,
+                        title = tr("sponsor_title"),
+                        subtitle = tr("sponsor_subtitle"),
+                        onClick = onOpenSponsorship,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.Description,
+                        title = tr("ai_disclaimer_title"),
+                        subtitle = tr("ai_disclaimer_subtitle"),
+                        onClick = onOpenDisclaimer,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.FavoriteBorder,
+                        title = tr("acknowledgements_title"),
+                        subtitle = tr("acknowledgements_subtitle"),
+                        onClick = onOpenAcknowledgements,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.Code,
+                        title = tr("open_source_licenses"),
+                        subtitle = tr("open_source_licenses_desc"),
+                        onClick = onOpenSourceLicenses,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.Description,
+                        title = tr("app_license"),
+                        subtitle = tr("app_license_desc"),
+                        onClick = onOpenAppLicense,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.PrivacyTip,
+                        title = tr("privacy_policy"),
+                        subtitle = tr("privacy_policy_desc"),
+                        onClick = onOpenPrivacyPolicy,
+                    )
+                }
+
+                item {
+                    AboutActionRow(
+                        icon = Icons.Default.SystemUpdate,
+                        title = tr("software_version"),
+                        subtitle = if (updateChecking) {
+                            tr("checking_for_updates")
+                        } else {
+                            "V${BuildConfig.VERSION_NAME} · ${tr("check_for_updates")}"
+                        },
+                        showDot = updateAvailable,
+                        onClick = onCheckForUpdates,
+                    )
+                }
             }
         }
     }
@@ -220,11 +231,20 @@ fun AboutScreen(
 
 @Composable
 fun AboutNoticeScreen(kind: String, onBack: () -> Unit) {
+    val body = tr("${kind}_body")
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
+    val paragraphs = remember(body) { body.split(Regex("\\n\\s*\\n")).filter(String::isNotBlank) }
     AboutPage(title = tr("${kind}_title"), onBack = onBack) {
         item {
-            AboutCard {
+            if (materialLayout) {
+                AboutGroup {
+                    paragraphs.forEach { paragraph ->
+                        item { SelectionContainer { Text(paragraph, style = MaterialTheme.typography.bodyLarge) } }
+                    }
+                }
+            } else AboutCard {
                 SelectionContainer {
-                    Text(tr("${kind}_body"), style = MaterialTheme.typography.bodyLarge)
+                    Text(body, style = MaterialTheme.typography.bodyLarge)
                 }
                 // Pending personal approval: draft only, NOT rendered or stored in app assets.
                 // 感谢 北*烁（抖音号：551****1976）免费提供硅基流动 API 测试资源，
@@ -250,6 +270,22 @@ fun SponsorshipScreen(onBack: () -> Unit) {
                 }
             }, confirmButton = { BondTextAction(text = tr("close"), onClick = { qrWallet = null }) })
     }
+    val walletContent: @Composable ColumnScope.(SponsorshipWallet) -> Unit = { wallet ->
+        Text(wallet.network, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        SelectionContainer {
+            Text(wallet.address, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BondTextAction(text = tr("sponsor_copy_address"), modifier = Modifier.weight(1f), onClick = {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
+                Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
+            })
+            BondTextAction(text = tr("sponsor_qr_short"), modifier = Modifier.weight(1f), onClick = { qrWallet = wallet })
+        }
+    }
+    val materialLayout = LocalUiStyle.current == UiStyle.MATERIAL3
     AboutPage(title = tr("sponsor_title"), onBack = onBack) {
         item {
             AboutCard {
@@ -258,23 +294,15 @@ fun SponsorshipScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        sponsorshipWallets.forEach { wallet ->
-            item(key = wallet.network) {
-                AboutCard {
-                    Text(wallet.network, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    SelectionContainer {
-                        Text(wallet.address, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BondTextAction(text = tr("sponsor_copy_address"), modifier = Modifier.weight(1f), onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText(wallet.network, wallet.address))
-                            Toast.makeText(context, copied, Toast.LENGTH_SHORT).show()
-                        })
-                        BondTextAction(text = tr("sponsor_qr_short"), modifier = Modifier.weight(1f), onClick = { qrWallet = wallet })
-                    }
+        if (materialLayout) {
+            item {
+                AboutGroup {
+                    sponsorshipWallets.forEach { wallet -> item { walletContent(wallet) } }
                 }
+            }
+        } else {
+            sponsorshipWallets.forEach { wallet ->
+                item(key = wallet.network) { AboutCard { walletContent(wallet) } }
             }
         }
     }
@@ -362,7 +390,7 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                 ) { requestBack ->
                     LegalPage(title = if (currentDocument.startsWith("AndroidLiquidGlass")) "Liquid Glass" else tr("open_source_licenses"),
                         onBack = requestBack) {
-                        SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) }
+                        item { SelectionContainer { Text(body, style = MaterialTheme.typography.bodyMedium) } }
                     }
                 }
             }
@@ -374,26 +402,30 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
         drawLayer(snapshotLayer)
     }) {
         LegalPage(title = tr("open_source_licenses"), onBack = onBack, listState = listState) {
-            Text(
-                text = tr("open_source_statement"),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(14.dp))
-            Text("Liquid Glass · AndroidLiquidGlass / Backdrop 1.0.6", style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold)
-            Text("Copyright 2025 Kyant · Apache License 2.0", modifier = Modifier.padding(top = 6.dp),
-                style = MaterialTheme.typography.bodyMedium)
-            Text(tr("glass_open_source_details"), modifier = Modifier.padding(top = 10.dp),
-                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            SelectionContainer {
-                Text("https://github.com/Kyant0/AndroidLiquidGlass\n896a94a3ade1cc1a940b92365f942a34971fecda",
-                    modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodySmall)
+            item {
+                Text(
+                    text = tr("open_source_statement"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(14.dp))
             }
-            TextButton(onClick = { openDocument("AndroidLiquidGlass-Apache-2.0.txt") }, modifier = Modifier.padding(vertical = 14.dp)) {
-                Text(tr("view_full_license"))
+            item {
+                Text("Liquid Glass · AndroidLiquidGlass / Backdrop 1.0.6", style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text("Copyright 2025 Kyant · Apache License 2.0", modifier = Modifier.padding(top = 6.dp),
+                    style = MaterialTheme.typography.bodyMedium)
+                Text(tr("glass_open_source_details"), modifier = Modifier.padding(top = 10.dp),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SelectionContainer {
+                    Text("https://github.com/Kyant0/AndroidLiquidGlass\n896a94a3ade1cc1a940b92365f942a34971fecda",
+                        modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodySmall)
+                }
+                TextButton(onClick = { openDocument("AndroidLiquidGlass-Apache-2.0.txt") }, modifier = Modifier.padding(vertical = 14.dp)) {
+                    Text(tr("view_full_license"))
+                }
+                if (LocalUiStyle.current != UiStyle.MATERIAL3) HorizontalDivider()
             }
-            HorizontalDivider()
             val libraries = listOf(
                 "MIUIX" to "Apache License 2.0",
                 "theSVG" to "MIT License (package/tooling; brand rights retained)",
@@ -408,31 +440,35 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit) {
                 "Bootstrap Icons" to "MIT License",
             )
             libraries.forEachIndexed { index, (library, license) ->
-                Column(modifier = Modifier.padding(vertical = 9.dp)) {
-                    Text(
-                        text = library,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = license,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 3.dp),
-                    )
-                }
-                if (index < libraries.lastIndex) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                item {
+                    Column(modifier = Modifier.padding(vertical = 9.dp)) {
+                        Text(
+                            text = library,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = license,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                    if (LocalUiStyle.current != UiStyle.MATERIAL3 && index < libraries.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                 }
             }
-            Text(
-                text = tr("open_source_notice"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 14.dp),
-            )
-            TextButton(onClick = { openDocument("THIRD_PARTY_NOTICES.md") }, modifier = Modifier.padding(top = 14.dp)) {
-                Text(tr("view_third_party_notices"))
+            item {
+                Text(
+                    text = tr("open_source_notice"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 14.dp),
+                )
+                TextButton(onClick = { openDocument("THIRD_PARTY_NOTICES.md") }, modifier = Modifier.padding(top = 14.dp)) {
+                    Text(tr("view_third_party_notices"))
+                }
             }
         }
     }
@@ -443,32 +479,36 @@ fun AppLicenseScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val license = remember { context.assets.open("licenses/BondMail-MIT.txt").bufferedReader().use { it.readText() } }
     LegalPage(title = tr("app_license"), onBack = onBack) {
-        Text(tr("app_license_scope"), modifier = Modifier.padding(bottom = 16.dp), style = MaterialTheme.typography.bodyMedium)
-        Text(
-            text = license,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
-        )
+        item {
+            Text(tr("app_license_scope"), modifier = Modifier.padding(bottom = 16.dp),
+                style = MaterialTheme.typography.bodyMedium)
+        }
+        item {
+            SelectionContainer {
+                Text(text = license, style = MaterialTheme.typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace)
+            }
+        }
     }
 }
 
 @Composable
 fun PrivacyPolicyScreen(onBack: () -> Unit) {
     LegalPage(title = tr("privacy_policy"), onBack = onBack) {
-        Text(
+        item { Text(
             text = tr("privacy_updated"),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
-        )
-        PrivacySection(tr("privacy_local_title"), tr("privacy_local_body"))
-        PrivacySection(tr("privacy_network_title"), tr("privacy_network_body"))
-        PrivacySection(tr("privacy_ai_title"), tr("privacy_ai_body"))
-        PrivacySection(tr("privacy_credentials_title"), tr("privacy_credentials_body"))
-        PrivacySection(tr("privacy_remote_images_title"), tr("privacy_remote_images_body"))
-        PrivacySection(tr("privacy_permissions_title"), tr("privacy_permissions_body"))
-        PrivacySection(tr("privacy_delete_title"), tr("privacy_delete_body"))
-        PrivacySection(tr("privacy_no_tracking_title"), tr("privacy_no_tracking_body"))
-        PrivacySection(tr("privacy_contact_title"), tr("privacy_contact_body"))
+        ) }
+        item { PrivacySection(tr("privacy_local_title"), tr("privacy_local_body")) }
+        item { PrivacySection(tr("privacy_network_title"), tr("privacy_network_body")) }
+        item { PrivacySection(tr("privacy_ai_title"), tr("privacy_ai_body")) }
+        item { PrivacySection(tr("privacy_credentials_title"), tr("privacy_credentials_body")) }
+        item { PrivacySection(tr("privacy_remote_images_title"), tr("privacy_remote_images_body")) }
+        item { PrivacySection(tr("privacy_permissions_title"), tr("privacy_permissions_body")) }
+        item { PrivacySection(tr("privacy_delete_title"), tr("privacy_delete_body")) }
+        item { PrivacySection(tr("privacy_no_tracking_title"), tr("privacy_no_tracking_body")) }
+        item { PrivacySection(tr("privacy_contact_title"), tr("privacy_contact_body")) }
     }
 }
 
@@ -478,7 +518,7 @@ private fun PrivacySection(title: String, body: String) {
         text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 20.dp),
+        modifier = Modifier.padding(top = if (LocalUiStyle.current == UiStyle.MATERIAL3) 0.dp else 20.dp),
     )
     Text(
         text = body,
@@ -522,14 +562,10 @@ private fun LegalPage(
     title: String,
     onBack: () -> Unit,
     listState: LazyListState = rememberLazyListState(),
-    content: @Composable ColumnScope.() -> Unit,
+    content: GroupedContentScope.() -> Unit,
 ) {
     AboutPage(title = title, onBack = onBack, listState = listState) {
-        item {
-            AboutCard {
-                Column(content = content)
-            }
-        }
+        item { AboutGroup(content = content) }
     }
 }
 
@@ -565,7 +601,41 @@ private fun PageTopBar(title: String, onBack: () -> Unit) {
 }
 
 @Composable
+private fun AboutGroup(
+    title: String? = null,
+    dividers: Boolean = false,
+    content: GroupedContentScope.() -> Unit,
+) {
+    val rows = GroupedContentScope().apply(content).rows
+    if (LocalUiStyle.current == UiStyle.MATERIAL3) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            title?.let {
+                Text(it, modifier = Modifier.padding(start = 8.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            }
+            GroupedContentColumn(rows)
+        }
+    } else {
+        AboutCard {
+            title?.let {
+                Text(it, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            rows.forEachIndexed { index, row ->
+                if (dividers && index > 0) AboutDivider()
+                row()
+            }
+        }
+    }
+}
+
+@Composable
 private fun AboutCard(content: @Composable ColumnScope.() -> Unit) {
+    if (LocalUiStyle.current == UiStyle.MATERIAL3) {
+        GroupedContentColumn(listOf(content))
+        return
+    }
     if (LocalUiStyle.current == UiStyle.MIUIX) {
         MiuixCard(
             modifier = Modifier.fillMaxWidth(),

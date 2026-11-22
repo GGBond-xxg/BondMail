@@ -111,7 +111,8 @@ import com.bond.mail.ui.theme.LocalUiStyle
 import com.bond.mail.ui.theme.MiuixActionSetting
 import com.bond.mail.ui.theme.MiuixDropdownSetting
 import com.bond.mail.ui.theme.MiuixPermissionSetting
-import com.bond.mail.ui.components.MailContentDefaults
+import com.bond.mail.ui.components.GroupedContentColumn
+import com.bond.mail.ui.components.GroupedContentScope
 import com.bond.mail.ui.theme.MiuixSectionTitle
 import com.bond.mail.ui.theme.MiuixSettingsCard
 import com.bond.mail.ui.theme.MiuixSettingsDivider
@@ -535,17 +536,9 @@ private fun SectionTitle(text: String) {
     )
 }
 
-internal class SettingsGroupScope {
-    val rows = mutableListOf<@Composable ColumnScope.() -> Unit>()
-
-    fun item(content: @Composable ColumnScope.() -> Unit) {
-        rows += content
-    }
-}
-
 @Composable
-internal fun SettingsGroup(content: SettingsGroupScope.() -> Unit) {
-    val rows = SettingsGroupScope().apply(content).rows
+internal fun SettingsGroup(content: GroupedContentScope.() -> Unit) {
+    val rows = GroupedContentScope().apply(content).rows
     val legacyContent: @Composable ColumnScope.() -> Unit = {
         rows.forEachIndexed { index, row ->
             if (index > 0) SettingsDivider()
@@ -560,20 +553,7 @@ internal fun SettingsGroup(content: SettingsGroupScope.() -> Unit) {
             Column(Modifier.fillMaxWidth().padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp), content = legacyContent)
         }
-        UiStyle.MATERIAL3 -> Column(
-            Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(MailContentDefaults.ItemSpacing),
-        ) {
-            rows.forEachIndexed { index, row ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MailContentDefaults.animatedItemShape(index, rows.size, selected = false),
-                    color = MaterialTheme.bondSurfaces.content,
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), content = row)
-                }
-            }
-        }
+        UiStyle.MATERIAL3 -> GroupedContentColumn(rows, contentPadding = PaddingValues(12.dp))
     }
 }
 
