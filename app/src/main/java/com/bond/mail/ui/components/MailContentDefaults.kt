@@ -22,6 +22,7 @@ internal object MailContentDefaults {
     val SingleItemShape: Shape = RoundedCornerShape(OuterCorner)
     val MiddleItemShape: Shape = RoundedCornerShape(InnerCorner)
     val ItemSpacing = 3.dp
+    val SectionSpacing = 12.dp
     val HorizontalInset = 10.dp
 
     data class ItemCorners(

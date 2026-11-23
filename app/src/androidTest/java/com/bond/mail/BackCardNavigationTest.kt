@@ -59,6 +59,7 @@ class BackCardNavigationTest {
                 val active = mutableStateOf(true)
                 var dockBounds = Rect.Zero
                 val webReady = java.util.concurrent.CountDownLatch(if (reader) 1 else 0)
+                val dockProgress = java.util.concurrent.CopyOnWriteArrayList<Float>()
                 scenario.onActivity { activity -> activity.setContent {
                     BondMailTheme(AppSettings()) {
                         Box(Modifier.fillMaxSize().background(Color.Red)) {
@@ -82,8 +83,15 @@ class BackCardNavigationTest {
                                         Text("Back card", Modifier.statusBarsPadding().clickable(onClick = back))
                                     }
                                 }
-                                if (reader) TelegramMailTransition(null, true, committed) { back, ready ->
-                                    LaunchedEffect(Unit) { ready() }
+                                if (reader) TelegramMailTransition(null, true, committed,
+                                    onVisualProgress = { dockProgress.add(it) }) { back, ready ->
+                                    LaunchedEffect(Unit) {
+                                        // The dock must stay in main mode while the reader is prepared.
+                                        kotlinx.coroutines.delay(180)
+                                        assertTrue(dockProgress.isNotEmpty())
+                                        assertTrue(dockProgress.all { it == 0f })
+                                        ready()
+                                    }
                                     page(back)
                                 } else BondBackScreen(null, true, committed) { page(it) }
                             } else Text("Returned", Modifier.statusBarsPadding())
@@ -98,6 +106,12 @@ class BackCardNavigationTest {
                 assertTrue(device.wait(Until.hasObject(By.text("Back card")), 5_000))
                 assertTrue("WebView fixture committed", webReady.await(10, java.util.concurrent.TimeUnit.SECONDS))
                 android.os.SystemClock.sleep(500)
+                if (reader) {
+                    assertTrue("Entry needs visible intermediate dock frames", dockProgress.distinct().count { it > .01f && it < .99f } >= 3)
+                    assertEquals(1f, dockProgress.last(), .001f)
+                    assertTrue(dockProgress.zipWithNext().all { (a, b) -> b >= a })
+                    dockProgress.clear()
+                }
                 fun start() {
                     scenario.onActivity { it.onBackPressedDispatcher.dispatchOnBackStarted(BackEventCompat(0f, 700f, 0f, edge)) }
                     android.os.SystemClock.sleep(100)
@@ -127,12 +141,19 @@ class BackCardNavigationTest {
                 android.os.SystemClock.sleep(100)
                 assertEquals("Cancelled snapshot must release touches", 1, taps.get())
                 assertEquals(0, backs.get())
+                if (reader) assertTrue("Cancelled preview keeps reader actions", dockProgress.all { it == 1f })
                 if (edge == BackEventCompat.EDGE_LEFT) start()
                 // Also exercise the non-progress/three-button fallback after cancellation.
                 scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
                 val returned = device.wait(Until.hasObject(By.text("Returned")), 5_000)
                 assertTrue("Return visible: reader=$reader edge=$edge commits=${backs.get()} active=${active.value}", returned)
                 assertEquals("Return commits exactly once", 1, backs.get())
+                if (reader) {
+                    assertTrue("Return needs intermediate dock frames (edge=$edge): ${dockProgress.distinct()}",
+                        dockProgress.distinct().count { it > .01f && it < .99f } >= 3)
+                    assertTrue(dockProgress.zipWithNext().all { (a, b) -> b <= a })
+                    assertTrue("Dock finishes with the page", dockProgress.last() < .02f)
+                }
             }
         }
     }

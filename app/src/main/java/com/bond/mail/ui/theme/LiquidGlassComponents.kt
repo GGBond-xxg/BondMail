@@ -44,6 +44,7 @@ internal fun GlassButton(
     destructive: Boolean = false,
     iconOnly: Boolean = false,
     contentColor: Color = Color.Unspecified,
+    primaryFraction: Float? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val accent = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
@@ -77,8 +78,11 @@ internal fun GlassButton(
         LiquidButton(
             onClick = onClick, backdrop = glassBackdrop(),
             modifier = modifier.alpha(if (enabled) 1f else 0.38f), enabled = enabled,
-            tint = if (primary) accent else Color.Unspecified,
-            surfaceColor = if (primary) Color.Unspecified else surface.copy(alpha = if (LocalGlassEffects.current) 0.38f else 1f),
+            tint = if (primaryFraction != null) MaterialTheme.colorScheme.primary else if (primary) accent else Color.Unspecified,
+            tintAlpha = primaryFraction ?: 1f,
+            surfaceColor = if (primaryFraction != null)
+                surface.copy(alpha = (if (LocalGlassEffects.current) 0.38f else 1f) * (1f - primaryFraction))
+                else if (primary) Color.Unspecified else surface.copy(alpha = if (LocalGlassEffects.current) 0.38f else 1f),
             contentPadding = buttonPadding,
             content = centeredContent,
         )

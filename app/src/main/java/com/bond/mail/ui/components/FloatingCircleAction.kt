@@ -31,6 +31,7 @@ fun FloatingCircleAction(
     contentColor: Color,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    glassPrimaryFraction: Float? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
@@ -39,7 +40,9 @@ fun FloatingCircleAction(
             primary = containerColor == MaterialTheme.colorScheme.primary,
             destructive = containerColor == MaterialTheme.colorScheme.error,
             iconOnly = true,
-            contentColor = if (containerColor == MaterialTheme.colorScheme.error) MaterialTheme.colorScheme.error else contentColor,
+            primaryFraction = glassPrimaryFraction,
+            contentColor = if (glassPrimaryFraction == null && containerColor == MaterialTheme.colorScheme.error)
+                MaterialTheme.colorScheme.error else contentColor,
         ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center, content = content) }
         return
     }

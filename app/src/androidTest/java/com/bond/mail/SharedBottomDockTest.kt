@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -34,6 +37,7 @@ class SharedBottomDockTest {
         var reader by mutableStateOf(false)
         var selected by mutableIntStateOf(0)
         var coordinates: LayoutCoordinates? = null
+        var auxiliaryBounds = Rect.Zero
         var composeCalls = 0
         val actionCalls = mutableListOf<String>()
         var mailId by mutableStateOf("first")
@@ -57,6 +61,10 @@ class SharedBottomDockTest {
                         val id = mailId
                         Box(Modifier.fillMaxSize()) {
                             Box(Modifier.fillMaxSize().background(Color.Gray).layerBackdrop(backdrop))
+                            Box(Modifier.align(Alignment.BottomCenter).bottomDockAuxiliaryBounds(88.dp)) {
+                                Box(Modifier.align(Alignment.BottomEnd).size(BottomDockDefaults.AuxiliarySize)
+                                    .onGloballyPositioned { auxiliaryBounds = it.boundsInWindow() })
+                            }
                             CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
                                 AppBottomDock(selected, { selected = it }, { composeCalls++ }, reader,
                                     ReaderDockActions(id, { actionCalls.add("reply:$id") },
@@ -76,6 +84,8 @@ class SharedBottomDockTest {
                 val mainCoordinates = coordinates
                 val mainSize = checkNotNull(mainCoordinates).size
                 val mainBounds = device.findObject(By.desc("Compose")).visibleBounds
+                assertEquals("Scroll-to-top must share the trailing button axis",
+                    mainBounds.exactCenterX(), auxiliaryBounds.center.x, 1f)
                 repeat(2) { iteration ->
                     val id = "${variant.name}-$iteration"
                     instrumentation.runOnMainSync { mailId = id; reader = true }
@@ -83,7 +93,10 @@ class SharedBottomDockTest {
                     settle()
                     assertSame("Dock layout was recreated on entry", mainCoordinates, coordinates)
                     assertEquals(mainSize, coordinates!!.size)
-                    assertEquals(mainBounds, device.findObject(By.desc("Delete")).visibleBounds)
+                    val deleteButton = device.wait(Until.findObject(By.desc("Delete")), 2_000)
+                    assertNotNull("Missing Delete ($variant/$iteration); visible labels: " +
+                        device.findObjects(By.desc(java.util.regex.Pattern.compile(".+"))).map { it.contentDescription }, deleteButton)
+                    assertEquals(mainBounds, deleteButton!!.visibleBounds)
                     assertTrue(device.wait(Until.gone(By.desc("Compose")), 2_000))
                     for ((label, action) in listOf("Reply" to "reply", "Forward" to "forward", "Share" to "share", "Delete" to "delete")) {
                         device.findObject(By.desc(label)).click()

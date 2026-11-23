@@ -78,6 +78,7 @@ import com.bond.mail.data.settings.UiStyle
 import com.bond.mail.ui.components.ContactAvatar
 import com.bond.mail.ui.components.GroupedListSurface
 import com.bond.mail.ui.components.FloatingCircleAction
+import com.bond.mail.ui.theme.bottomDockAuxiliaryBounds
 import com.bond.mail.ui.components.MailContentDefaults
 import com.bond.mail.ui.components.groupedItemModifier
 import com.bond.mail.ui.i18n.tr
@@ -400,41 +401,41 @@ fun ContactsScreen(
 
         }
 
-        AnimatedVisibility(
-            visible = showScrollToTop && !searchOverlayActive,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 18.dp, bottom = scrollToTopBottomPadding),
-            enter = fadeIn(tween(150)) +
-                scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
-                slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
-            exit = fadeOut(tween(120)) +
-                scaleOut(targetScale = 0.80f, animationSpec = tween(150)) +
-                slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(150)),
-        ) {
-            androidx.compose.runtime.CompositionLocalProvider(
-                com.bond.mail.ui.theme.LocalGlassBackdrop provides contactBackdrop.takeIf { glassEnabled },
+        Box(Modifier.align(Alignment.BottomCenter).bottomDockAuxiliaryBounds(scrollToTopBottomPadding)) {
+            AnimatedVisibility(
+                visible = showScrollToTop && !searchOverlayActive,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd),
+                enter = fadeIn(tween(150)) +
+                    scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
+                    slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
+                exit = fadeOut(tween(120)) +
+                    scaleOut(targetScale = 0.80f, animationSpec = tween(150)) +
+                    slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(150)),
             ) {
-                FloatingCircleAction(
-                    onClick = {
-                        scrollScope.launch {
-                            listState.animateToTopWithMomentum(motionEnabled)
-                        }
-                    },
-                    modifier = Modifier.size(48.dp),
-                    containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
-                    contentColor = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.bond.mail.ui.theme.LocalGlassBackdrop provides contactBackdrop.takeIf { glassEnabled },
                 ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = tr("scroll_to_top"),
-                        modifier = Modifier.size(26.dp),
-                    )
+                    FloatingCircleAction(
+                        onClick = {
+                            scrollScope.launch {
+                                listState.animateToTopWithMomentum(motionEnabled)
+                            }
+                        },
+                        modifier = Modifier.size(48.dp),
+                        containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
+                        contentColor = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowUp,
+                            contentDescription = tr("scroll_to_top"),
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
                 }
             }
         }

@@ -144,6 +144,7 @@ import com.bond.mail.ui.components.groupedItemModifier
 import com.bond.mail.ui.components.MailRefreshIndicator
 import com.bond.mail.ui.components.MessageCard
 import com.bond.mail.ui.components.FloatingCircleAction
+import com.bond.mail.ui.theme.bottomDockAuxiliaryBounds
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
 import com.bond.mail.ui.motion.BondMotionEasing
@@ -509,7 +510,13 @@ fun HomeScreen(
                 // Keep optional notices inside the header: zero-height lazy items still receive
                 // Arrangement spacing and used to leave two extra gaps above the first message.
                 item(key = "folder-strip") {
-                    Column {
+                    // The folder header is a separate section, not another 3 dp grouped mail row.
+                    // Together with the chip row's 4 dp inset this leaves a 16 dp visible gap.
+                    Column(
+                        Modifier.padding(bottom = if (materialLayout) {
+                            MailContentDefaults.SectionSpacing - listItemSpacing
+                        } else 0.dp),
+                    ) {
                         LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -654,41 +661,41 @@ fun HomeScreen(
             }
         }
 
-        AnimatedVisibility(
-            visible = showScrollToTop && !inSelectionMode && !searchOverlayActive,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 18.dp, bottom = scrollToTopBottomPadding),
-            enter = fadeIn(tween(150)) +
-                scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
-                slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
-            exit = fadeOut(tween(120)) +
-                scaleOut(targetScale = 0.80f, animationSpec = tween(150)) +
-                slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(150)),
-        ) {
-            androidx.compose.runtime.CompositionLocalProvider(
-                com.bond.mail.ui.theme.LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
+        Box(Modifier.align(Alignment.BottomCenter).bottomDockAuxiliaryBounds(scrollToTopBottomPadding)) {
+            AnimatedVisibility(
+                visible = showScrollToTop && !inSelectionMode && !searchOverlayActive,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd),
+                enter = fadeIn(tween(150)) +
+                    scaleIn(initialScale = 0.78f, animationSpec = tween(180)) +
+                    slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(180)),
+                exit = fadeOut(tween(120)) +
+                    scaleOut(targetScale = 0.80f, animationSpec = tween(150)) +
+                    slideOutVertically(targetOffsetY = { it / 2 }, animationSpec = tween(150)),
             ) {
-                FloatingCircleAction(
-                    onClick = {
-                        scrollScope.launch {
-                            listState.animateToTopWithMomentum(motionEnabled)
-                        }
-                    },
-                    modifier = Modifier.size(48.dp),
-                    containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
-                    contentColor = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                androidx.compose.runtime.CompositionLocalProvider(
+                    com.bond.mail.ui.theme.LocalGlassBackdrop provides glassBackdrop.takeIf { glassEnabled },
                 ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = tr("scroll_to_top"),
-                        modifier = Modifier.size(26.dp),
-                    )
+                    FloatingCircleAction(
+                        onClick = {
+                            scrollScope.launch {
+                                listState.animateToTopWithMomentum(motionEnabled)
+                            }
+                        },
+                        modifier = Modifier.size(48.dp),
+                        containerColor = MaterialTheme.bondSurfaces.popup.copy(alpha = 0.96f),
+                        contentColor = if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowUp,
+                            contentDescription = tr("scroll_to_top"),
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
                 }
             }
         }
@@ -1104,22 +1111,45 @@ internal fun ElasticRefreshContainer(
     val triggerPx = with(density) { 80.dp.toPx() }
     val maximumPx = with(density) { 128.dp.toPx() }
     var pullOffsetPx by remember { mutableFloatStateOf(0f) }
+    var returning by remember { mutableStateOf(false) }
+    var keepIndicatorDuringReturn by remember { mutableStateOf(false) }
+    var returnGeneration by remember { mutableStateOf(0) }
     var thresholdHapticSent by remember { mutableStateOf(false) }
     val latestRefreshing by rememberUpdatedState(refreshing)
     val latestOnRefresh by rememberUpdatedState(onRefresh)
     val latestEnabled by rememberUpdatedState(enabled)
 
-    suspend fun settle(target: Float, initialVelocity: Float = 0f) {
-        if (!motionEnabled) {
-            pullOffsetPx = target
-            return
+    fun interruptReturn() {
+        if (returning) {
+            returnGeneration++
+            returning = false
+            keepIndicatorDuringReturn = false
         }
-        animate(
-            initialValue = pullOffsetPx,
-            targetValue = target,
-            initialVelocity = initialVelocity,
-            animationSpec = BondMotionSpring.Settle,
-        ) { value, _ -> pullOffsetPx = value }
+    }
+
+    suspend fun settle(target: Float, keepIndicator: Boolean = false) {
+        val generation = ++returnGeneration
+        returning = true
+        keepIndicatorDuringReturn = keepIndicator
+        try {
+            // The pull displacement and indicator spacing return on the same timeline. A spring
+            // with the finger's outward velocity can bounce through zero and reopen the spacing.
+            animate(
+                initialValue = pullOffsetPx,
+                targetValue = target,
+                animationSpec = tween(
+                    if (motionEnabled) BondMotionDuration.RefreshReturn else 0,
+                    easing = BondMotionEasing.Standard,
+                ),
+            ) { value, _ ->
+                if (generation == returnGeneration) pullOffsetPx = value
+            }
+        } finally {
+            if (generation == returnGeneration) {
+                returning = false
+                keepIndicatorDuringReturn = false
+            }
+        }
     }
 
     val nestedScrollConnection = remember(triggerPx, maximumPx, motionEnabled) {
@@ -1127,6 +1157,7 @@ internal fun ElasticRefreshContainer(
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 if (!latestEnabled) return Offset.Zero
                 if (available.y < 0f && pullOffsetPx > 0f && !latestRefreshing) {
+                    if (source == NestedScrollSource.UserInput) interruptReturn()
                     val consumedY = available.y.coerceAtLeast(-pullOffsetPx)
                     pullOffsetPx = (pullOffsetPx + consumedY).coerceAtLeast(0f)
                     if (pullOffsetPx < triggerPx) thresholdHapticSent = false
@@ -1146,6 +1177,7 @@ internal fun ElasticRefreshContainer(
                     available.y > 0f &&
                     !latestRefreshing
                 ) {
+                    interruptReturn()
                     val fraction = (pullOffsetPx / maximumPx).coerceIn(0f, 1f)
                     val resistance = (0.56f - fraction * 0.38f).coerceAtLeast(0.18f)
                     pullOffsetPx = (pullOffsetPx + available.y * resistance).coerceAtMost(maximumPx)
@@ -1166,7 +1198,7 @@ internal fun ElasticRefreshContainer(
                 if (latestRefreshing || pullOffsetPx <= 0f) return Velocity.Zero
                 val shouldRefresh = pullOffsetPx >= triggerPx
                 if (shouldRefresh) latestOnRefresh()
-                settle(target = 0f, initialVelocity = available.y)
+                settle(target = 0f, keepIndicator = shouldRefresh)
                 thresholdHapticSent = false
                 return Velocity(0f, available.y)
             }
@@ -1185,10 +1217,10 @@ internal fun ElasticRefreshContainer(
 
     // Reserve a 10 dp stroke with 12 dp breathing room above and below it. This belongs to
     // the list viewport, so the fixed app bar and bottom dock never jump with loading state.
-    val indicatorVisible = refreshing || pullOffsetPx > 0f
+    val indicatorVisible = refreshing || (pullOffsetPx > 0f && (!returning || keepIndicatorDuringReturn))
     val refreshSpacing by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (materialLayout && indicatorVisible) 34.dp else 0.dp,
-        animationSpec = tween(if (motionEnabled) 220 else 0, easing = BondMotionEasing.Standard),
+        animationSpec = tween(if (motionEnabled) BondMotionDuration.RefreshReturn else 0, easing = BondMotionEasing.Standard),
         label = "refresh-spacing",
     )
     Box(modifier.nestedScroll(nestedScrollConnection)) {

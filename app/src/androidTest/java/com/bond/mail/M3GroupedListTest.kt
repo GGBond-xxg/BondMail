@@ -12,6 +12,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,9 @@ class M3GroupedListTest {
         var density = 1f
         val corners = mutableMapOf<String, Pair<Float, Float>>()
         val topHistory = mutableListOf<Float>()
+        var recordReturn = false
+        var rowY = 0f
+        val releaseFrames = mutableListOf<Pair<Long, Float>>()
         fun settle() {
             instrumentation.waitForIdleSync()
             android.os.SystemClock.sleep(400)
@@ -100,7 +105,13 @@ class M3GroupedListTest {
                                         onClick = { selected = null },
                                         modifier = groupedItemModifier(),
                                     ) {
-                                        Text(id, Modifier.fillMaxWidth().height(64.dp).padding(20.dp))
+                                        Text(id, Modifier.fillMaxWidth().height(64.dp)
+                                            .onGloballyPositioned {
+                                                if (id == "A") {
+                                                    rowY = it.positionInRoot().y
+                                                    if (recordReturn) releaseFrames += android.os.SystemClock.uptimeMillis() to rowY
+                                                }
+                                            }.padding(20.dp))
                                     }
                                 }
                             }
@@ -152,6 +163,41 @@ class M3GroupedListTest {
             touch(shortPull, android.view.MotionEvent.ACTION_UP, 550f)
             settle()
             instrumentation.runOnMainSync { assertEquals("Below threshold must not refresh", 0, refreshCount) }
+            // Both a held short pull and a quick release must return in one continuous motion.
+            // Recording actual layout frames catches the old spacing reopening after spring overshoot.
+            val baselineY = rowY
+            for (holdBeforeRelease in listOf(true, false, false)) {
+                val pullTime = android.os.SystemClock.uptimeMillis()
+                touch(pullTime, android.view.MotionEvent.ACTION_DOWN, 500f)
+                repeat(12) { step ->
+                    touch(pullTime, android.view.MotionEvent.ACTION_MOVE, 500f + (step + 1) * 20f)
+                    android.os.SystemClock.sleep(16)
+                }
+                if (holdBeforeRelease) android.os.SystemClock.sleep(250)
+                val releaseTime = android.os.SystemClock.uptimeMillis()
+                instrumentation.runOnMainSync {
+                    releaseFrames.clear()
+                    releaseFrames += releaseTime to rowY
+                    recordReturn = true
+                }
+                touch(pullTime, android.view.MotionEvent.ACTION_UP, 740f)
+                android.os.SystemClock.sleep(550)
+                instrumentation.runOnMainSync {
+                    recordReturn = false
+                    assertEquals("Short pulls never refresh", 0, refreshCount)
+                    assertTrue("Must capture return motion", releaseFrames.size > 3)
+                    assertTrue("Return must have intermediate positions", releaseFrames.any {
+                        it.second > baselineY + 2 && it.second < releaseFrames.first().second - 2
+                    })
+                    assertTrue("No second bounce: $releaseFrames", releaseFrames.zipWithNext().all { (a, b) ->
+                        b.second <= a.second + 1f && b.second >= baselineY - 1f
+                    })
+                    assertEquals("Return reaches the exact starting position", baselineY, rowY, 1f)
+                    assertTrue("Pull and spacing must finish together, not run sequentially", releaseFrames.none {
+                        it.first - releaseTime > 300 && it.second > baselineY + 2
+                    })
+                }
+            }
             val downTime = android.os.SystemClock.uptimeMillis()
             touch(downTime, android.view.MotionEvent.ACTION_DOWN, 500f)
             repeat(24) { step ->

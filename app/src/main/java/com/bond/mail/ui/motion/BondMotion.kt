@@ -21,8 +21,10 @@ import androidx.compose.ui.unit.Dp
 object BondMotionDuration {
     const val Instant = 0
     const val EffectQuick = 90
+    const val DockPressRelease = 280
     const val EffectShort = 120
     const val ElementEnter = 180
+    const val RefreshReturn = 220
     const val MailContentRevisit = 150
     const val ChromeReveal = 240
     const val FadeThrough = 240

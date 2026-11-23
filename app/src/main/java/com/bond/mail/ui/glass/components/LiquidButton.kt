@@ -43,13 +43,18 @@ fun LiquidButton(
     enabled: Boolean = true,
     tint: Color = Color.Unspecified,
     surfaceColor: Color = Color.Unspecified,
+    tintAlpha: Float = 1f,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     content: @Composable RowScope.() -> Unit
 ) {
     val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val effectsEnabled = com.bond.mail.ui.theme.LocalGlassEffects.current
     val interactive = isInteractive && enabled && effectsEnabled
-    val edgeColor = com.bond.mail.ui.theme.glassControlBorderColor(enabled, tinted = tint.isSpecified)
+    val edgeColor = androidx.compose.ui.graphics.lerp(
+        com.bond.mail.ui.theme.glassControlBorderColor(enabled, tinted = false),
+        com.bond.mail.ui.theme.glassControlBorderColor(enabled, tinted = true),
+        if (tint.isSpecified) tintAlpha else 0f,
+    )
     val animationScope = rememberCoroutineScope()
 
     val interactiveHighlight = remember(animationScope) {
@@ -106,8 +111,8 @@ fun LiquidButton(
                 },
                 onDrawSurface = {
                     if (tint.isSpecified) {
-                        drawRect(tint, blendMode = BlendMode.Hue)
-                        drawRect(tint.copy(alpha = 0.75f))
+                        drawRect(tint.copy(alpha = tint.alpha * tintAlpha), blendMode = BlendMode.Hue)
+                        drawRect(tint.copy(alpha = 0.75f * tintAlpha))
                     }
                     if (surfaceColor.isSpecified) {
                         drawRect(surfaceColor)

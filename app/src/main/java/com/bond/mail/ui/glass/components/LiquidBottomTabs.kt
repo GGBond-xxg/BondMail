@@ -72,12 +72,14 @@ fun LiquidBottomTabs(
     tabsCount: Int,
     modifier: Modifier = Modifier,
     selectionEnabled: Boolean = true,
+    selectionAlpha: Float? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val latestSelectionEnabled by rememberUpdatedState(selectionEnabled)
     val latestOnTabSelected by rememberUpdatedState(onTabSelected)
-    val indicatorAlpha by animateFloatAsState(if (selectionEnabled) 1f else 0f,
+    val animatedIndicatorAlpha by animateFloatAsState(if (selectionEnabled) 1f else 0f,
         tween(if (com.bond.mail.ui.motion.bondMotionEnabled()) 180 else 0), label = "glass-dock-selection-alpha")
+    val indicatorAlpha = selectionAlpha ?: animatedIndicatorAlpha
     val optics = com.bond.mail.ui.theme.LocalGlassSettings.current
     val isLightTheme = androidx.compose.material3.MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val accentColor =

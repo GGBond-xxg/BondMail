@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,7 @@ fun TelegramMailTransition(
     motionEnabled: Boolean,
     onBackCommitted: () -> Unit,
     onOpeningFinished: () -> Unit = {},
+    onVisualProgress: (Float) -> Unit = {},
     content: @Composable (
         requestBack: () -> Unit,
         reportContentReady: () -> Unit,
@@ -76,6 +78,7 @@ fun TelegramMailTransition(
         freezeContentOnBack = true,
         backgroundIsLive = true,
         onOpeningFinished = onOpeningFinished,
+        onVisualProgress = onVisualProgress,
         onBackCommitted = onBackCommitted,
         content = content,
     )
@@ -120,6 +123,7 @@ private fun BondBackTransition(
     backgroundIsLive: Boolean,
     onBackCommitted: () -> Unit,
     onOpeningFinished: () -> Unit = {},
+    onVisualProgress: (Float) -> Unit = {},
     content: @Composable (
         requestBack: () -> Unit,
         reportContentReady: () -> Unit,
@@ -149,6 +153,11 @@ private fun BondBackTransition(
     var touchDeltaY by remember { mutableFloatStateOf(0f) }
     var frozenReader by remember { mutableStateOf<ImageBitmap?>(null) }
     var backIsFinishing by remember { mutableStateOf(false) }
+    // The sibling dock shares the actual page clock, including the content-ready wait.
+    // A cancelled predictive gesture retains reader actions; only committed dismissal swaps them.
+    val visualProgress = openingProgress.value * (1f - backCompletion.value)
+    val latestOnVisualProgress by rememberUpdatedState(onVisualProgress)
+    SideEffect { onVisualProgress(visualProgress) }
     val maximumCornerPx = with(density) { 28.dp.toPx() }
 
     LaunchedEffect(animateOpening, motionEnabled, backgroundSnapshot, contentReady) {
@@ -209,6 +218,7 @@ private fun BondBackTransition(
         }
         // The visual endpoint is already on screen. Commit now instead of retaining the outgoing
         // gesture layer for another frame, which made the first scroll on the revealed page miss.
+        latestOnVisualProgress(0f)
         latestOnBackCommitted()
     }
 

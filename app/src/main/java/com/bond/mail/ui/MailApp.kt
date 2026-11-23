@@ -1253,6 +1253,10 @@ fun MailApp(
                                 backgroundSnapshot = null,
                                 motionEnabled = motionEnabled,
                                 onBackCommitted = ::popBackStackOnce,
+                                onVisualProgress = { progress ->
+                                    appDock.progressMessageId = messageId
+                                    appDock.readerProgress = progress
+                                },
                             ) { requestBack, reportContentReady ->
                                 DetailScreen(
                                     container = container,
@@ -1358,6 +1362,8 @@ fun MailApp(
                         onCompose = { prepareCompose("") },
                         readerMode = readerMode,
                         readerActions = readerActions,
+                        visualProgress = if (readerMode && appDock.progressMessageId == readerId)
+                            appDock.readerProgress else 0f,
                         modifier = Modifier.align(Alignment.BottomCenter).bottomDockOffset(sharedDockOffset)
                             .graphicsLayer { alpha = if (dockAllowed) 1f else 0f }
                             .then(if (!dockAllowed) Modifier.clearAndSetSemantics { } else Modifier),
