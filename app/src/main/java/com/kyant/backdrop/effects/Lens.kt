@@ -21,9 +21,13 @@ fun BackdropEffectScope.lens(
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
     if (refractionHeight <= 0f || refractionAmount <= 0f) return
+    // Opposite lens edges must meet with zero displacement at the centerline.
+    // User optics can exceed half the height of compact controls such as the 52dp dock.
+    val effectiveHeight = refractionHeight.fastCoerceAtMost(size.minDimension / 2f)
+    if (effectiveHeight <= 0f) return
 
     if (padding > 0f) {
-        padding = (padding - refractionHeight).fastCoerceAtLeast(0f)
+        padding = (padding - effectiveHeight).fastCoerceAtLeast(0f)
     }
 
     val cornerRadii = cornerRadii
@@ -45,7 +49,7 @@ fun BackdropEffectScope.lens(
                 setFloatUniform("size", size.width, size.height)
                 setFloatUniform("offset", -padding, -padding)
                 setFloatUniform("cornerRadii", cornerRadii)
-                setFloatUniform("refractionHeight", refractionHeight)
+                setFloatUniform("refractionHeight", effectiveHeight)
                 setFloatUniform("refractionAmount", -refractionAmount)
                 setFloatUniform("depthEffect", if (depthEffect) 1f else 0f)
                 if (chromaticAberrationAmount > 0f) {
