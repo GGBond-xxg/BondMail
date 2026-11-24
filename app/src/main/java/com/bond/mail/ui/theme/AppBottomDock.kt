@@ -72,6 +72,7 @@ internal fun AppBottomDock(
     visualProgress: Float? = null,
 ) {
     val glass = LocalUiStyle.current == UiStyle.LIQUID_GLASS
+    val material = LocalUiStyle.current == UiStyle.MATERIAL3
     val motion = bondMotionEnabled()
     val animatedProgress by animateFloatAsState(if (readerMode) 1f else 0f,
         tween(if (motion) 260 else 0), label = "dock-mode-progress")
@@ -97,97 +98,112 @@ internal fun AppBottomDock(
         modifier.widthIn(max = BottomDockDefaults.MaxWidth).navigationBarsPadding()
             .padding(BottomDockDefaults.OuterPadding).fillMaxWidth().glassDockGestureBoundary(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (material) M3SplitDockDefaults.Gap else 10.dp),
     ) {
-        if (glass && LocalGlassEffects.current) {
-            LiquidBottomTabs(
-                { selection }, { onSelection(it) }, glassBackdrop(), 3, Modifier.weight(1f),
-                selectionEnabled = !readerMode,
-                selectionAlpha = indicatorAlpha,
-            ) {
-                repeat(3) { index ->
-                    LiquidBottomTab(
-                        onClick = { if (interactionReady) actions[index]?.invoke() },
-                        modifier = Modifier.semantics {
-                            if (!readerMode) selected = selectedTab == index
-                            if (!interactionReady) disabled()
-                        },
-                        enabled = actions[index] != null,
-                        role = if (readerMode) Role.Button else Role.Tab,
-                    ) { DockIcon(mainIcons[index], readerIcons[index], progress, labels[index], palette.onSurface) }
-                }
-            }
+        if (material) {
+            M3SplitDockParts(
+                selectedTab = selectedTab,
+                readerMode = readerMode,
+                indicatorAlpha = indicatorAlpha,
+                enabled = interactionReady,
+                actions = actions,
+                trailingEnabled = interactionReady && (!readerMode || readerActions != null),
+                onTrailingClick = { if (readerMode) readerActions?.delete?.invoke() else onCompose() },
+                motion = motion,
+                tabIcon = { index, tint -> DockIcon(mainIcons[index], readerIcons[index], progress, labels[index], tint) },
+                trailingIcon = { tint -> DockIcon(mainTrailingIcon, Icons.Default.Delete, progress, trailingLabel, tint) },
+            )
         } else {
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
-                tonalElevation = 0.dp, shadowElevation = 0.dp,
-            ) {
-                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = BottomDockDefaults.VerticalInset)) {
-                    val itemWidth = maxWidth / 3
-                    val indicatorX by animateDpAsState(itemWidth * selectedTab + BottomDockDefaults.IndicatorHorizontalInset, tween(if (motion) 240 else 0), label = "dock-selection-x")
-                    Surface(
-                        modifier = Modifier.offset { IntOffset(indicatorX.roundToPx(), BottomDockDefaults.IndicatorItemInset.roundToPx()) }
-                            .width(itemWidth - BottomDockDefaults.IndicatorHorizontalInset * 2).height(BottomDockDefaults.IndicatorHeight)
-                            .graphicsLayer { alpha = indicatorAlpha },
-                        shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer,
-                        tonalElevation = 0.dp, shadowElevation = 0.dp,
-                    ) {}
-                    Row(Modifier.fillMaxWidth()) {
-                        repeat(3) { index ->
-                            val mainTint by animateColorAsState(
-                                if (selectedTab == index) palette.onSecondaryContainer else palette.onSurfaceVariant,
-                                tween(if (motion) 180 else 0), label = "dock-tab-color")
-                            val tint = lerp(mainTint, palette.onSurfaceVariant, progress)
-                            val interaction = remember { MutableInteractionSource() }
-                            val pressAlpha = rememberDockPressAlpha(interaction, motion)
-                            // Keep the full touch target; draw press feedback only inside the
-                            // 44dp capsule, 2dp larger on each side than the selected capsule.
-                            Box(
-                                modifier = Modifier.weight(1f).height(BottomDockDefaults.ItemHeight)
-                                    .clickable(
-                                        interactionSource = interaction,
-                                        indication = null,
-                                        enabled = interactionReady && actions[index] != null,
-                                        role = if (readerMode) Role.Button else Role.Tab,
-                                        onClick = { actions[index]?.invoke() },
-                                    )
-                                    .semantics {
-                                        if (!readerMode) selected = selectedTab == index
-                                        if (!interactionReady) disabled()
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
+            if (glass && LocalGlassEffects.current) {
+                LiquidBottomTabs(
+                    { selection }, { onSelection(it) }, glassBackdrop(), 3, Modifier.weight(1f),
+                    selectionEnabled = !readerMode,
+                    selectionAlpha = indicatorAlpha,
+                ) {
+                    repeat(3) { index ->
+                        LiquidBottomTab(
+                            onClick = { if (interactionReady) actions[index]?.invoke() },
+                            modifier = Modifier.semantics {
+                                if (!readerMode) selected = selectedTab == index
+                                if (!interactionReady) disabled()
+                            },
+                            enabled = actions[index] != null,
+                            role = if (readerMode) Role.Button else Role.Tab,
+                        ) { DockIcon(mainIcons[index], readerIcons[index], progress, labels[index], palette.onSurface) }
+                    }
+                }
+            } else {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.bondSurfaces.dock.copy(alpha = 0.94f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)),
+                    tonalElevation = 0.dp, shadowElevation = 0.dp,
+                ) {
+                    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = BottomDockDefaults.VerticalInset)) {
+                        val itemWidth = maxWidth / 3
+                        val indicatorX by animateDpAsState(itemWidth * selectedTab + BottomDockDefaults.IndicatorHorizontalInset, tween(if (motion) 240 else 0), label = "dock-selection-x")
+                        Surface(
+                            modifier = Modifier.offset { IntOffset(indicatorX.roundToPx(), BottomDockDefaults.IndicatorItemInset.roundToPx()) }
+                                .width(itemWidth - BottomDockDefaults.IndicatorHorizontalInset * 2).height(BottomDockDefaults.IndicatorHeight)
+                                .graphicsLayer { alpha = indicatorAlpha },
+                            shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer,
+                            tonalElevation = 0.dp, shadowElevation = 0.dp,
+                        ) {}
+                        Row(Modifier.fillMaxWidth()) {
+                            repeat(3) { index ->
+                                val mainTint by animateColorAsState(
+                                    if (selectedTab == index) palette.onSecondaryContainer else palette.onSurfaceVariant,
+                                    tween(if (motion) 180 else 0), label = "dock-tab-color")
+                                val tint = lerp(mainTint, palette.onSurfaceVariant, progress)
+                                val interaction = remember { MutableInteractionSource() }
+                                val pressAlpha = rememberDockPressAlpha(interaction, motion)
+                                // Keep the full touch target; draw press feedback only inside the
+                                // 44dp capsule, 2dp larger on each side than the selected capsule.
                                 Box(
-                                    Modifier.fillMaxWidth().padding(horizontal = BottomDockDefaults.PressHorizontalInset)
-                                        .height(BottomDockDefaults.PressHeight)
-                                        .clip(RoundedCornerShape(50))
-                                        .drawBehind { drawRect(palette.onSurface.copy(alpha = .10f * pressAlpha.value)) },
+                                    modifier = Modifier.weight(1f).height(BottomDockDefaults.ItemHeight)
+                                        .clickable(
+                                            interactionSource = interaction,
+                                            indication = null,
+                                            enabled = interactionReady && actions[index] != null,
+                                            role = if (readerMode) Role.Button else Role.Tab,
+                                            onClick = { actions[index]?.invoke() },
+                                        )
+                                        .semantics {
+                                            if (!readerMode) selected = selectedTab == index
+                                            if (!interactionReady) disabled()
+                                        },
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    DockIcon(mainIcons[index], readerIcons[index], progress, labels[index], tint)
+                                    Box(
+                                        Modifier.fillMaxWidth().padding(horizontal = BottomDockDefaults.PressHorizontalInset)
+                                            .height(BottomDockDefaults.PressHeight)
+                                            .clip(RoundedCornerShape(50))
+                                            .drawBehind { drawRect(palette.onSurface.copy(alpha = .10f * pressAlpha.value)) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        DockIcon(mainIcons[index], readerIcons[index], progress, labels[index], tint)
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-        // The circle is also one persistent surface; only its role, palette and glyph change.
-        FloatingCircleAction(
-            onClick = { if (interactionReady) {
-                if (readerMode) readerActions?.delete?.invoke() else onCompose()
-            } },
-            modifier = Modifier.size(BottomDockDefaults.Height).semantics {
-                if (!interactionReady || (readerMode && readerActions == null)) disabled()
-            },
-            containerColor = actionColor,
-            contentColor = actionForeground,
-            glassPrimaryFraction = 1f - progress,
-        ) {
-            DockIcon(mainTrailingIcon, Icons.Default.Delete, progress, trailingLabel, actionForeground)
+            // The circle is also one persistent surface; only its role, palette and glyph change.
+            FloatingCircleAction(
+                onClick = { if (interactionReady) {
+                    if (readerMode) readerActions?.delete?.invoke() else onCompose()
+                } },
+                modifier = Modifier.size(BottomDockDefaults.Height).semantics {
+                    if (!interactionReady || (readerMode && readerActions == null)) disabled()
+                },
+                containerColor = actionColor,
+                contentColor = actionForeground,
+                glassPrimaryFraction = 1f - progress,
+            ) {
+                DockIcon(mainTrailingIcon, Icons.Default.Delete, progress, trailingLabel, actionForeground)
+            }
         }
     }
 }

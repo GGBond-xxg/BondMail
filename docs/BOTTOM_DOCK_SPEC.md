@@ -1,6 +1,6 @@
 # 悬浮底部导航栏规范
 
-版本：1.3 · 2026-11-23
+版本：1.4 · 2026-11-24
 
 适用于 BondMail 的 Material 3、MIUIX、Liquid Glass，以及希望复用同样底部导航布局的 Android 项目。这是项目级规范，不是 Material / HyperOS / iOS 官方组件尺寸。按参考图二的视觉比例取整为 dp；截图没有提供原设备 dp，不能把截图像素直接作为 dp 使用。
 
@@ -9,16 +9,16 @@
 | 项目 | 标准值 | 说明 |
 |---|---:|---|
 | 导航胶囊可见高度 | 52dp | 不包含系统安全区、外部留白和阴影 |
-| 整组可见宽度上限 | 300dp | 胶囊 + 10dp 间距 + 52dp 动作按钮；整组水平居中 |
+| 整组可见宽度上限 | 300dp | 导航 + 主题间距 + 52dp 动作按钮；整组水平居中 |
 | 外层布局宽度上限 | 324dp | 含左右各 12dp 留白；窄屏服从父级最大宽度 |
-| 右侧独立圆形按钮 | 52 × 52dp | 与胶囊垂直居中，顶底对齐 |
+| 右侧独立按钮 | 52 × 52dp | M3 为拼接半药丸，其他主题为圆形；顶底对齐 |
 | 底部额外留白 | 20dp | 从系统导航栏安全区上边缘向上计算 |
 | 导航项点击高度 | 48dp | 视觉缩小不能缩小触摸区域 |
 | 选中椭圆高度 | 40dp | 三种样式共享，独立于点击高度 |
 | 选中椭圆上下留白 | 各 6dp | `(52 - 40) / 2` |
 | 选中椭圆左右内缩 | 各 6dp | 相对于单个导航项宽度 |
 | 整组左右最小外边距 | 各 12dp | 受宽度上限约束时，居中后屏幕两侧留白会更大 |
-| 胶囊与圆形按钮间距 | 10dp | 不随主题改变 |
+| 两部件间距 | M3 2dp，其他 10dp | 真正布局空隙，不用分隔线模拟 |
 | 整行顶部留白 | 10dp | 留出阴影与按压效果空间 |
 | 导航图标 | 24dp | 居中；本次不改图标造型 |
 
@@ -28,20 +28,30 @@
 bottomDistance = WindowInsets.navigationBars.bottom + 20dp
 rowHeight      = WindowInsets.navigationBars.bottom + 10dp + 52dp + 20dp
 visibleWidth   = min(300dp, availableWidth - 24dp)
-capsuleWidth   = visibleWidth - 10dp - 52dp
+gap            = M3 ? 2dp : 10dp
+capsuleWidth   = visibleWidth - gap - 52dp
 ```
 
 手势导航、隐藏手势提示线、三键导航的系统 inset 可能不同。必须读取实时 inset，不能把截图里的底部像素距离写死，也不能在父级和底栏重复添加导航栏 padding。
 
 ## 2. 三种样式的边界
 
-三种样式共享宽度上限、高度、底部间距、按钮直径和点击高度。选中色、图标、阴影、玻璃光学、按压和切换动画仍由各自样式负责。
+三种样式共享宽度上限、高度、底部间距、按钮宽度和点击高度。间隙、轮廓、选中色、图标、阴影、玻璃光学、按压和切换动画由各自样式负责。
+
+### M3 拼接药丸
+
+- `M3SplitDockParts` 只用于 Material 3；主页导航与邮件详情动作继续复用同一底栏。左右两个 `Surface` 各自绘制背景、描边与裁切，中间为 2dp 页面背景空隙。
+- 高 52dp，两端外圆角 26dp，连接处默认 4dp；右部件宽 52dp，连接侧不能成为圆形。
+- 左侧任意导航项按下仅改变左侧连接圆角；右侧按钮按下仅改变右侧连接圆角。连接圆角以 140ms 从 4dp 到 8dp，松开/取消后以 260ms 恢复，使用 `FastOutSlowInEasing`。连续按压从当前值接续；同帧快速点击沿用钱踪的按下态回退处理，恢复过程仍为 260ms。
+- 关闭系统动效时两侧保持 4dp 静态轮廓；没有额外按压椭圆、ripple 或按压阴影。选中项保留 40dp 高度，以 300ms 平滑移动；关闭动效时立即定位。
+- 左右背景同为不透明 `surfaceContainer`，无额外色调高度或物理阴影；描边同为 `outlineVariant` 的 38% 透明度。选中项为 `primaryContainer` / `onPrimaryContainer`，未选中图标为 `onSurfaceVariant`，右侧图标为 `onSurface`。全部跟随当前 M3 莫奈/浅深色方案。
+- 尺寸和动效参数由 `BottomDockDefaults` 与 M3 专用 `M3SplitDockDefaults` 管理。以下旧式圆钮、10dp 间距与按压高亮描述仅适用于 MIUIX / Glass。
 
 - 三种样式的主导航和邮件详情共用 `AppBottomDock`，尺寸只由 `BottomDockDefaults` 定义。`GlassMainDock` 和独立预览用的 `MessageActionDock` 只做转接，不再维护第二份布局。
 - Material 3 / MIUIX：胶囊横向内边距 6dp、导航项左右 4dp、40dp 选中底形。
 - Liquid Glass：`LiquidBottomTabs` 保留同一个光学底层；选中透镜缩到 40dp，点击/图标采样层仍为 48dp。胶囊横向内边距仍为 4dp。
 - Glass 降级模式：使用同样的 52dp 高度和 20dp 底部留白；关闭特效不能改变布局尺寸。
-- 圆形动作按钮随高度同步缩小直径，以保持正圆；胶囊继续占据剩余宽度。不增加文字标签，不更改页面内容密度。
+- MIUIX / Glass 圆形动作按钮随高度同步缩小直径，以保持正圆；导航继续占据剩余宽度。不增加文字标签，不更改页面内容密度。
 
 ## 3. Compose 接入
 
@@ -55,7 +65,7 @@ Row(
         .padding(BottomDockDefaults.OuterPadding)
         .fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(10.dp),
+    horizontalArrangement = Arrangement.spacedBy(if (material) M3SplitDockDefaults.Gap else 10.dp),
 ) {
     // 胶囊：height(Height)，内部项：height(ItemHeight)
     // 动作按钮：size(Height)
@@ -69,7 +79,7 @@ Row(
 - 底栏常驻 Composition，通过 `bottomDockOffset`（`Modifier.offset { IntOffset(...) }`）收回，仅更新摆放位置，不改变屏幕测量高度。禁止用可见性切换反复移除整个底栏。
 - 底栏的唯一挂载点在 `MailApp` 的 NavHost 之外、写信浮层之下。点击邮件后，等待内容准备期间保留主导航外观；实际进入时使用邮件页面的同一动画进度（260ms），将“邮件/联系人/设置 + 写信”交叉淡化为“回复/转发/分享 + 删除”。选中椭圆透明度、图标颜色、动作按钮填充同时插值，三种主题一致。提交返回时跟随页面的 220ms 退出进度反向恢复，取消返回手势保留邮件操作。容器始终固定，不创建第二套胶囊。
 - Material 3 / MIUIX 选中底形不添加物理阴影或色调高度，避免恢复导航时出现突现的阴影边缘。
-- 选中底形保持 40dp 高度、左右各 6dp 内缩；按压反馈使用 44dp 高度、左右各 4dp 内缩，即四周各大 2dp，在 52dp 胶囊内仍保留上下各 4dp。反馈以 90ms 淡入，松手后 280ms 匀速淡出；快速点按也完成短促淡入后再退场，取消手势以 180ms 淡出。重复按压从当前透明度衔接，不叠加默认 ripple；关闭系统动画则立即更新。触摸区域保持完整导航项宽度和 48dp 高度，主页和邮件详情共用。
+- MIUIX / Glass 选中底形保持 40dp 高度、左右各 6dp 内缩；按压反馈使用 44dp 高度、左右各 4dp 内缩，即四周各大 2dp，在 52dp 胶囊内仍保留上下各 4dp。反馈以 90ms 淡入，松手后 280ms 匀速淡出；快速点按也完成短促淡入后再退场，取消手势以 180ms 淡出。重复按压从当前透明度衔接，不叠加默认 ripple；关闭系统动画则立即更新。触摸区域保持完整导航项宽度和 48dp 高度，主页和邮件详情共用。M3 采用前述独立连接圆角反馈。
 - 首页、联系人页的返回顶部按钮使用 `bottomDockAuxiliaryBounds`，在同一个 324dp 居中区域内靠右放置。48dp 按钮与 52dp 写信按钮共用中心线，右侧补偿 2dp，不能再按屏幕右边缘定位。
 - 详情按邮件 ID 注册最新动作，退出时仅释放自己的注册，防止旧邮件回调覆盖新邮件。详情动作模式禁用玻璃导航拖选，不能把拖动误当成回复/删除。主界面和详情分别保留自己的滚动显隐状态。
 - 全局玻璃源只包围主界面及 NavHost 内容；底栏作为兄弟层绘制。切换到详情后必须采样邮件正文，而不是继续采样被遮住的邮箱列表。
@@ -98,6 +108,7 @@ Row(
 
 ### 本次验证记录
 
+- 1.4 增补：`M3SplitDockTest` 在连接手机上通过浅/深色像素与真实触摸事件验证：2dp 空隙透出页面背景；两部件各自圆角变化且不变圆；按压无额外着色；取消不触发操作；快速连续导航和右侧操作正确；关闭系统动效时圆角保持静态。`SharedBottomDockTest` 的三主题主界面/邮件详情复用与动作回调回归通过。最终测试 APK 已覆盖安装，并目视检查 M3 莫奈深色布局及实际写信入口。
 - 已在连接的 Xiaomi 24129PN74C（Android 17，520dpi）上复现旧问题，并验证同一路径的修复效果。
 - 已目视检查三种样式的收窄/缩高布局；设备上整组可见宽度约 975px（300dp），胶囊和动作按钮高度约 169px（52dp）。
 - `assembleDebug`、`assembleDebugAndroidTest` 编译通过；`GlassDockRecoveryTest` 浅色/深色各三轮隐藏、强制重绘、显示的像素断言通过。
