@@ -201,6 +201,9 @@ internal object MailWebViewCache {
         val responsiveMediaRules = hasResponsiveMediaRules(document)
         val responsiveMarkup = hasResponsiveMarkup(document)
         document.outputSettings().prettyPrint(false)
+        // The host can adjust DOM styles, but sender scripts cannot run. Keep any static
+        // no-script fallback visible too, then sanitize its descendants with the rest of the mail.
+        document.select("noscript").toList().forEach(Element::unwrap)
         document.select("script, iframe, object, embed").remove()
         // Forms cannot be trusted or submitted inside the mail reader, but the form element is
         // often only a compatibility wrapper around the complete visible newsletter. Removing the
@@ -212,7 +215,13 @@ internal object MailWebViewCache {
         document.select("button").toList().forEach(Element::unwrap)
         document.select("meta[http-equiv~=(?i)content-security-policy]").remove()
         document.select("meta[http-equiv~=(?i)refresh]").remove()
-        // Let Android WebView's algorithmic darkening decide how to transform light-only mail.
+        // Only app-owned DOM evaluation may run. Sender scripts, handlers, javascript: links,
+        // frames and forms remain prohibited even when the host adjusts the body zoom.
+        document.getAllElements().forEach { element ->
+            element.attributes().asList().filter { it.key.startsWith("on", ignoreCase = true) }
+                .forEach { element.removeAttr(it.key) }
+        }
+        // App-owned contrast adaptation handles light-only mail after styles are resolved.
         // A number of newsletter templates incorrectly declare dark support while still using
         // black inline text, which prevents WebView from making the message readable.
         document.select("meta[name=color-scheme], meta[name=supported-color-schemes]").remove()
@@ -221,7 +230,7 @@ internal object MailWebViewCache {
         // LIGHT BondMail window cannot receive a partial black canvas merely because ColorOS
         // entered night mode. BondMail applies its own complete dark transformation below.
         if (header.displayMode != MailDisplayMode.ORIGINAL) disableSenderDarkMode(document)
-        repairDitoBodyReadability(document, header.senderAddress, darkMode && header.displayMode == MailDisplayMode.AUTO)
+        // Night readability is repaired after CSS resolution, preserving transparent preheaders.
         if (header.displayMode == MailDisplayMode.AUTO) repairNearInvisibleNewsletterText(document)
         trimTrailingNonVisualSections(document)
 
@@ -234,33 +243,38 @@ internal object MailWebViewCache {
         val forceTransactionalFluid =
             isKnownMobileTransactionalSender(senderDomain) || zaBankSender
         val binanceSender = isBinanceSender(senderDomain)
-        val bybitSender = senderDomain.contains("bybit.com") ||
-            senderIdentity.contains("bybit")
-        val bochkSender = senderDomain.contains("bochk.com") ||
-            senderIdentity.contains("bochk") ||
-            senderIdentity.contains("bank of china hong kong")
         val appleSender = senderDomain == "apple.com" ||
             senderDomain.endsWith(".apple.com")
         val samsungSender = senderDomain.contains("samsung") ||
             senderIdentity.contains("samsung")
-        val oslSender = senderDomain == "osl.com" ||
-            senderDomain.endsWith(".osl.com") ||
-            senderIdentity.contains("osl global")
         val instagramSender = senderDomain.contains("instagram.com") ||
             senderIdentity.contains("instagram")
-        val immigrationSender = senderDomain == "imigrasi.go.id" ||
-            senderDomain.endsWith(".imigrasi.go.id")
         val cloudflareSender = senderDomain == "cloudflare.com" ||
             senderDomain.endsWith(".cloudflare.com")
         val grabSender = isGrabTransactionalSender(senderDomain, senderIdentity)
         val facebookSender = isFacebookSender(senderDomain, senderIdentity)
         val forceKnownSenderResponsive = binanceSender && responsiveMediaRules
+        // Cathay statements mix 700px tables with partial mobile rules. Preserve that canvas,
+        // but leave ordinary fluid/plain messages from the same sender at their natural size.
+        val cathayCanvasWidth = if (senderDomain == "cathaypacific.com" || senderDomain.endsWith(".cathaypacific.com")) {
+            // The live statement nests its 700px tables 15–23 levels deep, beyond the generic
+            // detector's wrapper limit. Inspect real content tables, not only shallow wrappers.
+            document.select("table[width]")
+                .filter { it.text().length >= 48 || it.select("tr").size >= 3 }
+                .mapNotNull { parsePixelDimension(it.attr("width"))?.takeIf { width -> width in 520..1200 } }
+                .maxOrNull()
+        } else null
+        // This statement ships a complete phone layout, also used by its browser preview.
+        // Keep the established daytime/fixed-template path; opt in only when those rules exist.
+        val cathayNightResponsive = darkMode && header.displayMode == MailDisplayMode.AUTO &&
+            cathayCanvasWidth != null && hasCathayPhoneLayout(document)
         // Grab and Cloudflare's current templates advertise responsive rules but still paint their
         // hero/text on a roughly 600px canvas. Before remote media styles settle, FLUID briefly
         // enlarges that canvas past the phone and clips its right edge. Preserve the original
         // geometry and scale the complete canvas from the very first committed frame.
         val preferDesktopCanvas =
-            (binanceSender && !forceKnownSenderResponsive) || grabSender || cloudflareSender
+            (binanceSender && !forceKnownSenderResponsive) || grabSender || cloudflareSender ||
+                (cathayCanvasWidth != null && !cathayNightResponsive)
 
         // Production mailers frequently keep the real icon/image URL in data-src/data-original
         // while leaving a transparent tracking pixel in src. WebView does not execute the sender's
@@ -275,9 +289,10 @@ internal object MailWebViewCache {
         if (samsungSender) {
             markSamsungLogoImages(document)
         }
-        if (darkMode) {
+        if (darkMode && header.displayMode != MailDisplayMode.AUTO) {
             markDarkModeLogoImages(document)
         }
+        if (darkMode && header.displayMode == MailDisplayMode.AUTO) markCathayNightArtwork(document)
         enhanceKnownSenderBranding(
             document = document,
             isFacebookSender = facebookSender,
@@ -293,32 +308,19 @@ internal object MailWebViewCache {
 
         document.head().select("meta[name=viewport]").remove()
         document.head().prepend(
-            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, minimum-scale=0.75, maximum-scale=5.0, user-scalable=yes\" />",
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />",
         )
 
         val body = document.body()
         if (instagramSender) body.addClass("bondmail-instagram-mail")
         if (darkMode && header.displayMode == MailDisplayMode.AUTO) {
             body.addClass("bondmail-dark-mode")
-            val nativeDarkCanvas = hasNativeDarkCanvas(document)
-            if (nativeDarkCanvas) {
-                body.addClass("bondmail-native-dark-mail")
-            }
-            if (bybitSender || bochkSender || appleSender || oslSender) {
-                // This template becomes only partially dark in Android WebView: its canvas turns
-                // black while some panels, brand marks, or inline text keep the light palette.
-                // Preserve the complete authored light message instead of showing a split canvas.
-                body.addClass("bondmail-force-light-mail")
-            }
         }
         if (samsungSender) {
             body.addClass("bondmail-samsung-mail")
         }
         if (appleSender) {
             body.addClass("bondmail-apple-mail")
-        }
-        if (header.displayMode == MailDisplayMode.AUTO && darkMode && immigrationSender) {
-            body.addClass("bondmail-repair-inherited-light-text")
         }
         normalizeEmojiPresentation(document)
         // Preserve direct text nodes from malformed/plain HTML messages while still giving them
@@ -344,6 +346,8 @@ internal object MailWebViewCache {
             // every table independently clips the third column on a 360px viewport, so preserve the
             // complete 426px outer canvas and scale it as one unit.
             compactContentWidthPx + INSTAGRAM_SIDE_GUTTERS_PX
+        } else if (cathayCanvasWidth != null && !cathayNightResponsive) {
+            cathayCanvasWidth
         } else if (preferDesktopCanvas) {
             // Known fixed-canvas transactional templates are consistently authored around 600px,
             // but some variants expose that width only through Outlook conditionals that Jsoup no
@@ -357,15 +361,17 @@ internal object MailWebViewCache {
         }
         val detectedDesktopCanvasWidthPx = desktopCandidate
             ?.takeIf { candidate ->
-                (!forceTransactionalFluid || grabSender) &&
+                !cathayNightResponsive && (!forceTransactionalFluid || grabSender) &&
                     !forceKnownSenderResponsive &&
                     compactContentWidthPx == null &&
-                    // A real phone viewport or media query must take precedence over legacy
+                    // Real mobile layout rules take precedence over legacy
                     // Outlook fallback widths. Repeated 600/720px declarations otherwise shrink
                     // an already-mobile message a second time and produce a narrow centre column.
                     // Known fixed-canvas exceptions are selected above through
-                    // knownSenderCanvasWidthPx, so this generic detector is intentionally strict.
-                    !responsiveMarkup && (
+                    // knownSenderCanvasWidthPx. A viewport declaration alone does not make a
+                    // repeatedly hard-sized table responsive; retain that canvas too.
+                    (!responsiveMarkup || (!responsiveMediaRules &&
+                        candidate.hardWidthScore >= STRONG_DESKTOP_HARD_SCORE)) && (
                     candidate.hardWidthScore >= STRONG_DESKTOP_HARD_SCORE ||
                         candidate.score >= MIN_DESKTOP_CANVAS_SCORE ||
                         (!hasStrongFluidRoot(document) && candidate.score >= STRONG_DESKTOP_SCORE)
@@ -413,6 +419,11 @@ internal object MailWebViewCache {
             normalizeDesktopSafety(document)
             retargetBodyChildSelectors(document, "#bondmail-desktop-canvas")
             wrapDesktopCanvas(body, desktopCanvasWidthPx!!)
+        } else if (cathayNightResponsive) {
+            // Preserve the verified sender phone CSS. Generic receipt nowrap/column rewrites
+            // treat its right-aligned content columns as prices and inflate them to max-content.
+            normalizeDesktopSafety(document)
+            retargetBodyChildSelectors(document, "#bondmail-message-body")
         } else {
             // The Gmail-style message card wraps the original body nodes. Retarget sender CSS that
             // relied on direct `body > ...` selectors before moving those nodes into the card.
@@ -442,7 +453,9 @@ internal object MailWebViewCache {
                     ?.getOrNull(1)
                     ?.let(::parsePixelDimension)
             val smallIcon = width != null && height != null && width <= 96 && height <= 96
-            val responsiveHeight = if (smallIcon) "" else ";height:auto!important"
+            // Verified phone templates size some transparent logos by height alone. Replacing
+            // that height with auto expands the natural bitmap to the entire content column.
+            val responsiveHeight = if (smallIcon || cathayNightResponsive) "" else ";height:auto!important"
             image.attr(
                 "style",
                 image.attr("style") + ";max-width:100%!important$responsiveHeight",
@@ -459,13 +472,13 @@ internal object MailWebViewCache {
         document.select("svg").forEach { svg ->
             svg.attr("style", svg.attr("style") + ";max-width:100%!important")
         }
-        if (documentLayout == MailDocumentLayout.FLUID) preserveNewsletterSizeLimits(document)
+        if (documentLayout == MailDocumentLayout.FLUID && !cathayNightResponsive) preserveNewsletterSizeLimits(document)
 
         // Build one Gmail-style content card: subject on the page background, then the sender
         // row and original message body on a raised content surface. Keeping both loading and final
         // layouts structurally identical also removes the visible font-weight jump on first open.
         if (header.displayMode == MailDisplayMode.LIGHT) applyLightMailCanvas(document)
-        wrapMessageCard(body, header)
+        wrapMessageCard(body, header, if (cathayNightResponsive) 0 else BODY_CONTENT_INSET)
         // Sender inline !important backgrounds otherwise paint underneath the rounded body,
         // filling its transparent corners. The outer page belongs to the app in every mode.
         listOf(document.selectFirst("html")!!, body).forEach { page ->
@@ -509,7 +522,11 @@ internal object MailWebViewCache {
         val addressLineHeightCssPx = formatCssNumber(16f * fontScale)
         val recipientFontSizeCssPx = formatCssNumber(12f * fontScale)
         val recipientLineHeightCssPx = formatCssNumber(16f * fontScale)
-        val layoutCss = when (documentLayout) {
+        val layoutCss = if (cathayNightResponsive) """
+            #bondmail-message-body > .bondmail-root-content{
+                min-width:0!important;max-width:100%!important;margin-left:auto!important;margin-right:auto!important
+            }
+        """.trimIndent() else when (documentLayout) {
             MailDocumentLayout.FLUID -> """
               #bondmail-message-body > .bondmail-root-content{
                 position:relative!important;left:auto!important;right:auto!important;
@@ -651,7 +668,7 @@ internal object MailWebViewCache {
                 margin:0!important;padding:0!important;width:100%!important;min-width:0!important;
                 max-width:100%!important;height:auto!important;min-height:100%!important;
                 overflow-x:hidden!important;overflow-y:visible!important;box-sizing:border-box!important;
-                background:$backgroundCss;touch-action:pan-y
+                background:$backgroundCss;touch-action:pan-x pan-y pinch-zoom!important
               }
               body{
                 display:block!important;position:static!important;margin:0!important;
@@ -662,7 +679,7 @@ internal object MailWebViewCache {
                 font-family:sans-serif;
                 line-height:1.45;overflow-wrap:break-word;
                 -webkit-text-size-adjust:100%;-webkit-overflow-scrolling:touch;
-                touch-action:pan-y;overscroll-behavior-y:auto
+                touch-action:pan-x pan-y pinch-zoom!important;overscroll-behavior-y:auto
               }
               $layoutCss
               tr.bondmail-icon-row{
@@ -761,9 +778,10 @@ internal object MailWebViewCache {
               #bondmail-message-body{
                 position:relative!important;z-index:1!important;display:block!important;width:100%!important;
                 min-width:0!important;max-width:100%!important;margin:0!important;
-                padding:${BODY_CONTENT_INSET}px!important;box-sizing:border-box!important;
+                padding:${if (cathayNightResponsive) 0 else BODY_CONTENT_INSET}px!important;box-sizing:border-box!important;
                 background:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#fff" else "$headerSurfaceCss!important"};color:${if (header.displayMode == MailDisplayMode.ORIGINAL) "#202124" else "$foregroundCss!important"};
-                overflow:hidden!important;border-radius:0!important;
+                overflow-x:auto!important;overflow-y:hidden!important;border-radius:0!important;
+                touch-action:pan-x pan-y pinch-zoom!important;
                 isolation:auto!important;contain:none!important;
                 clip-path:none!important;color-scheme:light!important
               }
@@ -791,6 +809,7 @@ internal object MailWebViewCache {
               #bondmail-message-body > .bondmail-original-first{
                 top:auto!important;margin-top:0!important
               }
+              #bondmail-message-body *{touch-action:pan-x pan-y pinch-zoom!important}
               #bondmail-message-header,#bondmail-message-header *{
                 animation:none!important;transition:none!important;
                 font-family:sans-serif!important;
@@ -924,48 +943,9 @@ internal object MailWebViewCache {
                 height:21px!important;min-height:21px!important;max-height:21px!important;
                 padding:0!important
               }
-              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer,
-              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer *{
-                background-color:#f4f7fa!important;color:#202124!important;
-                -webkit-text-fill-color:#202124!important;color-scheme:light!important
-              }
-              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer a,
-              body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer a *{
-                color:#1267a5!important;-webkit-text-fill-color:#1267a5!important
-              }
-              body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body{
-                background:#ffffff!important;color:#202124!important;color-scheme:light!important;
+              body.bondmail-dark-mode #bondmail-message-body{
+                background:#121214!important;color:#e8eaed!important;color-scheme:only light!important;
                 filter:none!important
-              }
-              body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body img,
-              body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body video,
-              body.bondmail-dark-mode:not(.bondmail-native-dark-mail) #bondmail-message-body svg{
-                filter:none!important
-              }
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body{
-                background:#ffffff!important;color:#111111!important;
-                -webkit-text-fill-color:#111111!important;color-scheme:light!important;
-                filter:none!important
-              }
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body *{
-                color:#111111!important;-webkit-text-fill-color:#111111!important
-              }
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body a,
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body a *{
-                color:#1689d8!important;-webkit-text-fill-color:#1689d8!important
-              }
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body img,
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body video,
-              body.bondmail-dark-mode.bondmail-force-light-mail #bondmail-message-body svg{
-                filter:none!important
-              }
-              body.bondmail-repair-inherited-light-text #bondmail-message-body p,
-              body.bondmail-repair-inherited-light-text #bondmail-message-body p *{
-                color:#202124!important;-webkit-text-fill-color:#202124!important
-              }
-              body.bondmail-repair-inherited-light-text #bondmail-message-body table.blue,
-              body.bondmail-repair-inherited-light-text #bondmail-message-body table.blue *{
-                color:#ffffff!important;-webkit-text-fill-color:#ffffff!important
               }
               body.bondmail-apple-mail svg.bondmail-apple-brand-logo{
                 display:block!important;width:24px!important;height:29px!important;
@@ -1011,6 +991,11 @@ internal object MailWebViewCache {
             </style>
             """.trimIndent(),
         )
+        // Must precede every sender resource. Host evaluateJavascript is not a document script
+        // and is allowed by Chromium; no sender code is whitelisted and no JS bridge is exposed.
+        document.head().prependElement("meta")
+            .attr("http-equiv", "Content-Security-Policy")
+            .attr("content", "script-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; connect-src 'none'; form-action 'none'")
         return PreparedMailDocument(
             html = document.outerHtml(),
             hasRemoteImages = hasRemoteImages,
@@ -2333,7 +2318,7 @@ internal object MailWebViewCache {
         viewportWidthCssPx: Int,
         fontScale: Float,
     ): String = buildString {
-        append("layout-v56|")
+        append("layout-v59|")
         append(key)
         append("|display=").append(header.displayMode)
         append("|subject=").append(header.subject.hashCode())
@@ -2359,7 +2344,7 @@ internal object MailWebViewCache {
         append("|fontScale=").append(fontScale)
     }
 
-    private fun wrapMessageCard(body: Element, header: MailWebHeader) {
+    private fun wrapMessageCard(body: Element, header: MailWebHeader, contentInset: Int) {
         val originalNodes = body.childNodes().toList()
         val messageBody = Element("div").attr("id", "bondmail-message-body")
         when (header.displayMode) {
@@ -2368,7 +2353,7 @@ internal object MailWebViewCache {
             else -> Unit
         }
         // Original mode can carry sender inline padding:0!important; keep the reader's safe inset.
-        messageBody.attr("style", messageBody.attr("style") + ";padding:${BODY_CONTENT_INSET}px!important;")
+        messageBody.attr("style", messageBody.attr("style") + ";padding:${contentInset}px!important;")
         originalNodes.forEach { node ->
             node.remove()
             messageBody.appendChild(node)
@@ -2456,8 +2441,8 @@ internal object MailWebViewCache {
     /**
      * Several newsletter templates advertise dark-mode support and then switch only their text,
      * leaving inline white panels untouched. WebView consequently renders white text on white
-     * backgrounds. Disable those sender media queries and let WebView darken the complete light
-     * document as one unit instead.
+     * backgrounds. Disable those sender media queries before the app resolves and adapts
+     * each foreground/background pair.
      */
     private fun disableSenderDarkMode(document: Document) {
         document.select("style").forEach { style ->
@@ -2475,33 +2460,6 @@ internal object MailWebViewCache {
                 "style",
                 COLOR_SCHEME_DECLARATION.replace(element.attr("style"), "$1"),
             )
-        }
-    }
-
-    /**
-     * Preserve only templates that explicitly author both a dark canvas and a light foreground.
-     * A dark decorative header without a matching text color is not a native dark message: treating
-     * it as one is what produced black inherited text on the Immigration notification.
-     */
-    private fun hasNativeDarkCanvas(document: Document): Boolean {
-        val body = document.body()
-        val totalText = body.text().trim().length.coerceAtLeast(1)
-        return document.select(
-            "body, body > table, body > center, body > div, body > section, body > table > tbody > tr > td",
-        ).any { element ->
-            val colorSource = buildString {
-                append(element.attr("bgcolor")).append(';')
-                append(element.attr("background")).append(';')
-                append(element.attr("style"))
-            }
-            val foregroundSource = buildString {
-                append(element.attr("color")).append(';')
-                append(element.attr("style"))
-            }
-            val textCoverage = element.text().trim().length.toFloat() / totalText.toFloat()
-            textCoverage >= 0.45f &&
-                DARK_BACKGROUND_VALUE.containsMatchIn(colorSource) &&
-                LIGHT_FOREGROUND_VALUE.containsMatchIn(foregroundSource)
         }
     }
 
@@ -2822,17 +2780,6 @@ internal object MailWebViewCache {
 
     private val COLOR_SCHEME_DECLARATION = Regex(
         """(?i)((?:^|[;{])\s*)(?:supported-)?color-scheme\s*:\s*[^;]+;?""",
-    )
-
-    private val DARK_BACKGROUND_VALUE = Regex(
-        """(?i)(?:#(?:000(?:000)?|080808|0[abcde]0[abcde]0[abcde]|111(?:111)?|121212|181818)|""" +
-            """rgba?\(\s*(?:0|8|10|11|12|17|18|24)\s*,\s*(?:0|8|10|11|12|17|18|24)\s*,)""",
-    )
-
-    private val LIGHT_FOREGROUND_VALUE = Regex(
-        """(?i)(?:^|;)\s*(?:color|-webkit-text-fill-color)\s*:\s*""" +
-            """(?:#(?:fff(?:fff)?|f[0-9a-f]f[0-9a-f]f[0-9a-f])|white|""" +
-            """rgba?\(\s*(?:2[0-5]\d)\s*,\s*(?:2[0-5]\d)\s*,\s*(?:2[0-5]\d)\s*(?:,|\)))""",
     )
 
     private val BRAND_LOGO_HINT = Regex(

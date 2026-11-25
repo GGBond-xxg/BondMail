@@ -7,6 +7,43 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MailWebViewCacheTest {
+    @Test fun completeCathayPhoneRulesReflowNightStatementWithoutChangingDayCanvas() = runBlocking {
+        val html = """<html><head><style>
+            body{min-width:700px}.deviceWidth{width:700px!important}
+            @media screen and (max-width:620px){
+              body{min-width:0!important}.deviceWidth{width:100%!important}
+              .deviceWidthLarger{width:100%!important}
+              .fullWidthBlock{display:block!important;float:none;width:auto!important}
+            }
+            </style></head><body><table width='700' class='deviceWidth'><tr><td>
+            <img id='height-only-logo' height='22' width='' src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="200"%3E%3C/svg%3E'>
+            <p id='readable-title' style='font-size:20px'>A full size statement with mobile reading rules</p>
+            <table width='100%'><tr><td class='fullWidthBlock'>
+            <table width='349' class='deviceWidthLarger'><tr><td id='mobile-left'>Account balance and miles</td></tr></table>
+            </td><td class='fullWidthBlock'>
+            <table width='349' class='deviceWidthLarger'><tr><td id='mobile-right'>Status points and membership</td></tr></table>
+            </td></tr></table></td></tr></table></body></html>"""
+        val night = prepare("statement@e.cathaypacific.com", html, darkMode = true)
+        assertEquals(MailDocumentLayout.FLUID, night.layout)
+        assertEquals(MailDocumentLayout.DESKTOP_SCALED,
+            prepare("statement@e.cathaypacific.com", html, darkMode = false).layout)
+        val result = renderedGeometry(night, """
+            const b=document.getElementById('bondmail-message-body');
+            const l=document.getElementById('mobile-left').getBoundingClientRect();
+            const r=document.getElementById('mobile-right').getBoundingClientRect();
+            return [b.scrollWidth-b.clientWidth,r.top-l.top,l.width,
+                parseFloat(getComputedStyle(document.getElementById('readable-title')).fontSize),
+                parseFloat(getComputedStyle(b).paddingLeft),
+                document.getElementById('height-only-logo').getBoundingClientRect().height];
+        """)
+        assertTrue("Phone layout cannot overflow", result.getDouble(0) <= 1)
+        assertTrue("Columns must stack", result.getDouble(1) > 0)
+        assertTrue("Text uses the available phone width", result.getDouble(2) > 250)
+        assertEquals(20.0, result.getDouble(3), .1)
+        assertEquals("Sender already supplies phone gutters", 0.0, result.getDouble(4), .1)
+        assertEquals("Height-only logos keep their authored size", 22.0, result.getDouble(5), .1)
+    }
+
     @Test
     fun responsiveTableRetainsSideGutters() = runBlocking {
         val prepared = prepare("notice@example.com", """
@@ -223,12 +260,12 @@ class MailWebViewCacheTest {
         assertFalse(prepared.html.contains("open.gif"))
     }
 
-    @Test fun ifastFooterGetsReadablePaletteInDarkMode() = runBlocking {
+    @Test fun ifastFooterUsesSharedNightPaletteInsteadOfAForcedLightPanel() = runBlocking {
         val prepared = prepare("notice@ifastgb.com", "<table><tr><td>Main text</td></tr><tr><td><font color='white'>iFAST Global Bank Limited</font><p style='color:white'>London E14 9SH</p></td></tr></table>", true)
         val document = org.jsoup.Jsoup.parse(prepared.html)
         assertEquals(1, document.select("td.bondmail-ifast-footer").size)
-        assertTrue(prepared.html.contains("background-color:#f4f7fa!important;color:#202124!important"))
-        assertTrue(prepared.html.contains("body.bondmail-dark-mode #bondmail-message-body .bondmail-ifast-footer"))
+        assertFalse(prepared.html.contains("background-color:#f4f7fa!important;color:#202124!important"))
+        assertTrue(document.body().hasClass("bondmail-dark-mode"))
     }
 
     @Test
@@ -538,6 +575,73 @@ class MailWebViewCacheTest {
             assertTrue("Copy stacks below the artwork", geometry.getDouble(7) >= -1)
             assertTrue("No horizontal overflow", geometry.getDouble(8) <= 1)
         }
+    }
+
+    @org.junit.Test fun cathayStatementKeepsBothEdgesOnItsOriginalCanvas() = kotlinx.coroutines.runBlocking {
+        assertEquals("Plain mail from the same sender must not shrink", MailDocumentLayout.FLUID,
+            prepare("notice@e.cathaypacific.com", "<p>A readable text-only notification.</p>").layout)
+        val prepared = prepare("statement@e.cathaypacific.com", """
+            <html><head><meta name="viewport" content="width=device-width,user-scalable=no">
+            <style>@media(max-width:640px){.logo{width:90px}}</style></head><body>${"<div>".repeat(15)}
+            <table width="700" cellspacing="0" cellpadding="0" style="width:700px"><tr><td>
+            <table width="700" cellspacing="0" cellpadding="0"><tr>
+            <td id="left" width="350">Account balance</td><td id="right" width="350">Full membership statement</td>
+            </tr></table><p id="end">All membership terms remain visible.</p>
+            </td></tr></table>${"</div>".repeat(15)}</body></html>
+        """.trimIndent())
+        assertEquals(MailDocumentLayout.DESKTOP_SCALED, prepared.layout)
+        val geometry = renderedGeometry(prepared, """
+            var b=document.getElementById('bondmail-message-body').getBoundingClientRect();
+            var l=document.getElementById('left').getBoundingClientRect();
+            var r=document.getElementById('right').getBoundingClientRect();
+            return [l.left-b.left,b.right-r.right,r.width,document.documentElement.scrollWidth-innerWidth];
+        """.trimIndent())
+        assertTrue("Left edge fits", geometry.getDouble(0) >= 0)
+        assertTrue("Right edge fits", geometry.getDouble(1) >= -1)
+        assertTrue("Right column has not collapsed", geometry.getDouble(2) > 100)
+        assertTrue("Page does not overflow", geometry.getDouble(3) <= 1)
+        assertTrue(prepared.html.contains("maximum-scale=1.0"))
+        assertTrue(prepared.html.contains("user-scalable=no"))
+    }
+
+    @org.junit.Test fun unexpectedOverflowRemainsHorizontallyReachable() = kotlinx.coroutines.runBlocking {
+        val prepared = prepare("reader@example.com", """
+            <html><body><div style="display:flex">
+              <div style="flex:0 0 290px">Left content</div>
+              <div id="far-edge" style="flex:0 0 290px">Right content must remain reachable</div>
+            </div></body></html>
+        """.trimIndent())
+        val geometry = renderedGeometry(prepared, """
+            var b=document.getElementById('bondmail-message-body');
+            var before=b.scrollLeft; b.scrollLeft=b.scrollWidth;
+            var r=document.getElementById('far-edge').getBoundingClientRect(), v=b.getBoundingClientRect();
+            return [b.scrollWidth-b.clientWidth,b.scrollLeft-before,v.right-r.right,
+                /pinch-zoom|manipulation|auto/.test(getComputedStyle(b).touchAction)];
+        """.trimIndent())
+        assertTrue("Fixture must really overflow", geometry.getDouble(0) > 100)
+        assertTrue("Overflow must be scrollable", geometry.getDouble(1) > 100)
+        assertTrue("Far edge can be revealed", geometry.getDouble(2) >= -1)
+        assertTrue("Pinch zoom is not blocked by CSS", geometry.getBoolean(3))
+    }
+
+    @Test fun senderScriptsRemainBlockedWhenHostAdjustsBodyZoom() = runBlocking {
+        val prepared = prepare("sender@example.invalid", """
+            <html><head><script>window.senderRan=true</script></head>
+            <body onload="window.senderRan=true"><img src="bad:" onerror="window.senderRan=true">
+            <svg onload="window.senderRan=true"></svg><noscript><p>Safe visible text</p></noscript></body></html>
+        """.trimIndent())
+        val doc = org.jsoup.Jsoup.parse(prepared.html)
+        assertEquals("Content-Security-Policy", doc.head().child(0).attr("http-equiv"))
+        assertTrue(doc.select("script,noscript,[onload],[onerror]").isEmpty())
+        val values = renderedGeometry(prepared, """
+            const script=document.createElement('script');script.textContent='window.senderRan=true';document.body.append(script);
+            const button=document.createElement('div');button.setAttribute('onclick','window.senderRan=true');document.body.append(button);button.click();
+            const b=document.getElementById('bondmail-message-body');b.style.setProperty('zoom','0.5','important');
+            return [window.senderRan===undefined, getComputedStyle(b).zoom, document.body.textContent.includes('Safe visible text')];
+        """.trimIndent())
+        assertTrue("CSP must reject both scripts and inline event handlers", values.getBoolean(0))
+        assertEquals("Host DOM zoom is allowed", "0.5", values.getString(1))
+        assertTrue(values.getBoolean(2))
     }
 
     private fun renderedGeometry(prepared: PreparedMailDocument, script: String): org.json.JSONArray {

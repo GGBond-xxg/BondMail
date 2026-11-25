@@ -86,6 +86,9 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -160,6 +163,11 @@ import com.bond.mail.ui.components.MailHeaderSpacing
 import com.bond.mail.ui.components.contactLogoSvgMarkup
 import com.bond.mail.ui.components.MailWebViewCache
 import com.bond.mail.ui.components.MailWebViewPool
+import com.bond.mail.ui.components.applyMailDarkMode
+import com.bond.mail.ui.components.configureMailZoom
+import com.bond.mail.ui.components.mailBodyZoomController
+import com.bond.mail.ui.components.zoomMailBodyBy
+import com.bond.mail.ui.components.resetMailZoom
 import com.bond.mail.ui.components.PreparedMailDocument
 import com.bond.mail.ui.i18n.tr
 import com.bond.mail.ui.motion.BondMotionDuration
@@ -245,6 +253,14 @@ fun DetailScreen(
     var rendererRecoveryCount by remember(messageId) { mutableStateOf(0) }
     var firstContentReadyReported by remember(messageId) { mutableStateOf(false) }
     var activeMailWebView by remember(messageId) { mutableStateOf<WebView?>(null) }
+    var copyFeedback by remember(messageId) { mutableStateOf<String?>(null) }
+    var copyFeedbackVersion by remember(messageId) { mutableIntStateOf(0) }
+    LaunchedEffect(copyFeedbackVersion) {
+        if (copyFeedback != null) {
+            kotlinx.coroutines.delay(2500)
+            copyFeedback = null
+        }
+    }
     val mailContentScrollY = remember(messageId) { mutableIntStateOf(0) }
     val reportFirstContentReady = {
         if (!firstContentReadyReported) {
@@ -918,6 +934,9 @@ fun DetailScreen(
                             onDismissRequest = { moreOpen = false },
                             entries = listOf(
                                 BondMenuEntry(text = tr("mail_display_title"), icon = Icons.Outlined.Tune, onClick = { moreOpen = false; displayModeOpen = true }),
+                                BondMenuEntry(text = tr("mail_zoom_in"), icon = Icons.Default.ZoomIn, onClick = { moreOpen = false; activeMailWebView?.zoomMailBodyBy(1.25f) }),
+                                BondMenuEntry(text = tr("mail_zoom_out"), icon = Icons.Default.ZoomOut, onClick = { moreOpen = false; activeMailWebView?.zoomMailBodyBy(0.8f) }),
+                                BondMenuEntry(text = tr("mail_zoom_reset"), icon = Icons.Default.RestartAlt, onClick = { moreOpen = false; activeMailWebView?.resetMailZoom() }),
                                 BondMenuEntry(text = tr("sender_icon_title"), icon = Icons.Outlined.Category, onClick = { moreOpen = false; senderIconOpen = true }),
                                 BondMenuEntry(text = tr("mail_tools_short"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; toolsOpen = true }),
                                 BondMenuEntry(text = tr("ai_title"), icon = Icons.Default.Inbox, onClick = { moreOpen = false; aiOpen = true }),
@@ -976,10 +995,19 @@ fun DetailScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                if (verificationCode != null) {
-                    VerificationCodeAction(item, container, Modifier.padding(end = 2.dp))
-                }
                 MessageTranslationActions(translation, enabled = !bodyLoading && !bodyLoadFailed,
+                    feedback = copyFeedback,
+                    verificationAction = if (verificationCode != null) {
+                        { VerificationCodeAction(item, container, onResult = { copied ->
+                            copyFeedback = context.getString(if (copied) com.bond.mail.R.string.verification_code_copied
+                                else com.bond.mail.R.string.verification_code_copy_failed)
+                            copyFeedbackVersion++
+                        }) }
+                    } else null,
+                    zoomResetAction = if (abs((activeMailWebView?.mailBodyZoomController()?.factor ?: 1f) - 1f) > .01f) {
+                        { MessageFloatingIconAction(Icons.Default.RestartAlt, tr("mail_zoom_reset"),
+                            onClick = { activeMailWebView?.resetMailZoom() }) }
+                    } else null,
                     extraAction = {
                         if (hasRemoteImages && !loadImages) RemoteImageFloatingButton(onClick = {
                             loadImages = true
@@ -1061,23 +1089,36 @@ private fun RemoteImageFloatingButton(
 
 @Composable
 internal fun MessageTranslationActions(translation: InlineMailTranslationState, enabled: Boolean, modifier: Modifier = Modifier,
-    extraAction: (@Composable () -> Unit)? = null) {
+    extraAction: (@Composable () -> Unit)? = null,
+    verificationAction: (@Composable () -> Unit)? = null,
+    zoomResetAction: (@Composable () -> Unit)? = null,
+    feedback: String? = null) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (translation.busy || translation.error != null) Box(modifier =
+        if (feedback != null || translation.busy || translation.error != null) Box(modifier =
             if (LocalUiStyle.current == UiStyle.LIQUID_GLASS) Modifier.glassSurface(shape = RoundedCornerShape(20.dp), prominent = true)
             else Modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(20.dp))) {
-            Text(if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
+            Text(feedback ?: if (translation.busy) tr("translation_working") + " ${translation.progress.first}/${translation.progress.second}"
                 else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface)
         }
-        // Center the 48dp auxiliary action above the shared 52dp trailing dock button.
+        // Auxiliary actions live above the fixed bottom row. Adding progress, remote images or
+        // zoom reset must never lift the code-copy button out of its slot beside translation.
+        if (extraAction != null || zoomResetAction != null) Row(
+            Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            extraAction?.invoke()
+            zoomResetAction?.invoke()
+        }
+        // Fixed slots, right to left: translate/cancel, copy code, restore original.
         Row(Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
-            extraAction?.invoke()
-            if (translation.result != null) MessageFloatingIconAction(
+            if (translation.displayed != null) MessageFloatingIconAction(
                 icon = Icons.Outlined.Restore, label = tr("translation_original"),
                 onClick = { translation.showOriginal = true },
-            )
+            ) else Spacer(Modifier.size(48.dp))
+            if (verificationAction != null) verificationAction() else Spacer(Modifier.size(48.dp))
             MessageFloatingIconAction(
                 icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
                 label = tr(if (translation.busy) "cancel" else "translate_body"),
@@ -1443,8 +1484,8 @@ internal fun MailHtmlView(
                         settings.allowContentAccess = false
                         settings.loadsImagesAutomatically = true
                         settings.cacheMode = WebSettings.LOAD_DEFAULT
-                        settings.setSupportZoom(true)
-                        settings.builtInZoomControls = true
+                        settings.setSupportZoom(false)
+                        settings.builtInZoomControls = false
                         settings.displayZoomControls = false
                         settings.useWideViewPort = true
                         settings.loadWithOverviewMode = true
@@ -1463,10 +1504,47 @@ internal fun MailHtmlView(
                         // HTML and the native subject/sender layer move as one physical sheet. rawY is
                         // used because the view itself is translated during the gesture.
                         setOnTouchListener { view, event ->
+                            if (event.actionMasked == MotionEvent.ACTION_DOWN) holder.multiTouch = false
+                            if (event.pointerCount > 1 && !holder.multiTouch) {
+                                holder.multiTouch = true
+                                // End Chromium's single-finger scroll/link gesture before the
+                                // body-only detector takes ownership of both fingers.
+                                MotionEvent.obtain(event).let { cancel ->
+                                    cancel.action = MotionEvent.ACTION_CANCEL
+                                    view.onTouchEvent(cancel)
+                                    cancel.recycle()
+                                }
+                            }
+                            (view as? WebView)?.mailBodyZoomController()?.onTouch(event)
+                            // Keep the remaining finger after pointer-up out of pull/stretch too.
+                            if (holder.multiTouch) {
+                                holder.touchLastY = event.rawY
+                                holder.touchAccumulator = 0f
+                                holder.touchDirection = 0
+                                if (holder.topPullActive) {
+                                    holder.topPullActive = false
+                                    latestOnTopPullRelease()
+                                }
+                                view.parent?.requestDisallowInterceptTouchEvent(
+                                    event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL)
+                                return@setOnTouchListener true
+                            }
+                            if (event.actionMasked == MotionEvent.ACTION_MOVE &&
+                                abs(event.rawX - holder.touchStartX) > 8f * density.density &&
+                                abs(event.rawX - holder.touchStartX) > abs(event.rawY - holder.touchStartY)) {
+                                holder.touchLastY = event.rawY
+                                if (holder.topPullActive) {
+                                    holder.topPullActive = false
+                                    latestOnTopPullRelease()
+                                }
+                                return@setOnTouchListener false
+                            }
                             when (event.actionMasked) {
                                 MotionEvent.ACTION_DOWN -> {
                                     view.parent?.requestDisallowInterceptTouchEvent(true)
                                     holder.touchLastY = event.rawY
+                                    holder.touchStartX = event.rawX
+                                    holder.touchStartY = event.rawY
                                     holder.touchTravel = 0f
                                     holder.touchAccumulator = 0f
                                     holder.touchDirection = 0
@@ -1479,8 +1557,8 @@ internal fun MailHtmlView(
                                     holder.touchTravel += abs(fingerDelta)
                                     val webView = view as? WebView
                                     val shouldDriveTopPull =
-                                        ((webView?.scrollY ?: 0) <= 0 && fingerDelta > 0f) ||
-                                            holder.topPullActive
+                                        abs((webView?.mailBodyZoomController()?.factor ?: 1f) - 1f) < .01f &&
+                                            (((webView?.scrollY ?: 0) <= 0 && fingerDelta > 0f) || holder.topPullActive)
                                     if (shouldDriveTopPull) {
                                         val pull = latestOnTopPullDelta(fingerDelta)
                                         holder.topPullActive = pull > 0.5f
@@ -1552,6 +1630,9 @@ internal fun MailHtmlView(
                         }
                         setOnScrollChangeListener { _, _, scrollY, _, oldScrollY ->
                             latestOnContentScrollChanged(scrollY.coerceAtLeast(0))
+                            if (holder.multiTouch || android.os.SystemClock.uptimeMillis() < holder.zoomSettlingUntil) {
+                                return@setOnScrollChangeListener
+                            }
                             if (scrollY > 0 && holder.topPullActive) {
                                 holder.topPullActive = false
                                 latestOnTopPullRelease()
@@ -1739,22 +1820,28 @@ internal fun MailHtmlView(
                                     return
                                 }
 
-                                // Both commit and finish callbacks must cross the same visual-state
-                                // fence. This waits for local HTML, not remote image downloads.
-                                runCatching {
-                                    view.postVisualStateCallback(
-                                        generation,
-                                        object : WebView.VisualStateCallback() {
-                                            override fun onComplete(requestId: Long) {
-                                                scheduleReveal()
-                                            }
-                                        },
-                                    )
-                                    // Some vendor WebViews omit the visual callback. The generation
-                                    // check keeps this fallback harmless when the callback wins.
-                                    view.postDelayed({ scheduleReveal() }, 420L)
-                                }.onFailure {
-                                    scheduleReveal()
+                                // Resolve sender CSS and repair night contrast beneath the placeholder,
+                                // then fence the adapted pixels. Light/original documents are a no-op.
+                                view.applyMailDarkMode {
+                                    if (holder.contentKey != committedContentKey ||
+                                        holder.contentGeneration != generation) return@applyMailDarkMode
+                                    // Both commit and finish callbacks must cross the same visual-state
+                                    // fence. This waits for local HTML, not remote image downloads.
+                                    runCatching {
+                                        view.postVisualStateCallback(
+                                            generation,
+                                            object : WebView.VisualStateCallback() {
+                                                override fun onComplete(requestId: Long) {
+                                                    scheduleReveal()
+                                                }
+                                            },
+                                        )
+                                        // Some vendor WebViews omit the visual callback. The generation
+                                        // check keeps this fallback harmless when the callback wins.
+                                        view.postDelayed({ scheduleReveal() }, 420L)
+                                    }.onFailure {
+                                        scheduleReveal()
+                                    }
                                 }
                             }
 
@@ -1773,6 +1860,7 @@ internal fun MailHtmlView(
                     }
                 },
                 onRelease = { webView ->
+                    webView.mailBodyZoomController()?.onZoom = {}
                     // Own the lease at the AndroidView boundary. It can leave composition while
                     // a replacement document is preparing, before MailHtmlView itself disposes.
                     if (holder.webView === webView) {
@@ -1803,22 +1891,9 @@ internal fun MailHtmlView(
                     } else {
                         WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     }
-                    // Desktop newsletters are already scaled as one canvas by the prepared CSS.
-                    // Disable WebView's second overview pass in that mode; otherwise Chromium can
-                    // independently rescale the already-zoomed canvas and crop its right edge.
-                    when (document.layout) {
-                        com.bond.mail.ui.components.MailDocumentLayout.DESKTOP_SCALED -> {
-                            webView.settings.useWideViewPort = false
-                            webView.settings.loadWithOverviewMode = false
-                            webView.settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.NORMAL
-                            webView.settings.textZoom = document.textZoomPercent
-                        }
-                        com.bond.mail.ui.components.MailDocumentLayout.FLUID -> {
-                            webView.settings.useWideViewPort = true
-                            webView.settings.loadWithOverviewMode = true
-                            webView.settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
-                            webView.settings.textZoom = document.textZoomPercent
-                        }
+                    webView.configureMailZoom(document.layout, document.textZoomPercent,
+                        topContentInsetCssPx + subjectBlockHeightCssPx + senderBlockHeightCssPx + MailHeaderSpacing.BODY_GAP) {
+                        holder.zoomSettlingUntil = android.os.SystemClock.uptimeMillis() + 500L
                     }
                     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
                         WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
@@ -1900,6 +1975,7 @@ internal fun MailHtmlView(
                         } else {
                             webView.showMailDocumentImmediately()
                         }
+                        webView.mailBodyZoomController()?.documentChanged()
                         webView.loadDataWithBaseURL(
                             document.baseUrl ?: "https://mail.bond.invalid/",
                             document.html,
@@ -2103,7 +2179,6 @@ private fun MailStableHeaderOverlay(
     val latestTopPullOffsetPx by rememberUpdatedState(topPullOffsetPx)
     val latestOnTopPullDelta by rememberUpdatedState(onTopPullDelta)
     val latestOnTopPullRelease by rememberUpdatedState(onTopPullRelease)
-
     val headerDragState = rememberDraggableState { dragDeltaPx ->
         val target = latestWebView ?: return@rememberDraggableState
         if (!target.isAttachedToWindow) return@rememberDraggableState
@@ -2556,9 +2631,13 @@ private class WebContentHolder(
     var chromeScrollAccumulator: Int = 0,
     var chromeScrollDirection: Int = 0,
     var touchLastY: Float = 0f,
+    var touchStartX: Float = 0f,
+    var touchStartY: Float = 0f,
     var touchTravel: Float = 0f,
     var touchAccumulator: Float = 0f,
     var touchDirection: Int = 0,
+    var multiTouch: Boolean = false,
+    var zoomSettlingUntil: Long = 0L,
     var topPullActive: Boolean = false,
     var webView: WebView? = null,
     var rendererGone: Boolean = false,

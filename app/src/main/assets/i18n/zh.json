@@ -639,5 +639,8 @@
   "forward_original_hint": "发送时保留原邮件排版和图片，点击摘要可展开。",
   "forward_remove_original": "移除原邮件",
   "choose_avatar": "选择头像",
-  "avatar_custom": "自定义表情或字符"
+  "avatar_custom": "自定义表情或字符",
+  "mail_zoom_in": "放大正文",
+  "mail_zoom_out": "缩小正文",
+  "mail_zoom_reset": "恢复默认缩放"
 }

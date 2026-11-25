@@ -1,6 +1,5 @@
 package com.bond.mail.ui.screens
 
-import android.os.Build
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -31,10 +30,16 @@ internal fun rememberVerificationCode(message: MessageEntity?): String? {
 }
 
 @Composable
-internal fun VerificationCodeAction(message: MessageEntity, container: AppContainer, modifier: Modifier = Modifier) {
+internal fun VerificationCodeAction(message: MessageEntity, container: AppContainer, modifier: Modifier = Modifier,
+    onResult: ((Boolean) -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var copying by remember(message.id) { mutableStateOf(false) }
+    val reportResult: (Boolean) -> Unit = { copied ->
+        if (onResult != null) onResult(copied)
+        else Toast.makeText(context, if (copied) R.string.verification_code_copied
+            else R.string.verification_code_copy_failed, Toast.LENGTH_SHORT).show()
+    }
     MessageFloatingIconAction(
         icon = Icons.Outlined.ContentCopy,
         label = tr("copy_verification_code"),
@@ -45,13 +50,11 @@ internal fun VerificationCodeAction(message: MessageEntity, container: AppContai
             scope.launch {
                 try {
                     val copied = container.copyVerificationCode(message, fromNotification = false)
-                    if (copied && Build.VERSION.SDK_INT < 33) {
-                        Toast.makeText(context, R.string.verification_code_copied, Toast.LENGTH_SHORT).show()
-                    }
+                    reportResult(copied)
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
-                    Toast.makeText(context, R.string.verification_code_copy_failed, Toast.LENGTH_SHORT).show()
+                    reportResult(false)
                 } finally {
                     copying = false
                 }

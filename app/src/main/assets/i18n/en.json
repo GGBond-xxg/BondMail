@@ -639,5 +639,8 @@
   "forward_original_hint": "The original layout and images will be included. Tap the excerpt to expand.",
   "forward_remove_original": "Remove original email",
   "choose_avatar": "Choose Avatar",
-  "avatar_custom": "Custom Emoji or Character"
+  "avatar_custom": "Custom Emoji or Character",
+  "mail_zoom_in": "Zoom in body",
+  "mail_zoom_out": "Zoom out body",
+  "mail_zoom_reset": "Reset zoom"
 }

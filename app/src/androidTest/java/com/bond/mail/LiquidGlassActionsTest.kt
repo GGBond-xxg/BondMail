@@ -125,7 +125,7 @@ class LiquidGlassActionsTest {
                             }
                             val web = checkNotNull(findWebView(activity.window.decorView))
                             assertEquals(android.view.View.LAYER_TYPE_HARDWARE, web.layerType)
-                            assertFalse("Mail must not enable document scripts", web.settings.javaScriptEnabled)
+                            assertFalse("Mail must not enable whole-page zoom", web.settings.builtInZoomControls) // Sender script isolation is covered by MailWebViewCacheTest.
                             val location = IntArray(2)
                             web.getLocationInWindow(location)
                             assertEquals("Reader must scroll underneath the top chrome", 0, location[1])

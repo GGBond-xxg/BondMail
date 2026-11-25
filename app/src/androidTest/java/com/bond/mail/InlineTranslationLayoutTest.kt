@@ -2,6 +2,11 @@ package com.bond.mail
 
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RestartAlt
+import com.bond.mail.ui.screens.MessageFloatingIconAction
+import com.bond.mail.ui.screens.VerificationCodeAction
+import com.bond.mail.data.db.MessageEntity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +44,14 @@ class InlineTranslationLayoutTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val device = UiDevice.getInstance(instrumentation)
         val visible = mutableStateOf(true)
+        val zoomed = mutableStateOf(true)
+        val copyFeedback = mutableStateOf<String?>(null)
+        val context = instrumentation.targetContext
+        val container = (context.applicationContext as MailApplication).container
+        val fixture = MessageEntity(id = "translation-controls-offline", accountId = "offline", folderType = "INBOX",
+            remoteFolder = "INBOX", remoteUid = 0, senderName = "Offline Test", senderAddress = "test@example.invalid",
+            subject = "Verification code", preview = "", bodyText = "Your verification code is 817263", bodyHtml = null,
+            receivedAt = 0, unread = false, starred = false, hasAttachments = false)
         val settings = mutableStateOf(AppSettings(uiStyle = UiStyle.MATERIAL3))
         val state = InlineMailTranslationState(TranslationProvider.GOOGLE, "zh").apply {
             result = TranslatedHtmlMail("离线测试", "<p>模拟译文，不使用任何密钥。</p>")
@@ -65,7 +78,15 @@ class InlineTranslationLayoutTest {
                                     Row(Modifier.statusBarsPadding().align(Alignment.TopEnd)) { InlineTranslationSelectors(state) }
                                     val bottom = floatingActionBottomPadding(visible.value)
                                     val offset = animateChromeOffset(visible.value, 124.dp, "test-dock")
-                                    MessageTranslationActions(state, true, Modifier.align(Alignment.BottomCenter).widthIn(max = com.bond.mail.ui.theme.BottomDockDefaults.MaxWidth).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = bottom))
+                                    MessageTranslationActions(state, true,
+                                        Modifier.align(Alignment.BottomCenter).widthIn(max = com.bond.mail.ui.theme.BottomDockDefaults.MaxWidth).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = bottom),
+                                        feedback = copyFeedback.value,
+                                        verificationAction = { VerificationCodeAction(fixture, container, onResult = { copied ->
+                                            copyFeedback.value = context.getString(if (copied) R.string.verification_code_copied else R.string.verification_code_copy_failed)
+                                        }) },
+                                        zoomResetAction = if (zoomed.value) { {
+                                            MessageFloatingIconAction(Icons.Default.RestartAlt, "Reset zoom", onClick = { zoomed.value = false })
+                                        } } else null)
                                     MessageActionDock({}, {}, {}, {}, Modifier.align(Alignment.BottomCenter).offset { androidx.compose.ui.unit.IntOffset(0, offset.roundToPx()) })
                                 }
                             }
@@ -88,9 +109,35 @@ class InlineTranslationLayoutTest {
             assertTrue(initial.bottom < delete.visibleBounds.top)
             assertTrue(device.hasObject(By.descStartsWith("翻译语言")))
             assertTrue(device.hasObject(By.descStartsWith("翻译服务密钥")))
+            val copy = device.findObject(By.desc("复制验证码"))
+            val copyBounds = copy.visibleBounds
+            assertEquals("Copy stays beside translate", initial.centerY(), copyBounds.centerY())
+            assertTrue(original.visibleBounds.right < copyBounds.left)
+            assertTrue(copyBounds.right < initial.left)
+            val reset = device.findObject(By.desc("Reset zoom"))
+            assertTrue("Zoom reset is above the action row", reset.visibleBounds.bottom < copyBounds.top)
+            reset.click()
+            assertTrue(device.wait(Until.gone(By.desc("Reset zoom")), 3000))
+            assertFalse(zoomed.value)
+            assertEquals(copyBounds, device.findObject(By.desc("复制验证码")).visibleBounds)
+            val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+            var previousClip: android.content.ClipData? = null
+            scenario.onActivity { previousClip = clipboard.primaryClip }
+            try {
+                copy.click()
+                val shown = device.wait(Until.hasObject(By.text(context.getString(R.string.verification_code_copied))), 3000)
+                assertEquals("Copy callback reports success", context.getString(R.string.verification_code_copied), copyFeedback.value)
+                assertTrue("Copy success feedback must be shown", shown)
+                scenario.onActivity { assertEquals("817263", clipboard.primaryClip?.getItemAt(0)?.text?.toString()) }
+            } finally {
+                scenario.onActivity { previousClip?.let(clipboard::setPrimaryClip) ?: clipboard.clearPrimaryClip() }
+            }
+            scenario.onActivity { copyFeedback.value = null }
             original.click()
             instrumentation.waitForIdleSync()
             assertTrue(state.showOriginal)
+            assertFalse(device.hasObject(By.desc("查看原文")))
+            assertEquals(copyBounds, device.findObject(By.desc("复制验证码")).visibleBounds)
             translate.click() // Reuses the fake result; this state has no network/controller coroutine.
             instrumentation.waitForIdleSync()
             assertFalse(state.showOriginal)
@@ -110,6 +157,8 @@ class InlineTranslationLayoutTest {
                 }
                 assertTrue(device.wait(Until.hasObject(By.textContains("20/27")), 5000))
                 Thread.sleep(600)
+                assertEquals("Translation progress must not lift copy", copyBounds, device.findObject(By.desc("复制验证码")).visibleBounds)
+                assertEquals(initial, device.findObject(By.desc("取消")).visibleBounds)
                 assertTrue(device.takeScreenshot(File(instrumentation.targetContext.getExternalFilesDir(null), "glass-translation-progress-${mode.name.lowercase()}.png")))
                 if (mode == ThemeMode.DARK) {
                     val progressBounds = device.findObject(By.textContains("20/27")).visibleBounds
