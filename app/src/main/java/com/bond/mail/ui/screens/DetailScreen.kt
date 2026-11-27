@@ -1101,29 +1101,30 @@ internal fun MessageTranslationActions(translation: InlineMailTranslationState, 
                 else tr(translation.error!!), modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface)
         }
-        // Auxiliary actions live above the fixed bottom row. Adding progress, remote images or
-        // zoom reset must never lift the code-copy button out of its slot beside translation.
-        if (extraAction != null || zoomResetAction != null) Row(
+        // Zoom reset has its own trailing row; image loading stays at the lower leading edge.
+        if (zoomResetAction != null) Row(
             Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2),
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            extraAction?.invoke()
-            zoomResetAction?.invoke()
+            zoomResetAction()
         }
         // Fixed slots, right to left: translate/cancel, copy code, restore original.
-        Row(Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)) {
-            if (translation.displayed != null) MessageFloatingIconAction(
-                icon = Icons.Outlined.Restore, label = tr("translation_original"),
-                onClick = { translation.showOriginal = true },
-            ) else Spacer(Modifier.size(48.dp))
-            if (verificationAction != null) verificationAction() else Spacer(Modifier.size(48.dp))
-            MessageFloatingIconAction(
-                icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
-                label = tr(if (translation.busy) "cancel" else "translate_body"),
-                enabled = enabled, onClick = translation::translateOrCancel,
-            )
+        Row(Modifier.fillMaxWidth().padding(end = (BottomDockDefaults.Height - 48.dp) / 2), verticalAlignment = Alignment.CenterVertically) {
+            extraAction?.invoke()
+            Spacer(Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (translation.displayed != null) MessageFloatingIconAction(
+                    icon = Icons.Outlined.Restore, label = tr("translation_original"),
+                    onClick = { translation.showOriginal = true },
+                ) else Spacer(Modifier.size(48.dp))
+                if (verificationAction != null) verificationAction() else Spacer(Modifier.size(48.dp))
+                MessageFloatingIconAction(
+                    icon = if (translation.busy) Icons.Outlined.Close else Icons.Outlined.Translate,
+                    label = tr(if (translation.busy) "cancel" else "translate_body"),
+                    enabled = enabled, onClick = translation::translateOrCancel,
+                )
+            }
         }
     }
 }

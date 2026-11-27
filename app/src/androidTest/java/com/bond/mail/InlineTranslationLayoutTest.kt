@@ -4,6 +4,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Image
 import com.bond.mail.ui.screens.MessageFloatingIconAction
 import com.bond.mail.ui.screens.VerificationCodeAction
 import com.bond.mail.data.db.MessageEntity
@@ -45,6 +46,7 @@ class InlineTranslationLayoutTest {
         val device = UiDevice.getInstance(instrumentation)
         val visible = mutableStateOf(true)
         val zoomed = mutableStateOf(true)
+        val imagesPending = mutableStateOf(true)
         val copyFeedback = mutableStateOf<String?>(null)
         val context = instrumentation.targetContext
         val container = (context.applicationContext as MailApplication).container
@@ -81,6 +83,9 @@ class InlineTranslationLayoutTest {
                                     MessageTranslationActions(state, true,
                                         Modifier.align(Alignment.BottomCenter).widthIn(max = com.bond.mail.ui.theme.BottomDockDefaults.MaxWidth).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = bottom),
                                         feedback = copyFeedback.value,
+                                        extraAction = if (imagesPending.value) { {
+                                            MessageFloatingIconAction(Icons.Default.Image, "Load images", onClick = { imagesPending.value = false })
+                                        } } else null,
                                         verificationAction = { VerificationCodeAction(fixture, container, onResult = { copied ->
                                             copyFeedback.value = context.getString(if (copied) R.string.verification_code_copied else R.string.verification_code_copy_failed)
                                         }) },
@@ -116,6 +121,16 @@ class InlineTranslationLayoutTest {
             assertTrue(copyBounds.right < initial.left)
             val reset = device.findObject(By.desc("Reset zoom"))
             assertTrue("Zoom reset is above the action row", reset.visibleBounds.bottom < copyBounds.top)
+            assertEquals("Zoom reset stays at the right", initial.centerX(), reset.visibleBounds.centerX())
+            val images = device.findObject(By.desc("Load images"))
+            assertEquals("Images share the lower row", initial.centerY(), images.visibleBounds.centerY())
+            assertTrue("Images stay left of translation actions", images.visibleBounds.right < original.visibleBounds.left)
+            device.takeScreenshot(File(context.getExternalFilesDir(null), "reader-actions-two-rows.png"))
+            images.click()
+            assertTrue(device.wait(Until.gone(By.desc("Load images")), 3000))
+            assertFalse(imagesPending.value)
+            assertEquals(copyBounds, device.findObject(By.desc("复制验证码")).visibleBounds)
+            assertEquals(initial, device.findObject(By.desc("翻译邮件")).visibleBounds)
             reset.click()
             assertTrue(device.wait(Until.gone(By.desc("Reset zoom")), 3000))
             assertFalse(zoomed.value)
